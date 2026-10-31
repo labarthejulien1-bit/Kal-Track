@@ -19,8 +19,10 @@ export function useProfile() {
   const goals: Goals = useMemo(() => computeGoals(profile), [profile]);
 
   const updateProfile = useCallback(async (patch: Partial<Profile>) => {
-    const current = await ensureProfile();
-    await db.userProfile.put({ ...current, ...patch, id: 1, updatedAt: Date.now() });
+    await db.transaction('rw', db.userProfile, async () => {
+      const current = (await db.userProfile.get(1)) ?? DEFAULT_PROFILE;
+      await db.userProfile.put({ ...DEFAULT_PROFILE, ...current, ...patch, id: 1, updatedAt: Date.now() });
+    });
   }, []);
 
   return { profile, goals, loading, hasProfile: !!stored, updateProfile };

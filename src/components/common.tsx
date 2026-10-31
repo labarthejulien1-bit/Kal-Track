@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn, MEAL_EMOJI, round } from '@/lib/utils';
 import type { MealType } from '@/types';
 
@@ -98,14 +98,69 @@ export function MacroPill({ label, value, color, unit = 'g' }: { label: string; 
   );
 }
 
+function fmtDecimal(v: number, allowEmpty?: boolean) {
+  if (!Number.isFinite(v)) return '';
+  if (v === 0 && allowEmpty) return '';
+  return String(v).replace('.', ',');
+}
+
+/**
+ * Champ numérique compatible claviers Android français (virgule décimale).
+ * - type="text" + inputMode="decimal" : la virgule est acceptée (type="number" la rejetait → valeur 0).
+ * - Le texte saisi est conservé localement : le champ peut être vidé puis retapé sans être réinitialisé.
+ */
+export function DecimalInput({
+  value,
+  onValueChange,
+  allowEmpty,
+  className,
+  ...rest
+}: { value: number; onValueChange: (v: number) => void; allowEmpty?: boolean } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type'>) {
+  const [text, setText] = useState(fmtDecimal(value, allowEmpty));
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setText(fmtDecimal(value, allowEmpty));
+  }, [value, allowEmpty]);
+  return (
+    <input
+      {...rest}
+      type="text"
+      inputMode="decimal"
+      autoComplete="off"
+      enterKeyHint="done"
+      value={text}
+      className={className}
+      onFocus={(e) => {
+        focused.current = true;
+        const el = e.target;
+        setTimeout(() => el.select(), 0);
+      }}
+      onBlur={() => {
+        focused.current = false;
+        setText(fmtDecimal(value, allowEmpty));
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+      }}
+      onChange={(e) => {
+        const t = e.target.value.replace(/[^0-9.,]/g, '');
+        setText(t);
+        if (t === '') return onValueChange(0);
+        const n = parseFloat(t.replace(',', '.'));
+        if (Number.isFinite(n)) onValueChange(n);
+      }}
+    />
+  );
+}
+
 export function NumberField({
   label,
   value,
   onChange,
   unit,
   color,
-  step = 1,
-  min = 0,
+  allowEmpty,
+  placeholder,
 }: {
   label: string;
   value: number;
@@ -114,23 +169,24 @@ export function NumberField({
   color?: string;
   step?: number;
   min?: number;
+  allowEmpty?: boolean;
+  placeholder?: string;
 }) {
   return (
     <label className="block">
-      <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-slate-400">
-        {color && <span className="h-2 w-2 rounded-full" style={{ background: color }} />}
-        {label}
-      </span>
+      {label && (
+        <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-slate-400">
+          {color && <span className="h-2 w-2 rounded-full" style={{ background: color }} />}
+          {label}
+        </span>
+      )}
       <div className="relative">
-        <input
-          type="number"
-          inputMode="decimal"
-          step={step}
-          min={min}
-          value={Number.isFinite(value) ? value : ''}
-          onChange={(e) => onChange(e.target.value === '' ? 0 : parseFloat(e.target.value))}
-          onFocus={(e) => e.target.select()}
-          className="h-11 w-full rounded-xl border border-slate-700 bg-slate-900/60 px-3 pr-10 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+        <DecimalInput
+          value={value}
+          onValueChange={onChange}
+          allowEmpty={allowEmpty}
+          placeholder={placeholder}
+          className="h-11 w-full rounded-xl border border-slate-700 bg-slate-900/60 px-3 pr-10 text-base text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
         />
         {unit && <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">{unit}</span>}
       </div>

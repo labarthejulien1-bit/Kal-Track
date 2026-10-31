@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { KeyRound, Eye, EyeOff, Wifi, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, ExternalLink, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,16 +7,83 @@ import { Switch } from '@/components/ui/switch';
 import { SegmentedTabs } from '@/components/ui/tabs';
 import { NumberField } from '@/components/common';
 import { useToast } from '@/components/ui/toast';
-import { useProfile } from '@/hooks/useProfile';
+import { ensureProfile, useProfile } from '@/hooks/useProfile';
 import { GEMINI_MODELS, testGeminiConnection } from '@/services/geminiVision';
-import { ACTIVITY_FACTORS, GOAL_LABELS, MACRO_PRESETS, PACE_DELTAS, macroSplitFor } from '@/services/bmrCalculator';
+import { ACTIVITY_FACTORS, GOAL_LABELS, MACRO_PRESETS, PACE_DELTAS, computeGoals, macroSplitFor } from '@/services/bmrCalculator';
 import { db, exportBackup, getStorageInfo, importBackup, requestPersistentStorage } from '@/db/database';
 import { COLORS, MEAL_LABELS, MEAL_TYPES, downloadFile, round, todayISO } from '@/lib/utils';
-import type { ActivityLevel, BackupFile, Goal, GoalPace, MacroPreset, Sex } from '@/types';
+import type { ActivityLevel, BackupFile, Goal, GoalPace, MacroPreset, Profile, Sex } from '@/types';
 
 export function Settings() {
-  const { profile, goals, updateProfile } = useProfile();
+  const { profile: stored, loading } = useProfile();
+  const [draft, setDraft] = useState<Profile | null>(null);
+
+  // Copie locale du profil : la saisie est instantanée (pas d'aller-retour IndexedDB à chaque touche),
+  // puis enregistrée automatiquement après une courte pause.
+  useEffect(() => {
+    if (!loading && !draft) setDraft(stored);
+  }, [loading, stored, draft]);
+
+  if (!draft) {
+    return (
+      <div className="flex justify-center py-20 text-slate-500">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+  return <SettingsForm draft={draft} setDraft={setDraft} />;
+}
+
+function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dispatch<React.SetStateAction<Profile | null>> }) {
+  const profile = draft;
+  const goals = useMemo(() => computeGoals(draft), [draft]);
   const toast = useToast();
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const dirty = useRef(false);
+  const latest = useRef(draft);
+  latest.current = draft;
+
+  const flush = useCallback(async () => {
+    if (!dirty.current) return;
+    dirty.current = false;
+    await db.userProfile.put({ ...latest.current, id: 1, updatedAt: Date.now() });
+    setSaveState('saved');
+  }, []);
+
+  const updateProfile = useCallback(
+    async (patch: Partial<Profile>) => {
+      dirty.current = true;
+      setSaveState('saving');
+      setDraft((d) => (d ? { ...d, ...patch } : d));
+    },
+    [setDraft],
+  );
+
+  // Enregistrement automatique 400 ms après la dernière modification.
+  useEffect(() => {
+    if (!dirty.current) return;
+    const t = setTimeout(flush, 400);
+    return () => clearTimeout(t);
+  }, [draft, flush]);
+
+  // Sauvegarde immédiate si l'appli passe en arrière-plan ou si on change d'onglet.
+  useEffect(() => {
+    const onHide = () => document.visibilityState === 'hidden' && flush();
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, [flush]);
+
+  const saveNow = async () => {
+    (document.activeElement as HTMLElement | null)?.blur();
+    dirty.current = true;
+    await flush();
+    toast('Profil enregistré');
+  };
 
   // --- IA ---
   const [key, setKey] = useState(profile.apiKey);
@@ -28,6 +95,7 @@ export function Settings() {
   useEffect(() => setKey(profile.apiKey), [profile.apiKey]);
 
   const saveKey = async () => {
+    if (key.trim() === profile.apiKey) return;
     await updateProfile({ apiKey: key.trim() });
     toast('Clé API enregistrée localement');
   };
@@ -36,6 +104,8 @@ export function Settings() {
     setTesting(true);
     setTestResult(null);
     if (key.trim() !== profile.apiKey) await updateProfile({ apiKey: key.trim() });
+    dirty.current = true;
+    await flush();
     setTestResult(await testGeminiConnection(key.trim(), profile.model));
     setTesting(false);
   };
@@ -62,7 +132,9 @@ export function Settings() {
     try {
       const data = JSON.parse(await file.text()) as BackupFile;
       if (!confirm(`Importer ${data.meals?.length ?? 0} repas et ${data.weightLogs?.length ?? 0} pesées ?\nLes données actuelles seront remplacées.`)) return;
+      dirty.current = false;
       await importBackup(data, { includeApiKey: !!data.profile?.apiKey });
+      setDraft(await ensureProfile());
       toast('Sauvegarde importée avec succès');
       refreshStorage();
     } catch (e) {
@@ -73,7 +145,9 @@ export function Settings() {
   const resetAll = async () => {
     if (!confirm('Supprimer définitivement TOUTES les données (repas, pesées, profil) ?')) return;
     if (!confirm('Dernière confirmation : cette action est irréversible. Continuer ?')) return;
+    dirty.current = false;
     await Promise.all([db.meals.clear(), db.weightLogs.clear(), db.waterLogs.clear(), db.userProfile.clear()]);
+    setDraft(null);
     toast('Toutes les données ont été supprimées', 'info');
   };
 
@@ -83,7 +157,21 @@ export function Settings() {
 
   return (
     <div className="space-y-3">
-      <h1 className="pt-1 text-lg font-bold text-slate-50">Réglages</h1>
+      <div className="flex items-center justify-between pt-1">
+        <h1 className="text-lg font-bold text-slate-50">Réglages</h1>
+        <span className="flex items-center gap-1 text-xs text-slate-400">
+          {saveState === 'saving' && (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Enregistrement…
+            </>
+          )}
+          {saveState === 'saved' && (
+            <>
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> Enregistré
+            </>
+          )}
+        </span>
+      </div>
 
       {/* ---------- IA ---------- */}
       <Card>
@@ -158,7 +246,7 @@ export function Settings() {
         <CardContent className="space-y-3">
           <div>
             <Label>Prénom</Label>
-            <Input value={profile.name} onChange={(e) => updateProfile({ name: e.target.value })} placeholder="Optionnel" />
+            <Input value={profile.name} onChange={(e) => updateProfile({ name: e.target.value })} placeholder="Optionnel" autoComplete="given-name" autoCapitalize="words" className="text-base" />
           </div>
           <div>
             <Label>Sexe</Label>
@@ -178,7 +266,7 @@ export function Settings() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <NumberField label="Poids cible" value={profile.targetWeight} onChange={(v) => updateProfile({ targetWeight: v })} unit="kg" step={0.1} />
-            <NumberField label="Masse grasse (optionnel)" value={profile.bodyFat ?? 0} onChange={(v) => updateProfile({ bodyFat: v || undefined })} unit="%" step={0.5} />
+            <NumberField label="Masse grasse (optionnel)" value={profile.bodyFat ?? 0} onChange={(v) => updateProfile({ bodyFat: v || undefined })} unit="%" allowEmpty placeholder="—" />
           </div>
           <div>
             <Label>Activité quotidienne (hors sport)</Label>
@@ -248,7 +336,10 @@ export function Settings() {
             </div>
             {mealSum !== 100 && <p className="mt-1 text-[11px] text-amber-400">Le total fait {mealSum}% (devrait faire 100 %).</p>}
           </div>
-          <NumberField label="Objectif d'hydratation (0 = automatique)" value={profile.waterGoalMl ?? 0} onChange={(v) => updateProfile({ waterGoalMl: v || undefined })} unit="ml" step={250} />
+          <NumberField label="Objectif d'hydratation (0 = automatique)" value={profile.waterGoalMl ?? 0} onChange={(v) => updateProfile({ waterGoalMl: v || undefined })} unit="ml" allowEmpty placeholder="Auto" />
+          <Button className="w-full" onClick={saveNow}>
+            <CheckCircle2 /> Enregistrer le profil
+          </Button>
         </CardContent>
       </Card>
 

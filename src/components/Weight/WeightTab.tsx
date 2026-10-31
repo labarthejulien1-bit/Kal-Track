@@ -30,7 +30,8 @@ export function WeightTab() {
   const [note, setNote] = useState('');
   const [range, setRange] = useState<Range>('3M');
 
-  const currentValue = weight === '' ? (last?.weight ?? profile.weight) : parseFloat(weight.replace(',', '.'));
+  const parsed = parseFloat(weight.trim().replace(',', '.'));
+  const currentValue = weight === '' ? (last?.weight ?? profile.weight) : Number.isFinite(parsed) ? parsed : 0;
 
   const save = async () => {
     const w = currentValue;
@@ -110,11 +111,11 @@ export function WeightTab() {
           </button>
           <div className="relative">
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.1"
-              value={weight === '' ? round(currentValue, 1) : weight}
-              onChange={(e) => setWeight(e.target.value)}
+              autoComplete="off"
+              value={weight === '' ? String(round(currentValue, 1)).replace('.', ',') : weight}
+              onChange={(e) => setWeight(e.target.value.replace(/[^0-9.,]/g, '') || ' ')}
               onFocus={(e) => e.target.select()}
               className="w-36 bg-transparent text-center text-4xl font-bold tabular-nums text-slate-50 focus:outline-none"
             />

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, Check, Trash2, Sparkles, Plus } from 'lucide-react';
 import { Input, Label } from '@/components/ui/input';
-import { NumberField, NutriScoreBadge } from '@/components/common';
+import { DecimalInput, NumberField, NutriScoreBadge } from '@/components/common';
 import { COLORS, MEAL_EMOJI, MEAL_LABELS, MEAL_TYPES, cn, round, todayISO } from '@/lib/utils';
 import type { MealItem, MealType, MealSource, Nutrients } from '@/types';
 import { scaleNutrients } from '@/services/geminiVision';
@@ -234,11 +234,9 @@ export function MealReviewForm({ initial, onChange }: { initial: Draft; onChange
                 <div className="flex items-center gap-2">
                   <input value={it.name} onChange={(e) => updateItem(i, { name: e.target.value })} className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 focus:outline-none" />
                   <div className="relative w-20">
-                    <input
-                      type="number"
-                      inputMode="decimal"
+                    <DecimalInput
                       value={it.quantity_g}
-                      onChange={(e) => updateItem(i, { quantity_g: parseFloat(e.target.value) || 0 })}
+                      onValueChange={(v) => updateItem(i, { quantity_g: v })}
                       className="h-8 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 pr-6 text-right text-xs text-slate-100"
                     />
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500">g</span>
@@ -251,11 +249,9 @@ export function MealReviewForm({ initial, onChange }: { initial: Draft; onChange
                   {(['calories', 'protein', 'carbs', 'fat', 'sugar'] as const).map((k) => (
                     <label key={k} className="flex flex-col">
                       <span className="text-slate-500">{{ calories: 'kcal', protein: 'P', carbs: 'G', fat: 'L', sugar: 'Sucres' }[k]}</span>
-                      <input
-                        type="number"
-                        inputMode="decimal"
+                      <DecimalInput
                         value={it[k]}
-                        onChange={(e) => updateItem(i, { [k]: parseFloat(e.target.value) || 0 })}
+                        onValueChange={(v) => updateItem(i, { [k]: v })}
                         className="h-7 w-full rounded-md border border-slate-700 bg-slate-900 px-1 text-slate-200"
                       />
                     </label>
