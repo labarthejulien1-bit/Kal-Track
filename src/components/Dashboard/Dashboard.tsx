@@ -50,6 +50,7 @@ export function Dashboard() {
 
       <DateNavigator date={selectedDate} onChange={setSelectedDate} />
       <CalorieSummary totals={totals} goals={goals} goal={profile.goal} />
+      <MealDistribution byType={byType} total={totals.calories} goal={goals.calories} split={profile.mealSplit} />
       <MacroCircles totals={totals} goals={goals} />
 
       <SectionTitle
@@ -78,7 +79,6 @@ export function Dashboard() {
         ))}
       </div>
 
-      <MealDistribution byType={byType} total={totals.calories} goal={goals.calories} split={profile.mealSplit} />
       <WaterTracker date={selectedDate} goal={goals.water} />
 
       {totals.calories > 0 && <DayInsight totals={totals} goals={goals} />}
