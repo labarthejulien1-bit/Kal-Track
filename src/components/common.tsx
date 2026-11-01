@@ -44,18 +44,21 @@ export function Ring({
           style={{ transition: 'stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)', filter: `drop-shadow(0 0 6px ${color}55)` }}
         />
         {over > 0 && (
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            stroke="#ef4444"
-            strokeWidth={stroke * 0.55}
-            fill="none"
-            strokeLinecap="round"
-            strokeDasharray={c}
-            strokeDashoffset={c * (1 - over)}
-            style={{ transition: 'stroke-dashoffset .8s' }}
-          />
+          <>
+            <circle cx={size / 2} cy={size / 2} r={r} stroke="#0f172a" strokeWidth={stroke + 4} fill="none" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - over)} />
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              stroke="#dc2626"
+              strokeWidth={stroke}
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={c}
+              strokeDashoffset={c * (1 - over)}
+              style={{ transition: 'stroke-dashoffset .8s', filter: 'drop-shadow(0 0 6px #ef4444aa)' }}
+            />
+          </>
         )}
         {ticks &&
           Array.from({ length: 20 }).map((_, i) => {

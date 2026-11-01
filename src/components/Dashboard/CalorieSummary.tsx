@@ -13,9 +13,14 @@ export function CalorieSummary({ totals, goals, goal }: { totals: Nutrients; goa
   return (
     <Card className="overflow-hidden p-4">
       <div className="flex items-center gap-4">
-        <Ring value={totals.calories} max={goals.calories} size={156} stroke={14} color={over ? '#ef4444' : COLORS.kcal} ticks>
+        <Ring value={totals.calories} max={goals.calories} size={156} stroke={14} color={COLORS.kcal} ticks>
           <span className="text-3xl font-bold tabular-nums text-slate-50">{round(totals.calories)}</span>
           <span className="text-[11px] text-slate-400">kcal consommées</span>
+          {over && (
+            <span className="mt-1 rounded-full bg-red-600/90 px-2 py-0.5 text-xs font-bold tabular-nums text-white shadow-lg shadow-red-600/30">
+              +{round(-remaining)} kcal
+            </span>
+          )}
         </Ring>
         <div className="flex flex-1 flex-col gap-3">
           <Stat icon={<Target className="h-4 w-4" />} label="Objectif" value={goals.calories} color="#94a3b8" />
@@ -87,8 +92,13 @@ export function BarRow({ label, value, max, color, unit, limit, icon }: { label:
           {label}
           {limit && <span className="text-[10px] text-slate-500">(limite)</span>}
         </span>
-        <span className={over && limit ? 'font-semibold text-rose-400' : 'text-slate-300'}>
-          <span className="tabular-nums">{round(value, 1)}</span>
+        <span className="flex items-center gap-1.5 text-slate-300">
+          {over && (
+            <span className="rounded-full bg-red-600/90 px-1.5 py-px text-[10px] font-bold tabular-nums text-white">
+              +{round(value - max, 1)} {unit}
+            </span>
+          )}
+          <span className={over ? 'font-semibold tabular-nums text-red-400' : 'tabular-nums'}>{round(value, 1)}</span>
           <span className="text-slate-500"> / {max} {unit}</span>
         </span>
       </div>
