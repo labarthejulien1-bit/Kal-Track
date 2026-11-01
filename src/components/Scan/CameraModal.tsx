@@ -14,7 +14,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/components/ui/toast';
 import { useApp, type AddMode, type AddRequest } from '@/components/AppContext';
 import { MEAL_LABELS, guessMealType, haptic, round, todayISO, fromISODate } from '@/lib/utils';
-import type { MealAnalysis, MealType, MealSource } from '@/types';
+import type { Meal, MealAnalysis, MealItem, MealType, MealSource } from '@/types';
 
 type Step = AddMode | 'analyzing' | 'review' | 'photo-preview';
 
@@ -26,6 +26,47 @@ function timestampFor(date: string, type: MealType) {
   const [h, m] = DEFAULT_HOURS[type];
   d.setHours(h, m, 0, 0);
   return d.getTime();
+}
+
+/** Construit un objet repas « propre » (nombres valides, aucune valeur exotique) avant écriture IndexedDB. */
+function n(v: unknown, d = 1) {
+  const x = typeof v === 'number' ? v : parseFloat(String(v ?? '').replace(',', '.'));
+  return Number.isFinite(x) && x >= 0 ? round(x, d) : 0;
+}
+
+function buildMeal(d: Draft, timestamp: number): Meal {
+  const items: MealItem[] = (Array.isArray(d.items) ? d.items : []).map((it) => ({
+    name: String(it?.name ?? 'Aliment'),
+    quantity_g: n(it?.quantity_g, 0),
+    calories: n(it?.calories, 0),
+    protein: n(it?.protein),
+    carbs: n(it?.carbs),
+    fat: n(it?.fat),
+    sugar: n(it?.sugar),
+    fiber: n(it?.fiber),
+  }));
+  const meal: Meal = {
+    date: /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : todayISO(),
+    timestamp: Number.isFinite(timestamp) ? timestamp : Date.now(),
+    mealType: (['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).includes(d.mealType) ? d.mealType : 'snack',
+    title: String(d.title).trim(),
+    calories: n(d.calories, 0),
+    protein: n(d.protein),
+    carbs: n(d.carbs),
+    fat: n(d.fat),
+    sugar: n(d.sugar),
+    fiber: n(d.fiber),
+    items,
+    source: d.source ?? 'manual',
+  };
+  if (typeof d.id === 'number') meal.id = d.id;
+  if (typeof d.image === 'string' && d.image) meal.image = d.image;
+  if (d.confidenceNote) meal.confidenceNote = String(d.confidenceNote);
+  if (typeof d.confidence === 'number' && Number.isFinite(d.confidence)) meal.confidence = d.confidence;
+  if (d.barcode) meal.barcode = String(d.barcode);
+  if (d.nutriScore) meal.nutriScore = String(d.nutriScore);
+  if (d.favorite) meal.favorite = true;
+  return meal;
 }
 
 const LOADING_MESSAGES = ['Identification des aliments…', 'Estimation des portions…', 'Prise en compte de la cuisson…', 'Calcul des macronutriments…', 'Vérification de la cohérence…'];
@@ -47,9 +88,15 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   const [search, setSearch] = useState('');
   const [pendingMode, setPendingMode] = useState<'photo' | 'label'>('photo');
   const [formKey, setFormKey] = useState(0);
+  const draftRef = useRef<Draft | null>(null);
+  const updateDraft = useCallback((d: Draft) => {
+    draftRef.current = d;
+    setDraft(d);
+  }, []);
   const abortRef = useRef<AbortController | null>(null);
 
   const openReview = (d: Draft) => {
+    draftRef.current = d;
     setDraft(d);
     setFormKey((k) => k + 1);
     setStep('review');
@@ -72,6 +119,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
       openReview({ ...e, items: e.items ?? [], sugar: e.sugar ?? 0, fiber: e.fiber ?? 0 });
     } else {
       setDraft(null);
+      draftRef.current = null;
       const m = request.mode ?? 'choose';
       setStep(m);
       if (m === 'manual') startManual();
@@ -216,24 +264,44 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
     [date, mealType],
   );
 
+  const [saving, setSaving] = useState(false);
+
   const save = async () => {
-    if (!draft) return;
-    if (!draft.title.trim()) {
+    if (saving) return;
+    const current = draftRef.current ?? draft;
+    if (!current) {
+      toast('Aucune donnée à enregistrer, recommence l’ajout.', 'error');
+      return;
+    }
+    if (!String(current.title ?? '').trim()) {
       toast('Donne un nom au repas', 'error');
       return;
     }
-    const { per100g: _p, servingSize_g: _s, ...rest } = draft;
-    const sameDay = request?.edit && request.edit.date === draft.date && request.edit.mealType === draft.mealType;
-    await saveMeal({
-      ...rest,
-      title: draft.title.trim(),
-      calories: round(draft.calories),
-      timestamp: sameDay ? request!.edit!.timestamp : timestampFor(draft.date, draft.mealType),
-    });
-    haptic(25);
-    toast(request?.edit ? 'Repas mis à jour' : `Ajouté au ${MEAL_LABELS[draft.mealType].toLowerCase()}`);
-    onClose();
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    setSaving(true);
+    try {
+      const sameDay = !!request?.edit && request.edit.date === current.date && request.edit.mealType === current.mealType;
+      const meal = buildMeal(current, sameDay ? request!.edit!.timestamp : timestampFor(current.date, current.mealType));
+      try {
+        await saveMeal(meal);
+      } catch (e) {
+        // Dernier recours : réessayer sans la photo (stockage plein ou image refusée par l'appareil).
+        if (!meal.image) throw e;
+        console.error('Échec avec photo, nouvel essai sans photo', e);
+        await saveMeal({ ...meal, image: undefined });
+        toast('Repas enregistré sans la photo (stockage indisponible)', 'info');
+      }
+      haptic(25);
+      toast(request?.edit ? 'Repas mis à jour' : `Ajouté au ${MEAL_LABELS[meal.mealType].toLowerCase()}`);
+      onClose();
+    } catch (e) {
+      console.error(e);
+      toast(`Enregistrement impossible : ${(e as Error)?.message || e}`, 'error');
+    } finally {
+      setSaving(false);
+    }
   };
+
 
   const back = () => {
     abortRef.current?.abort();
@@ -263,7 +331,8 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
                 <ArrowLeft /> Retour
               </Button>
             )}
-            <Button className="flex-1" onClick={save}>
+            <Button type="button" className="flex-1" onClick={save} disabled={saving}>
+              {saving && <Loader2 className="animate-spin" />}
               {request?.edit ? 'Mettre à jour' : 'Enregistrer'} · {round(draft?.calories ?? 0)} kcal
             </Button>
           </div>
@@ -412,7 +481,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
         </div>
       )}
 
-      {step === 'review' && draft && <MealReviewForm key={formKey} initial={draft} onChange={setDraft} />}
+      {step === 'review' && draft && <MealReviewForm key={formKey} initial={draft} onChange={updateDraft} />}
     </Sheet>
   );
 }

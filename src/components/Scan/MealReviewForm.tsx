@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Check, Trash2, Sparkles, Plus } from 'lucide-react';
 import { Input, Label } from '@/components/ui/input';
 import { DecimalInput, NumberField, NutriScoreBadge } from '@/components/common';
@@ -55,12 +55,16 @@ export function MealReviewForm({ initial, onChange }: { initial: Draft; onChange
   const [grams, setGrams] = useState<number>(initial.servingSize_g ?? 100);
 
   const update = (patch: Partial<Draft>) => {
-    setD((prev) => {
-      const next = { ...prev, ...patch };
-      onChange(next);
-      return next;
-    });
+    setD((prev) => ({ ...prev, ...patch }));
   };
+
+  // Remonte chaque modification au parent (hors du rendu, pour éviter les mises à jour perdues).
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  useEffect(() => {
+    onChangeRef.current(d);
+  }, [d]);
+
 
   const applyGrams = (g: number) => {
     setGrams(g);

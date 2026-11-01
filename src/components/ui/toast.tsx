@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +14,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts((t) => [...t, { id, text, kind, action }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), action ? 5000 : 2800);
   }, []);
+  // Toute erreur inattendue est affichée au lieu d'échouer silencieusement.
+  useEffect(() => {
+    const onRejection = (e: PromiseRejectionEvent) => {
+      if ((e.reason as Error)?.name === 'AbortError') return;
+      push(`Erreur : ${(e.reason as Error)?.message ?? String(e.reason)}`, 'error');
+    };
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => window.removeEventListener('unhandledrejection', onRejection);
+  }, [push]);
+
   return (
     <Ctx.Provider value={push}>
       {children}
