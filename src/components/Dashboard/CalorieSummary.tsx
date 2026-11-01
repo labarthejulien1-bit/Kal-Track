@@ -14,12 +14,12 @@ export function CalorieSummary({ totals, goals, goal }: { totals: Nutrients; goa
     <Card className="overflow-hidden p-4">
       <div className="flex items-center gap-4">
         <Ring value={totals.calories} max={goals.calories} size={156} stroke={14} color={over ? '#ef4444' : COLORS.kcal} ticks>
-          <span className="text-3xl font-bold tabular-nums text-slate-50">{round(Math.abs(remaining))}</span>
-          <span className="text-[11px] text-slate-400">{over ? 'kcal en trop' : 'kcal restantes'}</span>
+          <span className="text-3xl font-bold tabular-nums text-slate-50">{round(totals.calories)}</span>
+          <span className="text-[11px] text-slate-400">kcal consommées</span>
         </Ring>
         <div className="flex flex-1 flex-col gap-3">
           <Stat icon={<Target className="h-4 w-4" />} label="Objectif" value={goals.calories} color="#94a3b8" />
-          <Stat icon={<UtensilsCrossed className="h-4 w-4" />} label="Consommé" value={round(totals.calories)} color={COLORS.kcal} />
+          <Stat icon={<UtensilsCrossed className="h-4 w-4" />} label={over ? 'En trop' : 'Restant'} value={round(Math.abs(remaining))} color={over ? '#ef4444' : COLORS.kcal} />
           <Stat icon={<Flame className="h-4 w-4" />} label="Progression" value={`${round((totals.calories / Math.max(1, goals.calories)) * 100)}%`} color={over ? '#ef4444' : '#fbbf24'} />
           <span className="w-fit rounded-full bg-slate-700/60 px-2 py-0.5 text-[10px] text-slate-300">{GOAL_LABELS[goal]}</span>
         </div>
@@ -62,32 +62,11 @@ const MACROS = [
   { key: 'fat', label: 'Lipides', color: COLORS.fat, kcalPerG: 9 },
 ] as const;
 
-/** Les 3 cercles bilans du jour (protéines / glucides / lipides). */
+/** Bilan du jour en barres : protéines, glucides, lipides, sucres et fibres. */
 export function MacroCircles({ totals, goals }: { totals: Nutrients; goals: Goals }) {
-  const totalMacroKcal = totals.protein * 4 + totals.carbs * 4 + totals.fat * 9;
   return (
     <Card className="p-4">
-      <div className="grid grid-cols-3 gap-2">
-        {MACROS.map((m) => {
-          const v = totals[m.key];
-          const g = goals[m.key];
-          const left = g - v;
-          const share = totalMacroKcal > 0 ? (v * m.kcalPerG * 100) / totalMacroKcal : 0;
-          return (
-            <div key={m.key} className="flex flex-col items-center gap-1">
-              <Ring value={v} max={g} size={92} stroke={9} color={m.color}>
-                <span className="text-lg font-bold tabular-nums text-slate-50">{round(v)}</span>
-                <span className="text-[10px] text-slate-400">/ {g} g</span>
-              </Ring>
-              <span className="text-xs font-semibold" style={{ color: m.color }}>{m.label}</span>
-              <span className="text-[10px] text-slate-400">
-                {left >= 0 ? `reste ${round(left)} g` : `+${round(-left)} g`} · {round(share)}% kcal
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="mt-4 space-y-3">
+      <div className="space-y-3">
         {MACROS.map((m) => (
           <BarRow key={m.key} label={m.label} value={totals[m.key]} max={goals[m.key]} color={m.color} unit="g" />
         ))}
