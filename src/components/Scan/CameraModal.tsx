@@ -359,9 +359,9 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
       {step === 'choose' && (
         <div className="grid grid-cols-2 gap-2 pb-2">
           <ModeButton icon={Camera} color="#10b981" title="Photo du plat" text="Analyse IA détaillée" onClick={() => setStep('photo')} big />
-          <ModeButton icon={Barcode} color="#6366f1" title="Code-barres" text="Produit emballé" onClick={() => setStep('barcode')} big />
+          <ModeButton icon={MessageSquareText} color="#d946ef" title="Décrire" text="Texte libre → IA" onClick={() => setStep('text')} big />
           <ModeButton icon={ScanText} color="#f59e0b" title="Étiquette" text="Tableau nutritionnel" onClick={() => setStep('label')} />
-          <ModeButton icon={MessageSquareText} color="#d946ef" title="Décrire" text="Texte libre → IA" onClick={() => setStep('text')} />
+          <ModeButton icon={Barcode} color="#6366f1" title="Code-barres" text="Produit emballé" onClick={() => setStep('barcode')} />
           <ModeButton icon={History} color="#0ea5e9" title="Récents & favoris" text={`${recent.length} enregistrés`} onClick={() => setStep('recent')} />
           <ModeButton icon={Keyboard} color="#94a3b8" title="Saisie manuelle" text="Valeurs connues" onClick={startManual} />
         </div>
