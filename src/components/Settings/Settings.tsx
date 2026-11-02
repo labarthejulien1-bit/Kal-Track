@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { KeyRound, Eye, EyeOff, Wifi, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, ExternalLink, Info } from 'lucide-react';
+import { KeyRound, Eye, EyeOff, Wifi, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, ExternalLink, Info, HelpCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { SegmentedTabs } from '@/components/ui/tabs';
 import { NumberField } from '@/components/common';
+import { ApiKeyHelp } from './ApiKeyHelp';
 import { useToast } from '@/components/ui/toast';
 import { ensureProfile, useProfile } from '@/hooks/useProfile';
 import { GEMINI_MODELS, testGeminiConnection } from '@/services/geminiVision';
@@ -90,6 +91,26 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
+  const keyInputRef = useRef<HTMLInputElement>(null);
+
+  const pasteKey = async () => {
+    setShowHelp(false);
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (/^AIza[\w-]{20,}$/.test(text)) {
+        setKey(text);
+        await updateProfile({ apiKey: text });
+        setShowKey(false);
+        toast('Clé collée ! Appuie sur « Tester la connexion »');
+        return;
+      }
+      toast('Aucune clé trouvée dans le presse-papiers. Colle-la à la main dans le champ.', 'info');
+    } catch {
+      toast('Appuie longuement dans le champ puis « Coller ».', 'info');
+    }
+    setTimeout(() => keyInputRef.current?.focus(), 300);
+  };
   const isPreset = GEMINI_MODELS.some((m) => m.id === profile.model);
   const [customModel, setCustomModel] = useState(isPreset ? '' : profile.model);
   useEffect(() => setKey(profile.apiKey), [profile.apiKey]);
@@ -179,13 +200,20 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           <CardTitle className="flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-indigo-400" /> Intelligence artificielle (Gemini)
           </CardTitle>
+          <button
+            onClick={() => setShowHelp(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-400/40 active:scale-95"
+            aria-label="Comment obtenir une clé API ?"
+          >
+            <HelpCircle className="h-5 w-5" />
+          </button>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
             <Label>Clé API Google Gemini</Label>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Input type={showKey ? 'text' : 'password'} value={key} onChange={(e) => setKey(e.target.value)} onBlur={saveKey} placeholder="AIza…" autoComplete="off" spellCheck={false} className="pr-10" />
+                <Input ref={keyInputRef} type={showKey ? 'text' : 'password'} value={key} onChange={(e) => setKey(e.target.value)} onBlur={saveKey} placeholder="AIza…" autoComplete="off" spellCheck={false} className="pr-10" />
                 <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400" onClick={() => setShowKey((s) => !s)} aria-label="Afficher la clé">
                   {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -235,6 +263,8 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           <p className="text-[11px] text-slate-500">La clé est stockée uniquement sur cet appareil (IndexedDB). Les photos sont envoyées directement à Google, sans serveur intermédiaire.</p>
         </CardContent>
       </Card>
+
+      <ApiKeyHelp open={showHelp} onClose={() => setShowHelp(false)} onPaste={pasteKey} />
 
       {/* ---------- Profil ---------- */}
       <Card>
