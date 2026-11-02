@@ -166,7 +166,7 @@ export const DEFAULT_PROFILE: Profile = {
   mealSplit: { breakfast: 25, lunch: 35, dinner: 30, snack: 10 },
   waterGoalMl: undefined,
   apiKey: '',
-  model: 'gemini-3.6-flash',
+  model: 'gemini-3.5-flash-lite',
   aiDetailLevel: 'detailed',
   createdAt: Date.now(),
   updatedAt: Date.now(),

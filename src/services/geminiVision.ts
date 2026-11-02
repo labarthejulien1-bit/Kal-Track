@@ -4,8 +4,8 @@ import { round } from '@/lib/utils';
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export const GEMINI_MODELS = [
-  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite', hint: 'Rapide & économique' },
-  { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash', hint: 'Équilibré (recommandé)' },
+  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite', hint: 'Rapide & économique (recommandé)' },
+  { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash', hint: 'Équilibré' },
   { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash', hint: 'Le plus précis' },
   { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite', hint: 'Léger' },
 ] as const;
