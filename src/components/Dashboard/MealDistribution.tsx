@@ -36,6 +36,9 @@ export function MealDistribution({
             const v = byType[t].totals.calories;
             const pct = total > 0 ? (v / total) * 100 : 0;
             const target = (goal * split[t]) / 100;
+            // % atteint du budget calorique de ce repas
+            const pctTarget = target > 0 ? (v / target) * 100 : 0;
+            const tColor = pctTarget > 115 ? '#f87171' : pctTarget >= 85 ? '#34d399' : '#94a3b8';
             return (
               <div key={t} className="rounded-xl bg-slate-900/50 p-2">
                 <div className="flex items-center gap-1.5 text-xs">
@@ -44,12 +47,16 @@ export function MealDistribution({
                 </div>
                 <div className="mt-1 flex items-baseline justify-between">
                   <span className="text-sm font-semibold tabular-nums text-slate-100">{round(v)} kcal</span>
-                  <span className="text-[11px] text-slate-400">{round(pct)}%</span>
+                  <span className="rounded-full px-1.5 py-0.5 text-xs font-bold tabular-nums" style={{ color: tColor, background: `${tColor}22` }} title="% du budget de ce repas">
+                    {round(pctTarget)}%
+                  </span>
                 </div>
                 <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-700">
                   <div className="h-full rounded-full" style={{ width: `${Math.min(100, target > 0 ? (v / target) * 100 : 0)}%`, background: v > target * 1.15 ? '#ef4444' : MEAL_COLORS[t] }} />
                 </div>
-                <div className="mt-0.5 text-[10px] text-slate-500">cible ≈ {round(target)} kcal ({split[t]}%)</div>
+                <div className="mt-0.5 text-[10px] text-slate-500">
+                  cible {round(target)} kcal
+                </div>
               </div>
             );
           })}
