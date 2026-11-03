@@ -11,7 +11,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { deleteWeight, trendSeries, upsertWeight, useWeights } from '@/hooks/useWeights';
 import { useMealsRange } from '@/hooks/useMeals';
 import { adaptiveTdee, bmiCategory } from '@/services/bmrCalculator';
-import { COLORS, addDays, daysBetween, formatDate, haptic, round, todayISO, capitalize } from '@/lib/utils';
+import { COLORS, addDays, daysBetween, formatDate, fromISODate, haptic, round, todayISO, capitalize } from '@/lib/utils';
 import { ChartTooltip, axisProps, gridProps } from '@/components/Analytics/chartKit';
 import { db } from '@/db/database';
 
@@ -46,10 +46,22 @@ export function WeightTab() {
   const bump = (d: number) => setWeight(String(round(currentValue + d, 1)));
 
   const trend = useMemo(() => trendSeries(logs), [logs]);
-  const from = addDays(today, -RANGE_DAYS[range]);
+  // Plage de temps réelle : l'axe X couvre toute la période choisie (1M, 3M…), pas seulement les pesées.
+  const firstDate = logs[0]?.date ?? today;
+  const from = range === 'Tout' ? (firstDate < today ? firstDate : addDays(today, -7)) : addDays(today, -RANGE_DAYS[range]);
+  const fromTs = fromISODate(from).getTime();
+  const toTs = fromISODate(today).getTime();
   const chartData = trend
     .filter((t) => t.date >= from)
-    .map((t) => ({ label: formatDate(t.date, { day: 'numeric', month: 'short' }), date: t.date, Poids: t.weight, Tendance: t.trend }));
+    .map((t) => ({ x: fromISODate(t.date).getTime(), label: capitalize(formatDate(t.date, { weekday: 'short', day: 'numeric', month: 'short' })), Poids: t.weight, Tendance: t.trend }));
+  const xTicks = Array.from({ length: 5 }, (_, i) => Math.round(fromTs + ((toTs - fromTs) * i) / 4));
+  const spanDays = (toTs - fromTs) / 86400000;
+  const fmtTick = (v: number) => {
+    const d = new Date(v);
+    return spanDays > 400
+      ? d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })
+      : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  };
 
   // Projection par régression linéaire sur la tendance des 30 derniers jours.
   const projection = useMemo(() => {
@@ -192,23 +204,23 @@ export function WeightTab() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid {...gridProps} />
-                <XAxis dataKey="label" {...axisProps} minTickGap={20} />
+                <XAxis dataKey="x" type="number" scale="time" domain={[fromTs, toTs]} ticks={xTicks} tickFormatter={fmtTick} {...axisProps} allowDataOverflow />
                 <YAxis
                   {...axisProps}
                   unit="kg"
                   tickCount={7}
                   domain={[(min: number) => Math.floor(Math.min(min, profile.targetWeight) - 1), (max: number) => Math.ceil(Math.max(max, profile.targetWeight) + 1)]}
                 />
-                <Tooltip content={<ChartTooltip unit=" kg" />} />
-                <Area dataKey="Tendance" stroke={COLORS.water} strokeWidth={2.5} fill="url(#wFill)" type="monotone" dot={false} baseValue="dataMin" />
-                <Line dataKey="Poids" stroke="transparent" dot={{ r: 3, fill: '#e2e8f0', stroke: COLORS.water }} activeDot={{ r: 5 }} />
+                <Tooltip content={(p) => <ChartTooltip active={p.active} payload={p.payload as never} label={(p.payload?.[0]?.payload as { label?: string } | undefined)?.label} unit=" kg" />} />
+                <Area dataKey="Poids" name="Poids" stroke={COLORS.water} strokeWidth={2.5} fill="url(#wFill)" type="linear" baseValue="dataMin" dot={{ r: 3.5, fill: '#e2e8f0', stroke: COLORS.water, strokeWidth: 2 }} activeDot={{ r: 6 }} isAnimationActive={false} />
+                <Line dataKey="Tendance" name="Tendance" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 4" type="monotone" dot={false} isAnimationActive={false} />
                 <ReferenceLine y={profile.targetWeight} stroke={COLORS.kcal} strokeDasharray="6 4" label={{ value: `Objectif ${profile.targetWeight} kg`, fill: COLORS.kcal, fontSize: 10, position: 'insideBottomRight' }} />
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
             <EmptyState icon={<Scale className="h-8 w-8" />} title="Pas encore de pesée" text="Ajoute ton poids pour voir la courbe." />
           )}
-          <p className="text-center text-[10px] text-slate-500">Points = pesées · courbe = tendance lissée (moyenne mobile exponentielle)</p>
+          <p className="text-center text-[10px] text-slate-500">Courbe bleue = tes pesées · pointillés gris = tendance lissée</p>
         </CardContent>
       </Card>
 
