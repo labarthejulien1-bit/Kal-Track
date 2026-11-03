@@ -34,7 +34,6 @@ export function MealDistribution({
         <div className="mt-3 grid grid-cols-2 gap-2">
           {MEAL_TYPES.map((t) => {
             const v = byType[t].totals.calories;
-            const pct = total > 0 ? (v / total) * 100 : 0;
             const target = (goal * split[t]) / 100;
             // % atteint du budget calorique de ce repas
             const pctTarget = target > 0 ? (v / target) * 100 : 0;
