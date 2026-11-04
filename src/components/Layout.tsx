@@ -36,8 +36,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto min-h-dvh max-w-lg">
       <main className="px-4 pb-32 pt-[max(0.75rem,env(safe-area-inset-top))]">{children}</main>
-      <nav className="fixed inset-x-0 bottom-0 z-40">
-        <div className="mx-auto max-w-lg border-t border-slate-800 bg-slate-900/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
+      <nav className="fixed inset-x-0 bottom-0 z-40 [transform:translateZ(0)] [backface-visibility:hidden]">
+        <div className="mx-auto max-w-lg border-t border-slate-800 bg-slate-900 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(2,6,23,0.6)]">
           <div className="relative flex items-end">
             {left.map((i) => (
               <NavBtn key={i.tab} item={i} />

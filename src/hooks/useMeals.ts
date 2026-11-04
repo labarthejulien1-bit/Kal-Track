@@ -1,12 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { db } from '@/db/database';
 import type { Meal, MealType, Nutrients } from '@/types';
 import { MEAL_TYPES, sumNutrients, dateRange, addDays, todayISO } from '@/lib/utils';
 
 export function useMealsForDate(date: string) {
   const meals = useLiveQuery(() => db.meals.where('date').equals(date).sortBy('timestamp'), [date]);
-  const list = meals ?? [];
+  const last = useRef<Meal[]>([]);
+  if (meals) last.current = meals;
+  const list = meals ?? last.current;
   const totals = useMemo(() => sumNutrients(list), [list]);
   const byType = useMemo(() => {
     const out = {} as Record<MealType, { meals: Meal[]; totals: Nutrients }>;
@@ -27,7 +29,10 @@ export interface DaySummary extends Nutrients {
 }
 
 export function useMealsRange(start: string, end: string) {
-  const meals = useLiveQuery(() => db.meals.where('date').between(start, end, true, true).toArray(), [start, end]);
+  const fresh = useLiveQuery(() => db.meals.where('date').between(start, end, true, true).toArray(), [start, end]);
+  const lastRange = useRef<Meal[]>([]);
+  if (fresh) lastRange.current = fresh;
+  const meals = fresh ?? lastRange.current;
   const days: DaySummary[] = useMemo(() => {
     const map = new Map<string, Meal[]>();
     for (const m of meals ?? []) {

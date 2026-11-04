@@ -176,3 +176,15 @@ export function downloadFile(filename: string, content: string, type = 'applicat
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/** Petite animation d'arrivée horizontale sans démonter le contenu (évite tout clignotement). */
+export function slideIn(el: HTMLElement | null, dir: 'next' | 'prev') {
+  if (!el || typeof el.animate !== 'function') return;
+  el.animate(
+    [
+      { transform: `translate3d(${dir === 'next' ? 40 : -40}px,0,0)`, opacity: 0.4 },
+      { transform: 'translate3d(0,0,0)', opacity: 1 },
+    ],
+    { duration: 240, easing: 'cubic-bezier(.2,.8,.2,1)' },
+  );
+}

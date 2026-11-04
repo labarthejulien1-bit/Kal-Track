@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { cn, haptic } from '@/lib/utils';
+import { useEffect, useRef } from 'react';
+import { cn, haptic, slideIn } from '@/lib/utils';
 
 /**
  * Zone « balayable » : glisser vers la gauche = suivant, vers la droite = précédent.
@@ -22,7 +22,11 @@ export function SwipeArea({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const touch = useRef<{ x: number; y: number; lock: 'h' | 'v' | null; dx: number } | null>(null);
-  const [dir, setDir] = useState<'next' | 'prev' | null>(null);
+  const dirRef = useRef<'next' | 'prev' | null>(null);
+  useEffect(() => {
+    if (dirRef.current) slideIn(ref.current, dirRef.current);
+    dirRef.current = null;
+  }, [animKey]);
 
   const reset = () => {
     const el = ref.current;
@@ -68,11 +72,11 @@ export function SwipeArea({
         if (!s || s.lock !== 'h') return;
         if (s.dx < -60 && canNext) {
           haptic(8);
-          setDir('next');
+          dirRef.current = 'next';
           onNext();
         } else if (s.dx > 60) {
           haptic(8);
-          setDir('prev');
+          dirRef.current = 'prev';
           onPrev();
         }
       }}
@@ -81,7 +85,7 @@ export function SwipeArea({
         reset();
       }}
     >
-      <div ref={ref} key={animKey} className={cn(dir === 'next' && 'animate-day-next', dir === 'prev' && 'animate-day-prev')}>
+      <div ref={ref}>
         {children}
       </div>
     </div>

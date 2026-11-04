@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Flame, Copy, Sparkles } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { duplicateMeal, useMealsForDate, useStreak } from '@/hooks/useMeals';
@@ -9,7 +9,7 @@ import { MealDistribution } from './MealDistribution';
 import { MealSection } from './MealSection';
 import { WaterTracker } from './WaterTracker';
 import { SectionTitle } from '@/components/common';
-import { addDays, cn, haptic, MEAL_TYPES, round, todayISO } from '@/lib/utils';
+import { addDays, haptic, MEAL_TYPES, round, slideIn, todayISO } from '@/lib/utils';
 import { db } from '@/db/database';
 import { useToast } from '@/components/ui/toast';
 
@@ -28,13 +28,13 @@ export function Dashboard() {
   };
 
   // ---- Navigation par balayage horizontal (swipe) ----
-  const [dir, setDir] = useState<'next' | 'prev' | null>(null);
+  const dirRef = useRef<'next' | 'prev' | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const touch = useRef<{ x: number; y: number; lock: 'h' | 'v' | null; dx: number } | null>(null);
 
   const changeDate = (d: string) => {
     if (d === selectedDate) return;
-    setDir(d > selectedDate ? 'next' : 'prev');
+    dirRef.current = d > selectedDate ? 'next' : 'prev';
     setSelectedDate(d);
   };
 
@@ -44,6 +44,11 @@ export function Dashboard() {
     haptic(8);
     changeDate(d);
   };
+
+  useEffect(() => {
+    if (dirRef.current) slideIn(contentRef.current, dirRef.current);
+    dirRef.current = null;
+  }, [selectedDate]);
 
   const resetDrag = () => {
     const el = contentRef.current;
@@ -114,7 +119,7 @@ export function Dashboard() {
       )}
 
       <DateNavigator date={selectedDate} onChange={changeDate} />
-      <div ref={contentRef} key={selectedDate} className={cn('space-y-3', dir === 'next' && 'animate-day-next', dir === 'prev' && 'animate-day-prev')}>
+      <div ref={contentRef} className="space-y-3">
       <CalorieSummary totals={totals} goals={goals} goal={profile.goal} />
       <MealDistribution byType={byType} total={totals.calories} goal={goals.calories} split={profile.mealSplit} />
       <MacroCircles totals={totals} goals={goals} />
