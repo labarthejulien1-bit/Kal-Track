@@ -50,17 +50,35 @@ export function useMealsRange(start: string, end: string) {
 }
 
 /** Repas récents uniques (par titre) pour l'ajout rapide. */
+export function titleKey(t: string) {
+  return t.trim().toLowerCase();
+}
+
+/** Ajoute/retire un produit des favoris (toutes ses occurrences en cas de retrait). */
+export async function setFavorite(meal: Meal, fav: boolean) {
+  const k = titleKey(meal.title);
+  if (fav) {
+    await db.meals.update(meal.id!, { favorite: true });
+  } else {
+    const ids = (await db.meals.filter((m) => !!m.favorite && titleKey(m.title) === k).primaryKeys()) as number[];
+    await Promise.all(ids.map((id) => db.meals.update(id, { favorite: false })));
+  }
+}
+
 export function useRecentMeals(limit = 30) {
   return (
     useLiveQuery(async () => {
-      const all = await db.meals.orderBy('timestamp').reverse().limit(300).toArray();
+      const recent = await db.meals.orderBy('timestamp').reverse().limit(300).toArray();
+      // Un produit est favori si au moins une de ses occurrences l'est (le favori ne se perd pas à l'usage).
+      const favs = await db.meals.filter((m) => !!m.favorite).toArray();
+      const favKeys = new Set(favs.map((m) => titleKey(m.title)));
       const seen = new Set<string>();
       const out: Meal[] = [];
-      for (const m of all) {
-        const k = m.title.trim().toLowerCase();
+      for (const m of [...recent, ...favs.sort((a, b) => b.timestamp - a.timestamp)]) {
+        const k = titleKey(m.title);
         if (seen.has(k)) continue;
         seen.add(k);
-        out.push(m);
+        out.push({ ...m, favorite: favKeys.has(k) });
       }
       out.sort((a, b) => Number(!!b.favorite) - Number(!!a.favorite));
       return out.slice(0, limit);

@@ -448,7 +448,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
               key={m.id}
               onClick={() => {
                 const { id: _id, timestamp: _t, ...rest } = m;
-                openReview({ ...rest, items: m.items ?? [], sugar: m.sugar ?? 0, fiber: m.fiber ?? 0, date, mealType, favorite: false });
+                openReview({ ...rest, items: m.items ?? [], sugar: m.sugar ?? 0, fiber: m.fiber ?? 0, date, mealType, favorite: !!m.favorite });
               }}
               className="flex w-full items-center gap-3 rounded-xl bg-slate-800/60 p-2 text-left"
             >

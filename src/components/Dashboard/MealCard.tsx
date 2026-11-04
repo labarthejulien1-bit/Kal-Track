@@ -4,7 +4,7 @@ import { MacroPill, NutriScoreBadge, Thumbnail } from '@/components/common';
 import { COLORS, cn, haptic, round, todayISO } from '@/lib/utils';
 import type { Meal, MealSource } from '@/types';
 import { db } from '@/db/database';
-import { deleteMeal, duplicateMeal } from '@/hooks/useMeals';
+import { deleteMeal, duplicateMeal, setFavorite } from '@/hooks/useMeals';
 import { useApp } from '@/components/AppContext';
 import { useToast } from '@/components/ui/toast';
 
@@ -32,7 +32,7 @@ export function MealCard({ meal }: { meal: Meal }) {
 
   const toggleFav = async () => {
     haptic();
-    await db.meals.update(meal.id!, { favorite: !meal.favorite });
+    await setFavorite(meal, !meal.favorite);
   };
 
   const copyToday = async () => {
