@@ -37,7 +37,7 @@ export function MealDistribution({
             const target = (goal * split[t]) / 100;
             // % atteint du budget calorique de ce repas
             const pctTarget = target > 0 ? (v / target) * 100 : 0;
-            const tColor = pctTarget > 115 ? '#f87171' : pctTarget >= 85 ? '#34d399' : '#94a3b8';
+            const tColor = pctTarget > 100 ? '#f87171' : '#34d399';
             return (
               <div key={t} className="rounded-xl bg-slate-900/50 p-2">
                 <div className="flex items-center gap-1.5 text-xs">
@@ -51,7 +51,7 @@ export function MealDistribution({
                   </span>
                 </div>
                 <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-700">
-                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, target > 0 ? (v / target) * 100 : 0)}%`, background: v > target * 1.15 ? '#ef4444' : MEAL_COLORS[t] }} />
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, target > 0 ? (v / target) * 100 : 0)}%`, background: v > target ? '#ef4444' : MEAL_COLORS[t] }} />
                 </div>
                 <div className="mt-0.5 text-[10px] text-slate-500">
                   cible {round(target)} kcal
