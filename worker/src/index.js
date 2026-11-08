@@ -17,21 +17,26 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 /** Compteur de quotas (un seul objet, stockage SQLite intégré). */
 export class QuotaCounter extends DurableObject {
   async fetch(request) {
-    const { action, day, code, limit, globalLimit } = await request.json();
+    const { action, day, code, device, limit, perDevice, globalLimit } = await request.json();
     const kCode = `${day}:${code}`;
+    const kDev = device ? `${day}:${code}:${device}` : null;
     const kAll = `${day}:__all__`;
     const used = (await this.ctx.storage.get(kCode)) ?? 0;
+    const usedDev = kDev ? ((await this.ctx.storage.get(kDev)) ?? 0) : 0;
     const usedAll = (await this.ctx.storage.get(kAll)) ?? 0;
-    if (action === 'peek') return Response.json({ used, usedAll });
+    if (action === 'peek') return Response.json({ used, usedDev, usedAll });
     if (action === 'refund') {
       await this.ctx.storage.put(kCode, Math.max(0, used - 1));
+      if (kDev) await this.ctx.storage.put(kDev, Math.max(0, usedDev - 1));
       await this.ctx.storage.put(kAll, Math.max(0, usedAll - 1));
       return Response.json({ ok: true });
     }
     // action === 'take'
-    if (used >= limit) return Response.json({ ok: false, reason: 'user', used });
-    if (usedAll >= globalLimit) return Response.json({ ok: false, reason: 'global', used });
+    if (kDev && perDevice && usedDev >= perDevice) return Response.json({ ok: false, reason: 'device', used, usedDev });
+    if (used >= limit) return Response.json({ ok: false, reason: 'user', used, usedDev });
+    if (usedAll >= globalLimit) return Response.json({ ok: false, reason: 'global', used, usedDev });
     await this.ctx.storage.put(kCode, used + 1);
+    if (kDev) await this.ctx.storage.put(kDev, usedDev + 1);
     await this.ctx.storage.put(kAll, usedAll + 1);
     // Ménage : on ne garde que quelques jours d'historique.
     if (Math.random() < 0.02) {
@@ -39,7 +44,7 @@ export class QuotaCounter extends DurableObject {
       const keep = new Set([day, prevDay(day)]);
       for (const k of all.keys()) if (!keep.has(k.split(':')[0])) await this.ctx.storage.delete(k);
     }
-    return Response.json({ ok: true, used: used + 1 });
+    return Response.json({ ok: true, used: used + 1, usedDev: usedDev + 1 });
   }
 }
 
@@ -65,7 +70,7 @@ function corsHeaders(request, env) {
   return {
     'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0] || '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Kal-Code',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Kal-Code, X-Kal-Device',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
@@ -98,14 +103,26 @@ export default {
 
     const day = today();
     const limit = Number(entry.daily) || 50;
+    const perDevice = Number(entry.perDevice) || 0;
+    // Identifiant anonyme du téléphone (aucune donnée personnelle).
+    const rawDevice = (request.headers.get('X-Kal-Device') || '').trim();
+    const device = /^[A-Za-z0-9-]{8,64}$/.test(rawDevice) ? rawDevice : '';
+    if (perDevice && !device) {
+      return json({ error: { code: 'update_app', message: "Mets à jour Kal-Track (ferme puis rouvre l'appli) pour utiliser ce code." } }, 400, cors);
+    }
     const globalLimit = Number(env.GLOBAL_DAILY_LIMIT) || 1000;
     const quota = env.QUOTA.get(env.QUOTA.idFromName('global'));
     const callQuota = (action) =>
-      quota.fetch('https://quota/', { method: 'POST', body: JSON.stringify({ action, day, code: entry.name, limit, globalLimit }) }).then((r) => r.json());
+      quota.fetch('https://quota/', { method: 'POST', body: JSON.stringify({ action, day, code: entry.name, device: perDevice ? device : '', limit, perDevice, globalLimit }) }).then((r) => r.json());
 
     if (url.pathname === '/status' && request.method === 'GET') {
-      const { used } = await callQuota('peek');
-      return json({ ok: true, name: entry.name, used, limit, remaining: Math.max(0, limit - used) }, 200, cors);
+      const { used, usedDev } = await callQuota('peek');
+      const groupLeft = Math.max(0, limit - used);
+      if (perDevice) {
+        const devLeft = Math.max(0, perDevice - usedDev);
+        return json({ ok: true, name: entry.name, perDevice: true, used: usedDev, limit: perDevice, remaining: Math.min(devLeft, groupLeft), groupRemaining: groupLeft }, 200, cors);
+      }
+      return json({ ok: true, name: entry.name, used, limit, remaining: groupLeft }, 200, cors);
     }
 
     if (url.pathname !== '/generate' || request.method !== 'POST') {
@@ -133,13 +150,17 @@ export default {
     if (!taken.ok) {
       const message =
         taken.reason === 'global'
-          ? "Le service IA a atteint sa limite du jour. Réessaie demain."
-          : `Tu as utilisé tes ${limit} analyses IA du jour. Réessaie demain.`;
+          ? 'Le service IA a atteint sa limite du jour. Réessaie demain.'
+          : taken.reason === 'device'
+            ? `Tu as utilisé tes ${perDevice} analyses IA du jour sur ce téléphone. Réessaie demain.`
+            : perDevice
+              ? 'Le quota du jour de ce code est épuisé. Réessaie demain.'
+              : `Tu as utilisé tes ${limit} analyses IA du jour. Réessaie demain.`;
       return json({ error: { code: 'quota', message } }, 429, cors);
     }
 
     const model = env.MODEL || 'gemini-3.5-flash-lite';
-    const upstream = await fetch(`${GEMINI_BASE}/${encodeURIComponent(model)}:generateContent`, {
+    const upstream = await fetch(`${env.GEMINI_BASE_OVERRIDE || GEMINI_BASE}/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
       body: JSON.stringify(payload),
@@ -147,7 +168,7 @@ export default {
     const text = await upstream.text();
     // En cas d'échec côté Google, l'analyse n'est pas décomptée.
     if (!upstream.ok) await callQuota('refund');
-    const headers = { 'Content-Type': 'application/json', ...cors, 'X-Kal-Remaining': String(Math.max(0, limit - (taken.used ?? 0))) };
+    const headers = { 'Content-Type': 'application/json', ...cors, 'X-Kal-Remaining': String(perDevice ? Math.max(0, perDevice - (taken.usedDev ?? 0)) : Math.max(0, limit - (taken.used ?? 0))) };
     return new Response(text, { status: upstream.status, headers });
   },
 };

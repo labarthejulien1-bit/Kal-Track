@@ -6,6 +6,21 @@ const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 /** Serveur relais Kal-Track : la clé et le modèle sont gérés côté serveur. */
 export const AI_PROXY_URL = (import.meta.env.VITE_AI_PROXY_URL as string | undefined) || 'https://kal-track-ai.labarthe-julien1.workers.dev';
 
+/** Identifiant anonyme et aléatoire de ce téléphone (pour les quotas par appareil). */
+export function getDeviceId(): string {
+  const KEY = 'kal-device-id';
+  try {
+    let id = localStorage.getItem(KEY);
+    if (!id || !/^[A-Za-z0-9-]{8,64}$/.test(id)) {
+      id = (crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`).replace(/[^A-Za-z0-9-]/g, '');
+      localStorage.setItem(KEY, id);
+    }
+    return id;
+  } catch {
+    return 'nostorage-device';
+  }
+}
+
 export function normalizeCode(code: string) {
   return code.trim().toUpperCase().replace(/\s+/g, '');
 }
@@ -125,7 +140,7 @@ async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, sche
   if (!viaProxy && !apiKey) throw new GeminiError("Code d'accès IA manquant. Ajoute-le dans les Réglages.");
   const url = viaProxy ? `${AI_PROXY_URL}/generate` : `${API_BASE}/${encodeURIComponent(model)}:generateContent`;
   const headers: Record<string, string> = viaProxy
-    ? { 'Content-Type': 'application/json', 'X-Kal-Code': code }
+    ? { 'Content-Type': 'application/json', 'X-Kal-Code': code, 'X-Kal-Device': getDeviceId() }
     : { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey };
 
   const buildBody = (withSchema: boolean) =>
@@ -180,7 +195,7 @@ async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, sche
       /* noop */
     }
     // Erreurs du serveur Kal-Track : message déjà rédigé pour l'utilisateur, pas de nouvel essai.
-    if (viaProxy && ['bad_code', 'quota', 'too_big', 'server'].includes(errCode)) throw new GeminiError(message, res.status);
+    if (viaProxy && ['bad_code', 'quota', 'too_big', 'server', 'update_app'].includes(errCode)) throw new GeminiError(message, res.status);
     lastError = new GeminiError(humanizeError(res.status, message), res.status);
 
     if (res.status === 400 && withSchema && /schema|response_schema|responseSchema/i.test(message)) {
@@ -359,9 +374,16 @@ export async function analyzeNutritionLabel(base64Jpeg: string, cfg: AiConfig): 
 /** Vérifie un code d'accès auprès du serveur Kal-Track (sans consommer d'analyse). */
 export async function checkAccessCode(code: string): Promise<{ ok: boolean; message: string; name?: string; remaining?: number; limit?: number }> {
   try {
-    const res = await fetch(`${AI_PROXY_URL}/status`, { headers: { 'X-Kal-Code': normalizeCode(code) } });
+    const res = await fetch(`${AI_PROXY_URL}/status`, { headers: { 'X-Kal-Code': normalizeCode(code), 'X-Kal-Device': getDeviceId() } });
     const data = await res.json().catch(() => ({}));
-    if (res.ok && data.ok) return { ok: true, name: data.name, remaining: data.remaining, limit: data.limit, message: `Code valide ✔ · ${data.remaining}/${data.limit} analyses disponibles aujourd'hui` };
+    if (res.ok && data.ok)
+      return {
+        ok: true,
+        name: data.name,
+        remaining: data.remaining,
+        limit: data.limit,
+        message: `Code valide ✔ · ${data.remaining}/${data.limit} analyses disponibles aujourd'hui${data.perDevice ? ' sur ce téléphone' : ''}`,
+      };
     return { ok: false, message: data?.error?.message || `Erreur serveur (${res.status})` };
   } catch {
     return { ok: false, message: 'Serveur IA injoignable. Vérifie ta connexion Internet.' };
