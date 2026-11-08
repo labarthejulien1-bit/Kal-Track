@@ -1,0 +1,26 @@
+# Serveur relais IA de Kal-Track (Cloudflare Workers)
+# La clé Gemini n'est PAS ici : elle est injectée depuis le secret GitHub GEMINI_API_KEY.
+name = "kal-track-ai"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+account_id = "3c03fac694789ce3b2a0d22290f3b3ef"
+workers_dev = true
+
+[vars]
+# Modèle utilisé pour tous les utilisateurs (invisible côté appli)
+MODEL = "gemini-3.5-flash-lite"
+# Plafond global d'analyses par jour (protection de la facture)
+GLOBAL_DAILY_LIMIT = "1000"
+# Sites autorisés à appeler le relais
+ALLOWED_ORIGINS = "https://labarthejulien1-bit.github.io,http://localhost:5173,http://localhost:4173"
+# Codes d'accès : empreinte SHA-256 du code -> nom et quota quotidien.
+# Les codes eux-mêmes ne sont jamais écrits dans le dépôt.
+ACCESS_CODES = '{"e6fefe7804c0f8bc9bcf86528b55a467442e1e774e03398be6fb88de91c1fd02": {"name": "Juju", "daily": 100}, "dab277c11577d388355e6230263667bdde7f708624ea2df112a72b8e3085a416": {"name": "Amis", "daily": 200}}'
+
+[[durable_objects.bindings]]
+name = "QUOTA"
+class_name = "QuotaCounter"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["QuotaCounter"]
