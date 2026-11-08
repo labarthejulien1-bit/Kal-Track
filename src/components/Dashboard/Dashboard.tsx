@@ -14,7 +14,7 @@ import { db } from '@/db/database';
 import { useToast } from '@/components/ui/toast';
 
 export function Dashboard() {
-  const { selectedDate, setSelectedDate, setTab } = useApp();
+  const { selectedDate, setSelectedDate } = useApp();
   const { profile, goals } = useProfile();
   const { meals, totals, byType } = useMealsForDate(selectedDate);
   const streak = useStreak();
@@ -111,12 +111,6 @@ export function Dashboard() {
         </div>
       </header>
 
-      {!profile.apiKey && !profile.accessCode && (
-        <button onClick={() => setTab('settings')} className="flex w-full items-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-500/10 p-3 text-left text-xs text-indigo-200">
-          <Sparkles className="h-4 w-4 shrink-0" />
-          Entre ton code d'accès IA dans les Réglages pour activer l'analyse des repas par l'IA.
-        </button>
-      )}
 
       <DateNavigator date={selectedDate} onChange={changeDate} />
       <div ref={contentRef} className="space-y-3">

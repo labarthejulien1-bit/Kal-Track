@@ -98,8 +98,14 @@ export default {
     } catch {
       /* configuration invalide */
     }
-    const entry = code ? codes[await sha256(code)] : undefined;
-    if (!entry) return json({ error: { code: 'bad_code', message: "Code d'accès invalide." } }, 401, cors);
+    let entry;
+    if (code) {
+      entry = codes[await sha256(code)];
+      if (!entry) return json({ error: { code: 'bad_code', message: "Code d'accès invalide." } }, 401, cors);
+    } else {
+      // Accès public inclus dans l'appli : quota par téléphone + plafond total.
+      entry = { name: 'Public', daily: Number(env.PUBLIC_DAILY) || 500, perDevice: Number(env.PUBLIC_PER_DEVICE) || 20 };
+    }
 
     const day = today();
     const limit = Number(entry.daily) || 50;

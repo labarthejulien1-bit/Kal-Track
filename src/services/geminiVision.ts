@@ -136,11 +136,11 @@ interface CallOptions {
 
 async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, schema, signal }: CallOptions): Promise<unknown> {
   const code = accessCode ? normalizeCode(accessCode) : '';
-  const viaProxy = !!code;
-  if (!viaProxy && !apiKey) throw new GeminiError("Code d'accès IA manquant. Ajoute-le dans les Réglages.");
+  // L'IA passe toujours par le serveur Kal-Track (accès public inclus, code facultatif).
+  const viaProxy = true;
   const url = viaProxy ? `${AI_PROXY_URL}/generate` : `${API_BASE}/${encodeURIComponent(model)}:generateContent`;
   const headers: Record<string, string> = viaProxy
-    ? { 'Content-Type': 'application/json', 'X-Kal-Code': code, 'X-Kal-Device': getDeviceId() }
+    ? { 'Content-Type': 'application/json', 'X-Kal-Device': getDeviceId(), ...(code ? { 'X-Kal-Code': code } : {}) }
     : { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey };
 
   const buildBody = (withSchema: boolean) =>
@@ -372,9 +372,10 @@ export async function analyzeNutritionLabel(base64Jpeg: string, cfg: AiConfig): 
 }
 
 /** Vérifie un code d'accès auprès du serveur Kal-Track (sans consommer d'analyse). */
-export async function checkAccessCode(code: string): Promise<{ ok: boolean; message: string; name?: string; remaining?: number; limit?: number }> {
+export async function checkAccessCode(code = ''): Promise<{ ok: boolean; message: string; name?: string; remaining?: number; limit?: number }> {
   try {
-    const res = await fetch(`${AI_PROXY_URL}/status`, { headers: { 'X-Kal-Code': normalizeCode(code), 'X-Kal-Device': getDeviceId() } });
+    const c = normalizeCode(code);
+    const res = await fetch(`${AI_PROXY_URL}/status`, { headers: { 'X-Kal-Device': getDeviceId(), ...(c ? { 'X-Kal-Code': c } : {}) } });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.ok)
       return {
@@ -382,7 +383,7 @@ export async function checkAccessCode(code: string): Promise<{ ok: boolean; mess
         name: data.name,
         remaining: data.remaining,
         limit: data.limit,
-        message: `Code valide ✔ · ${data.remaining}/${data.limit} analyses disponibles aujourd'hui${data.perDevice ? ' sur ce téléphone' : ''}`,
+        message: `${c ? 'Code valide ✔' : 'IA incluse ✔'} · ${data.remaining}/${data.limit} analyses disponibles aujourd'hui${data.perDevice ? ' sur ce téléphone' : ''}`,
       };
     return { ok: false, message: data?.error?.message || `Erreur serveur (${res.status})` };
   } catch {

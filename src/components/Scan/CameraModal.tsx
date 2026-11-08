@@ -12,7 +12,7 @@ import { fetchProductByBarcode } from '@/services/openFoodFacts';
 import { saveMeal, useRecentMeals } from '@/hooks/useMeals';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/components/ui/toast';
-import { useApp, type AddMode, type AddRequest } from '@/components/AppContext';
+import type { AddMode, AddRequest } from '@/components/AppContext';
 import { MEAL_LABELS, guessMealType, haptic, round, todayISO, fromISODate } from '@/lib/utils';
 import type { Meal, MealAnalysis, MealItem, MealType, MealSource } from '@/types';
 
@@ -74,7 +74,6 @@ const LOADING_MESSAGES = ['Identification des aliments…', 'Estimation des port
 export function CameraModal({ request, onClose }: { request: AddRequest | null; onClose: () => void }) {
   const open = !!request;
   const { profile } = useProfile();
-  const { setTab } = useApp();
   const toast = useToast();
   const recent = useRecentMeals(40);
 
@@ -163,11 +162,6 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
     openReview({ title: '', calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, fiber: 0, items: [], source: 'manual', date, mealType });
   };
 
-  const requireKey = () => {
-    if (profile.accessCode || profile.apiKey) return true;
-    setError("Code d'accès IA manquant : ajoute-le dans Réglages pour utiliser l'IA.");
-    return false;
-  };
 
   const pickPhoto = (mode: 'photo' | 'label', fromCamera: boolean) => {
     setPendingMode(mode);
@@ -190,7 +184,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   };
 
   const runPhoto = async () => {
-    if (!photo || !requireKey()) return;
+    if (!photo) return;
     setStep('analyzing');
     setError('');
     abortRef.current = new AbortController();
@@ -206,10 +200,6 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   };
 
   const runLabel = async (img: CompressedImage) => {
-    if (!requireKey()) {
-      setStep('label');
-      return;
-    }
     setStep('analyzing');
     abortRef.current = new AbortController();
     try {
@@ -229,7 +219,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   };
 
   const runText = async () => {
-    if (!text.trim() || !requireKey()) return;
+    if (!text.trim()) return;
     setStep('analyzing');
     setError('');
     abortRef.current = new AbortController();
@@ -347,11 +337,6 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="flex-1">
             {error}
-            {!profile.apiKey && !profile.accessCode && (
-              <button className="mt-1 block font-semibold text-rose-100 underline" onClick={() => { close(); setTab('settings'); }}>
-                Ouvrir les réglages
-              </button>
-            )}
           </div>
         </div>
       )}

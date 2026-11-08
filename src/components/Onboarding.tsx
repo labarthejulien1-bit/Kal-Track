@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Sheet } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { SegmentedTabs } from '@/components/ui/tabs';
-import { Select, Label, Input } from '@/components/ui/input';
-import { normalizeCode } from '@/services/geminiVision';
+import { Select, Label } from '@/components/ui/input';
 import { NumberField } from '@/components/common';
 import { ACTIVITY_FACTORS, DEFAULT_PROFILE, GOAL_LABELS, computeGoals } from '@/services/bmrCalculator';
 import { db } from '@/db/database';
@@ -18,7 +17,7 @@ export function Onboarding({ open, onDone }: { open: boolean; onDone: () => void
   const set = (patch: Partial<Profile>) => setP((x) => ({ ...x, ...patch }));
 
   const finish = async () => {
-    await db.userProfile.put({ ...p, accessCode: normalizeCode(p.accessCode ?? ''), createdAt: Date.now(), updatedAt: Date.now() });
+    await db.userProfile.put({ ...p, createdAt: Date.now(), updatedAt: Date.now() });
     await upsertWeight(todayISO(), p.weight);
     onDone();
   };
@@ -63,19 +62,6 @@ export function Onboarding({ open, onDone }: { open: boolean; onDone: () => void
         <div>
           <Label>Objectif</Label>
           <SegmentedTabs<Goal> value={p.goal} onChange={(v) => set({ goal: v })} options={(['lose', 'maintain', 'gain'] as Goal[]).map((g) => ({ value: g, label: GOAL_LABELS[g].replace(' de poids', '') }))} />
-        </div>
-        <div>
-          <Label>Code d'accès IA (facultatif)</Label>
-          <Input
-            value={p.accessCode ?? ''}
-            onChange={(e) => set({ accessCode: e.target.value.toUpperCase() })}
-            placeholder="KAL-XXXX-XXXX"
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-            className="font-mono text-base uppercase tracking-wider"
-          />
-          <p className="mt-1 text-[11px] text-slate-500">Donné par la personne qui t'a partagé l'appli. Modifiable plus tard dans Réglages.</p>
         </div>
         <div className="rounded-xl bg-slate-800/60 p-3 text-xs text-slate-300">
           Métabolisme de base <b>{goals.bmr} kcal</b> · Dépense totale <b>{goals.tdee} kcal</b>

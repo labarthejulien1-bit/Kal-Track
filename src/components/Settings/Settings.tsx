@@ -93,11 +93,24 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
   const [checking, setChecking] = useState(false);
   const [access, setAccess] = useState<{ ok: boolean; message: string; name?: string } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [showCode, setShowCode] = useState(!!profile.accessCode);
 
+  // Statut de l'IA (accès inclus ou code personnel) et analyses restantes.
   useEffect(() => {
-    if (profile.accessCode) checkAccessCode(profile.accessCode).then(setAccess);
+    checkAccessCode(profile.accessCode ?? '').then(setAccess);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const removeCode = async () => {
+    setCode('');
+    await updateProfile({ accessCode: '' });
+    dirty.current = true;
+    await flush();
+    await db.userProfile.update(1, { accessCode: '' });
+    setShowCode(false);
+    setAccess(await checkAccessCode(''));
+    toast("Code retiré : tu utilises l'IA incluse.", 'info');
+  };
 
   const verify = async () => {
     const v = normalizeCode(code);
@@ -190,50 +203,66 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           <button
             onClick={() => setShowHelp(true)}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-400/40 active:scale-95"
-            aria-label="Où trouver mon code ?"
+            aria-label="À propos de l'analyse IA"
           >
             <HelpCircle className="h-5 w-5" />
           </button>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div>
-            <Label>Code d'accès</Label>
-            <div className="flex gap-2">
-              <Input
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === 'Enter' && verify()}
-                placeholder="KAL-XXXX-XXXX"
-                autoCapitalize="characters"
-                autoComplete="off"
-                spellCheck={false}
-                className="font-mono text-base uppercase tracking-wider"
-              />
-              <Button onClick={verify} disabled={checking || !code.trim()} className="shrink-0">
-                {checking ? <Loader2 className="animate-spin" /> : <CheckCircle2 />} Valider
-              </Button>
-            </div>
-          </div>
-          {access && (
+          {access ? (
             <p className={`flex items-start gap-2 rounded-xl p-2 text-xs ${access.ok ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/10 text-rose-300'}`}>
               {access.ok ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
               <span>
-                {access.ok && access.name ? <b>{access.name} · </b> : null}
+                {access.ok && access.name && access.name !== 'Public' ? <b>{access.name} · </b> : null}
                 {access.message}
               </span>
             </p>
+          ) : (
+            <p className="flex items-center gap-2 text-xs text-slate-500">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Vérification de l'IA…
+            </p>
+          )}
+          {!showCode ? (
+            <button onClick={() => setShowCode(true)} className="text-xs font-medium text-indigo-300 underline-offset-2 hover:underline">
+              J'ai un code d'accès
+            </button>
+          ) : (
+            <div>
+              <Label>Code d'accès (facultatif)</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === 'Enter' && verify()}
+                  placeholder="KAL-XXXX-XXXX"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="font-mono text-base uppercase tracking-wider"
+                />
+                <Button onClick={verify} disabled={checking || !code.trim()} className="shrink-0">
+                  {checking ? <Loader2 className="animate-spin" /> : <CheckCircle2 />} Valider
+                </Button>
+              </div>
+              {profile.accessCode && (
+                <button onClick={removeCode} className="mt-1.5 text-[11px] text-slate-400 underline">
+                  Retirer mon code
+                </button>
+              )}
+            </div>
           )}
           <p className="text-[11px] text-slate-500">Tes repas restent sur ton téléphone. Seules les photos et descriptions à analyser sont envoyées à l'IA, de façon sécurisée.</p>
         </CardContent>
       </Card>
 
-      <Sheet open={showHelp} onClose={() => setShowHelp(false)} title="Où trouver mon code ?">
+      <Sheet open={showHelp} onClose={() => setShowHelp(false)} title="L'analyse IA">
         <div className="space-y-3 pb-4 text-sm text-slate-300">
           <p>
-            Le <b>code d'accès</b> active l'analyse de tes repas par l'IA (photo, étiquette, description). Il ressemble à <span className="rounded-md bg-slate-800 px-1.5 py-0.5 font-mono text-slate-100">KAL-AB12-CD34</span>.
+            L'analyse de tes repas par l'IA (photo, étiquette, description) est <b>incluse</b> dans Kal-Track, sans clé ni inscription.
           </p>
-          <p>👉 Demande-le à la personne qui t'a fait découvrir Kal-Track, puis colle-le dans le champ et appuie sur <b>Valider</b>.</p>
-          <p className="text-slate-400">Chaque code donne droit à un certain nombre d'analyses par jour, remis à zéro chaque nuit. Sans code, tu peux quand même utiliser l'appli : code-barres, saisie manuelle, favoris, suivi du poids…</p>
+          <p>Tu disposes d'un nombre d'analyses par jour sur ce téléphone, remis à zéro chaque nuit à minuit.</p>
+          <p className="text-slate-400">Une fois tes analyses du jour utilisées, tu peux continuer avec le code-barres, la saisie manuelle et tes favoris, puis l'IA revient le lendemain.</p>
+          <p className="text-slate-400">Tu as reçu un <b>code d'accès</b> personnel ? Appuie sur « J'ai un code d'accès » pour l'ajouter.</p>
         </div>
       </Sheet>
 
