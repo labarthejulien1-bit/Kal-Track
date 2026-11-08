@@ -55,6 +55,8 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
     async (patch: Partial<Profile>) => {
       dirty.current = true;
       setSaveState('saving');
+      // Mise à jour immédiate de la copie à enregistrer (évite d'écrire une version sans la modification).
+      latest.current = { ...latest.current, ...patch };
       setDraft((d) => (d ? { ...d, ...patch } : d));
     },
     [setDraft],
@@ -110,6 +112,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
       await updateProfile({ accessCode: v });
       dirty.current = true;
       await flush();
+      await db.userProfile.update(1, { accessCode: v });
       toast(`Bienvenue ${r.name} ! L'IA est activée.`);
     }
     setChecking(false);
