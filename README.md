@@ -28,9 +28,20 @@ npm run preview    # sert le build (tester l'installation PWA)
 - Objectif : perte (−250 / **−500** / −750 kcal), maintien, prise (+150 / **+300** / +500 kcal), avec plancher de sécurité.
 - Macros par défaut 30 % P / 40 % G / 30 % L ; sucres < 10 % de l'énergie (OMS) ; fibres 14 g / 1000 kcal.
 
+## Serveur IA (Cloudflare Worker)
+
+L'analyse IA passe par un petit serveur relais (`worker/`, déployé automatiquement sur Cloudflare par `.github/workflows/deploy-worker.yml`) :
+
+- la **clé Gemini** est stockée comme secret (secret GitHub `GEMINI_API_KEY` → secret du Worker), jamais dans l'appli ;
+- le **modèle** est choisi côté serveur (`MODEL` dans `worker/wrangler.toml`), invisible pour les utilisateurs ;
+- l'accès se fait par **code d'accès** (`ACCESS_CODES` : empreintes SHA-256 des codes → nom + quota quotidien), avec un **plafond global** (`GLOBAL_DAILY_LIMIT`) ;
+- les utilisateurs saisissent leur code dans **Réglages → Analyse IA des repas**.
+
+Secrets GitHub requis : `CLOUDFLARE_API_TOKEN`, `GEMINI_API_KEY`.
+
 ## Persistance
 
-Toutes les données sont dans IndexedDB (Dexie, base `CalorieTrackerDB`). `navigator.storage.persist()` est appelé au démarrage pour empêcher Android de les effacer ; elles survivent aux redémarrages du téléphone. Les seuls appels réseau sont l'API Gemini (avec ta clé) et Open Food Facts (codes-barres).
+Toutes les données sont dans IndexedDB (Dexie, base `CalorieTrackerDB`). `navigator.storage.persist()` est appelé au démarrage pour empêcher Android de les effacer ; elles survivent aux redémarrages du téléphone. Les seuls appels réseau sont le serveur IA Kal-Track (analyses) et Open Food Facts (codes-barres).
 
 ## Structure
 

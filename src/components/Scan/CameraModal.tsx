@@ -164,8 +164,8 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   };
 
   const requireKey = () => {
-    if (profile.apiKey) return true;
-    setError('Clé API Gemini manquante : ajoute-la dans Réglages pour utiliser l’IA.');
+    if (profile.accessCode || profile.apiKey) return true;
+    setError("Code d'accès IA manquant : ajoute-le dans Réglages pour utiliser l'IA.");
     return false;
   };
 
@@ -195,7 +195,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
     setError('');
     abortRef.current = new AbortController();
     try {
-      const a = await analyzeMealPhoto(photo.base64, { apiKey: profile.apiKey, model: profile.model, hint, signal: abortRef.current.signal });
+      const a = await analyzeMealPhoto(photo.base64, { apiKey: profile.apiKey, model: profile.model, accessCode: profile.accessCode, hint, signal: abortRef.current.signal });
       haptic(30);
       openReview(toDraft(a, 'photo', photo.dataUrl));
     } catch (e) {
@@ -213,7 +213,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
     setStep('analyzing');
     abortRef.current = new AbortController();
     try {
-      let a = await analyzeNutritionLabel(img.base64, { apiKey: profile.apiKey, model: profile.model, signal: abortRef.current.signal });
+      let a = await analyzeNutritionLabel(img.base64, { apiKey: profile.apiKey, model: profile.model, accessCode: profile.accessCode, signal: abortRef.current.signal });
       // Si un code-barres a été lu et que le tableau est illisible, on complète avec Open Food Facts.
       if (a.barcode && a.per100g && a.per100g.calories === 0) {
         const off = await fetchProductByBarcode(a.barcode).catch(() => null);
@@ -234,7 +234,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
     setError('');
     abortRef.current = new AbortController();
     try {
-      const a = await analyzeMealText(text, { apiKey: profile.apiKey, model: profile.model, signal: abortRef.current.signal });
+      const a = await analyzeMealText(text, { apiKey: profile.apiKey, model: profile.model, accessCode: profile.accessCode, signal: abortRef.current.signal });
       openReview(toDraft(a, 'text'));
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
@@ -347,7 +347,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="flex-1">
             {error}
-            {!profile.apiKey && (
+            {!profile.apiKey && !profile.accessCode && (
               <button className="mt-1 block font-semibold text-rose-100 underline" onClick={() => { close(); setTab('settings'); }}>
                 Ouvrir les réglages
               </button>

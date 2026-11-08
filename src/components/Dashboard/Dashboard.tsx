@@ -111,10 +111,10 @@ export function Dashboard() {
         </div>
       </header>
 
-      {!profile.apiKey && (
+      {!profile.apiKey && !profile.accessCode && (
         <button onClick={() => setTab('settings')} className="flex w-full items-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-500/10 p-3 text-left text-xs text-indigo-200">
           <Sparkles className="h-4 w-4 shrink-0" />
-          Ajoute ta clé API Gemini dans les Réglages pour activer l'analyse IA des photos.
+          Entre ton code d'accès IA dans les Réglages pour activer l'analyse des repas par l'IA.
         </button>
       )}
 

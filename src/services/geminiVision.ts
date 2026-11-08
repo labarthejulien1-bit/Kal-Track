@@ -3,6 +3,13 @@ import { round } from '@/lib/utils';
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
+/** Serveur relais Kal-Track : la clé et le modèle sont gérés côté serveur. */
+export const AI_PROXY_URL = (import.meta.env.VITE_AI_PROXY_URL as string | undefined) || 'https://kal-track-ai.labarthe-julien1.workers.dev';
+
+export function normalizeCode(code: string) {
+  return code.trim().toUpperCase().replace(/\s+/g, '');
+}
+
 export const GEMINI_MODELS = [
   { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite', hint: 'Rapide & économique (recommandé)' },
   { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash', hint: 'Équilibré' },
@@ -105,15 +112,21 @@ Réponds UNIQUEMENT en JSON valide en français :
 interface CallOptions {
   apiKey: string;
   model: string;
+  accessCode?: string;
   systemPrompt: string;
   parts: Array<Record<string, unknown>>;
   schema?: object;
   signal?: AbortSignal;
 }
 
-async function callGemini({ apiKey, model, systemPrompt, parts, schema, signal }: CallOptions): Promise<unknown> {
-  if (!apiKey) throw new GeminiError('Clé API Gemini manquante. Ajoute-la dans les Réglages.');
-  const url = `${API_BASE}/${encodeURIComponent(model)}:generateContent`;
+async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, schema, signal }: CallOptions): Promise<unknown> {
+  const code = accessCode ? normalizeCode(accessCode) : '';
+  const viaProxy = !!code;
+  if (!viaProxy && !apiKey) throw new GeminiError("Code d'accès IA manquant. Ajoute-le dans les Réglages.");
+  const url = viaProxy ? `${AI_PROXY_URL}/generate` : `${API_BASE}/${encodeURIComponent(model)}:generateContent`;
+  const headers: Record<string, string> = viaProxy
+    ? { 'Content-Type': 'application/json', 'X-Kal-Code': code }
+    : { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey };
 
   const buildBody = (withSchema: boolean) =>
     JSON.stringify({
@@ -134,7 +147,7 @@ async function callGemini({ apiKey, model, systemPrompt, parts, schema, signal }
     try {
       res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        headers,
         body: buildBody(withSchema),
         signal,
       });
@@ -157,13 +170,17 @@ async function callGemini({ apiKey, model, systemPrompt, parts, schema, signal }
       return parseJsonLoose(text);
     }
 
-    let message = `Erreur Gemini (${res.status})`;
+    let message = `Erreur IA (${res.status})`;
+    let errCode = '';
     try {
       const err = await res.json();
       if (err?.error?.message) message = err.error.message;
+      if (typeof err?.error?.code === 'string') errCode = err.error.code;
     } catch {
       /* noop */
     }
+    // Erreurs du serveur Kal-Track : message déjà rédigé pour l'utilisateur, pas de nouvel essai.
+    if (viaProxy && ['bad_code', 'quota', 'too_big', 'server'].includes(errCode)) throw new GeminiError(message, res.status);
     lastError = new GeminiError(humanizeError(res.status, message), res.status);
 
     if (res.status === 400 && withSchema && /schema|response_schema|responseSchema/i.test(message)) {
@@ -285,6 +302,7 @@ export function scaleNutrients(per100: Nutrients, grams: number): Nutrients {
 interface AiConfig {
   apiKey: string;
   model: string;
+  accessCode?: string;
   signal?: AbortSignal;
 }
 
@@ -336,6 +354,18 @@ export async function analyzeNutritionLabel(base64Jpeg: string, cfg: AiConfig): 
     confidence_note: String(raw.confidence_note ?? ''),
     items: [{ name: title, quantity_g: serving, ...totals }],
   };
+}
+
+/** Vérifie un code d'accès auprès du serveur Kal-Track (sans consommer d'analyse). */
+export async function checkAccessCode(code: string): Promise<{ ok: boolean; message: string; name?: string; remaining?: number; limit?: number }> {
+  try {
+    const res = await fetch(`${AI_PROXY_URL}/status`, { headers: { 'X-Kal-Code': normalizeCode(code) } });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) return { ok: true, name: data.name, remaining: data.remaining, limit: data.limit, message: `Code valide ✔ · ${data.remaining}/${data.limit} analyses disponibles aujourd'hui` };
+    return { ok: false, message: data?.error?.message || `Erreur serveur (${res.status})` };
+  } catch {
+    return { ok: false, message: 'Serveur IA injoignable. Vérifie ta connexion Internet.' };
+  }
 }
 
 /** Vérifie la clé et la disponibilité du modèle (requête légère). */

@@ -36,5 +36,5 @@ jobs:
           printf '%s' "$GEMINI_API_KEY" | npx -y wrangler@4.152.0 secret put GEMINI_API_KEY
       - name: Vérifier que le serveur répond
         run: |
-          URL="https://kal-track-ai.$(npx -y wrangler@4.152.0 whoami 2>/dev/null | true; echo)"
-          echo "Déploiement terminé. Adresse affichée ci-dessus (ligne https://...workers.dev)."
+          sleep 5
+          curl -fsS https://kal-track-ai.labarthe-julien1.workers.dev/health

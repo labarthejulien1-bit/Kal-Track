@@ -71,6 +71,7 @@ export async function importBackup(data: BackupFile, opts: { includeApiKey: bool
       const p = { ...data.profile, id: 1 };
       if (!opts.includeApiKey && current) {
         p.apiKey = current.apiKey;
+        p.accessCode = current.accessCode ?? '';
       }
       await db.userProfile.put(p);
     }

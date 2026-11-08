@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { KeyRound, Eye, EyeOff, Wifi, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, ExternalLink, Info, HelpCircle } from 'lucide-react';
+import { Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { SegmentedTabs } from '@/components/ui/tabs';
 import { NumberField } from '@/components/common';
-import { ApiKeyHelp } from './ApiKeyHelp';
+import { Sheet } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { ensureProfile, useProfile } from '@/hooks/useProfile';
-import { GEMINI_MODELS, testGeminiConnection } from '@/services/geminiVision';
+import { checkAccessCode, normalizeCode } from '@/services/geminiVision';
 import { ACTIVITY_FACTORS, GOAL_LABELS, MACRO_PRESETS, PACE_DELTAS, computeGoals, macroSplitFor } from '@/services/bmrCalculator';
 import { db, exportBackup, getStorageInfo, importBackup, requestPersistentStorage } from '@/db/database';
 import { COLORS, MEAL_LABELS, MEAL_TYPES, downloadFile, round, todayISO } from '@/lib/utils';
@@ -86,49 +86,33 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
     toast('Profil enregistré');
   };
 
-  // --- IA ---
-  const [key, setKey] = useState(profile.apiKey);
-  const [showKey, setShowKey] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  // --- IA (serveur Kal-Track : clé et modèle gérés côté serveur) ---
+  const [code, setCode] = useState(profile.accessCode ?? '');
+  const [checking, setChecking] = useState(false);
+  const [access, setAccess] = useState<{ ok: boolean; message: string; name?: string } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
-  const keyInputRef = useRef<HTMLInputElement>(null);
 
-  const pasteKey = async () => {
-    setShowHelp(false);
-    try {
-      const text = (await navigator.clipboard.readText()).trim();
-      if (/^AIza[\w-]{20,}$/.test(text)) {
-        setKey(text);
-        await updateProfile({ apiKey: text });
-        setShowKey(false);
-        toast('Clé collée ! Appuie sur « Tester la connexion »');
-        return;
-      }
-      toast('Aucune clé trouvée dans le presse-papiers. Colle-la à la main dans le champ.', 'info');
-    } catch {
-      toast('Appuie longuement dans le champ puis « Coller ».', 'info');
+  useEffect(() => {
+    if (profile.accessCode) checkAccessCode(profile.accessCode).then(setAccess);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const verify = async () => {
+    const v = normalizeCode(code);
+    if (!v) return;
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    setChecking(true);
+    setAccess(null);
+    const r = await checkAccessCode(v);
+    setAccess(r);
+    if (r.ok) {
+      setCode(v);
+      await updateProfile({ accessCode: v });
+      dirty.current = true;
+      await flush();
+      toast(`Bienvenue ${r.name} ! L'IA est activée.`);
     }
-    setTimeout(() => keyInputRef.current?.focus(), 300);
-  };
-  const isPreset = GEMINI_MODELS.some((m) => m.id === profile.model);
-  const [customModel, setCustomModel] = useState(isPreset ? '' : profile.model);
-  useEffect(() => setKey(profile.apiKey), [profile.apiKey]);
-
-  const saveKey = async () => {
-    if (key.trim() === profile.apiKey) return;
-    await updateProfile({ apiKey: key.trim() });
-    toast('Clé API enregistrée localement');
-  };
-
-  const test = async () => {
-    setTesting(true);
-    setTestResult(null);
-    if (key.trim() !== profile.apiKey) await updateProfile({ apiKey: key.trim() });
-    dirty.current = true;
-    await flush();
-    setTestResult(await testGeminiConnection(key.trim(), profile.model));
-    setTesting(false);
+    setChecking(false);
   };
 
   // --- Stockage ---
@@ -143,7 +127,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
 
   const doExport = async () => {
     const data = await exportBackup();
-    if (!includeKey && data.profile) data.profile = { ...data.profile, apiKey: '' };
+    if (!includeKey && data.profile) data.profile = { ...data.profile, apiKey: '', accessCode: '' };
     downloadFile(`kal-track-sauvegarde-${todayISO()}.json`, JSON.stringify(data));
     toast(`Sauvegarde exportée (${data.meals.length} repas, ${data.weightLogs.length} pesées)`);
   };
@@ -154,7 +138,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
       const data = JSON.parse(await file.text()) as BackupFile;
       if (!confirm(`Importer ${data.meals?.length ?? 0} repas et ${data.weightLogs?.length ?? 0} pesées ?\nLes données actuelles seront remplacées.`)) return;
       dirty.current = false;
-      await importBackup(data, { includeApiKey: !!data.profile?.apiKey });
+      await importBackup(data, { includeApiKey: !!(data.profile?.apiKey || data.profile?.accessCode) });
       setDraft(await ensureProfile());
       toast('Sauvegarde importée avec succès');
       refreshStorage();
@@ -198,73 +182,57 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <KeyRound className="h-4 w-4 text-indigo-400" /> Intelligence artificielle (Gemini)
+            <Sparkles className="h-4 w-4 text-indigo-400" /> Analyse IA des repas
           </CardTitle>
           <button
             onClick={() => setShowHelp(true)}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-400/40 active:scale-95"
-            aria-label="Comment obtenir une clé API ?"
+            aria-label="Où trouver mon code ?"
           >
             <HelpCircle className="h-5 w-5" />
           </button>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label>Clé API Google Gemini</Label>
+            <Label>Code d'accès</Label>
             <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input ref={keyInputRef} type={showKey ? 'text' : 'password'} value={key} onChange={(e) => setKey(e.target.value)} onBlur={saveKey} placeholder="AIza…" autoComplete="off" spellCheck={false} className="pr-10" />
-                <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400" onClick={() => setShowKey((s) => !s)} aria-label="Afficher la clé">
-                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-[11px] text-indigo-300">
-              Obtenir une clé gratuite sur Google AI Studio <ExternalLink className="h-3 w-3" />
-            </a>
-          </div>
-          <div>
-            <Label>Modèle IA</Label>
-            <Select
-              value={isPreset ? profile.model : '__custom'}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === '__custom') updateProfile({ model: customModel || 'gemini-flash-latest' });
-                else updateProfile({ model: v });
-                setTestResult(null);
-              }}
-            >
-              {GEMINI_MODELS.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.id} — {m.hint}
-                </option>
-              ))}
-              <option value="__custom">Autre modèle (saisie manuelle)…</option>
-            </Select>
-            {!isPreset && (
               <Input
-                className="mt-2"
-                value={customModel || profile.model}
-                onChange={(e) => setCustomModel(e.target.value)}
-                onBlur={() => customModel.trim() && updateProfile({ model: customModel.trim() })}
-                placeholder="ex. gemini-flash-latest"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => e.key === 'Enter' && verify()}
+                placeholder="KAL-XXXX-XXXX"
+                autoCapitalize="characters"
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono text-base uppercase tracking-wider"
               />
-            )}
+              <Button onClick={verify} disabled={checking || !code.trim()} className="shrink-0">
+                {checking ? <Loader2 className="animate-spin" /> : <CheckCircle2 />} Valider
+              </Button>
+            </div>
           </div>
-          <Button variant="indigo" className="w-full" onClick={test} disabled={testing || !key.trim()}>
-            {testing ? <Loader2 className="animate-spin" /> : <Wifi />} Tester la connexion
-          </Button>
-          {testResult && (
-            <p className={`flex items-start gap-2 rounded-xl p-2 text-xs ${testResult.ok ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/10 text-rose-300'}`}>
-              {testResult.ok ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
-              {testResult.message}
+          {access && (
+            <p className={`flex items-start gap-2 rounded-xl p-2 text-xs ${access.ok ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/10 text-rose-300'}`}>
+              {access.ok ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
+              <span>
+                {access.ok && access.name ? <b>{access.name} · </b> : null}
+                {access.message}
+              </span>
             </p>
           )}
-          <p className="text-[11px] text-slate-500">La clé est stockée uniquement sur cet appareil (IndexedDB). Les photos sont envoyées directement à Google, sans serveur intermédiaire.</p>
+          <p className="text-[11px] text-slate-500">Tes repas restent sur ton téléphone. Seules les photos et descriptions à analyser sont envoyées à l'IA, de façon sécurisée.</p>
         </CardContent>
       </Card>
 
-      <ApiKeyHelp open={showHelp} onClose={() => setShowHelp(false)} onPaste={pasteKey} />
+      <Sheet open={showHelp} onClose={() => setShowHelp(false)} title="Où trouver mon code ?">
+        <div className="space-y-3 pb-4 text-sm text-slate-300">
+          <p>
+            Le <b>code d'accès</b> active l'analyse de tes repas par l'IA (photo, étiquette, description). Il ressemble à <span className="rounded-md bg-slate-800 px-1.5 py-0.5 font-mono text-slate-100">KAL-AB12-CD34</span>.
+          </p>
+          <p>👉 Demande-le à la personne qui t'a fait découvrir Kal-Track, puis colle-le dans le champ et appuie sur <b>Valider</b>.</p>
+          <p className="text-slate-400">Chaque code donne droit à un certain nombre d'analyses par jour, remis à zéro chaque nuit. Sans code, tu peux quand même utiliser l'appli : code-barres, saisie manuelle, favoris, suivi du poids…</p>
+        </div>
+      </Sheet>
 
       {/* ---------- Profil ---------- */}
       <Card>
@@ -472,7 +440,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
             </Button>
           </div>
           <label className="flex items-center justify-between text-xs text-slate-400">
-            Inclure la clé API dans l'export
+            Inclure le code d'accès IA dans l'export
             <Switch checked={includeKey} onCheckedChange={setIncludeKey} />
           </label>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => { doImport(e.target.files?.[0]); e.target.value = ''; }} />

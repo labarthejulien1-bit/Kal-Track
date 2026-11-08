@@ -58,6 +58,7 @@ export interface Profile {
   waterGoalMl?: number;
   apiKey: string;
   model: string;
+  accessCode: string; // code d'accès au serveur IA Kal-Track
   aiDetailLevel: 'standard' | 'detailed';
   createdAt: number;
   updatedAt: number;
