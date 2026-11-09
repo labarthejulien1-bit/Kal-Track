@@ -51,7 +51,7 @@ export function MealDistribution({
                     {round(pctTarget)}%
                   </span>
                 </div>
-                <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-700">
+                <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-700">
                   <div className="h-full rounded-full" style={{ width: `${Math.min(100, target > 0 ? (v / target) * 100 : 0)}%`, background: v > target ? '#ef4444' : MEAL_COLORS[mt] }} />
                 </div>
                 <div className="mt-0.5 text-[10px] text-slate-500">
