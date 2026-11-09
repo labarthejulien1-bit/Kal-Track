@@ -172,7 +172,7 @@ export const COLORS = {
   kcal: '#10b981',
   protein: '#6366f1',
   carbs: '#f59e0b',
-  fat: '#f43f5e',
+  fat: '#06b6d4', // cyan : le rouge est réservé aux dépassements
   sugar: '#d946ef',
   fiber: '#84cc16',
   water: '#0ea5e9',

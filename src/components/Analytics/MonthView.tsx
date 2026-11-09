@@ -55,7 +55,7 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
 
       <StatGrid
         items={[
-          { label: t('Conformité'), value: `${compliance}%`, sub: t('{a}/{b} jours ± 10 %', { a: kcal.onTarget, b: kcal.logged }), color: compliance >= 70 ? COLORS.kcal : compliance >= 40 ? COLORS.carbs : COLORS.fat },
+          { label: t('Conformité'), value: `${compliance}%`, sub: t('{a}/{b} jours ± 10 %', { a: kcal.onTarget, b: kcal.logged }), color: compliance >= 70 ? COLORS.kcal : compliance >= 40 ? COLORS.carbs : '#f43f5e' },
           { label: t('Moyenne / jour'), value: round(kcal.avg), sub: t('kcal · objectif {n}', { n: goals.calories }), color: COLORS.kcal },
           { label: t('Jours suivis'), value: `${kcal.logged}`, sub: t('sur {n}', { n: days.filter((d) => d.date <= today).length }) },
           {
