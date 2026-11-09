@@ -85,6 +85,8 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const [loadingMsg, setLoadingMsg] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const progressDone = useRef(false);
   const [search, setSearch] = useState('');
   const [pendingMode, setPendingMode] = useState<'photo' | 'label'>('photo');
   const [formKey, setFormKey] = useState(0);
@@ -94,6 +96,14 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
     setDraft(d);
   }, []);
   const abortRef = useRef<AbortController | null>(null);
+
+  /** Termine la barre (100 %) puis affiche le résultat. */
+  const finishAndReview = async (d: Draft) => {
+    progressDone.current = true;
+    setProgress(100);
+    await new Promise((r) => setTimeout(r, 380));
+    openReview(d);
+  };
 
   const openReview = (d: Draft) => {
     draftRef.current = d;
@@ -130,7 +140,17 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   useEffect(() => {
     if (step !== 'analyzing') return;
     const id = setInterval(() => setLoadingMsg((i) => (i + 1) % LOADING_MESSAGES.length), 1400);
-    return () => clearInterval(id);
+    // Progression estimée : avance vite au début puis ralentit vers 95 % en attendant la réponse.
+    progressDone.current = false;
+    setProgress(0);
+    const p = setInterval(() => {
+      if (progressDone.current) return;
+      setProgress((v) => Math.min(95, v + (95 - v) * 0.035));
+    }, 100);
+    return () => {
+      clearInterval(id);
+      clearInterval(p);
+    };
   }, [step]);
 
   const close = () => {
@@ -192,7 +212,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
     try {
       const a = await analyzeMealPhoto(photo.base64, { apiKey: profile.apiKey, model: profile.model, accessCode: profile.accessCode, hint, signal: abortRef.current.signal });
       haptic(30);
-      openReview(toDraft(a, 'photo', photo.dataUrl));
+      await finishAndReview(toDraft(a, 'photo', photo.dataUrl));
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
       setError((e as Error).message);
@@ -211,7 +231,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
         if (off) a = off;
       }
       haptic(30);
-      openReview(toDraft(a, 'label', img.dataUrl));
+      await finishAndReview(toDraft(a, 'label', img.dataUrl));
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
       setError((e as Error).message);
@@ -226,7 +246,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
     abortRef.current = new AbortController();
     try {
       const a = await analyzeMealText(text, { apiKey: profile.apiKey, model: profile.model, accessCode: profile.accessCode, signal: abortRef.current.signal });
-      openReview(toDraft(a, 'text'));
+      await finishAndReview(toDraft(a, 'text'));
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
       setError((e as Error).message);
@@ -245,7 +265,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
           setStep('label');
           return;
         }
-        openReview(toDraft(p, 'barcode'));
+        await finishAndReview(toDraft(p, 'barcode'));
       } catch (e) {
         setError((e as Error).message);
         setStep('barcode');
@@ -461,6 +481,15 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
             <Sparkles className="absolute -right-2 -top-2 h-4 w-4 animate-pulse text-amber-300" />
           </div>
           <p className="text-sm text-slate-300">{t(LOADING_MESSAGES[loadingMsg])}</p>
+          <div className="w-full max-w-xs" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-700/60">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-[width] duration-300 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="mt-1.5 text-center text-xs font-semibold tabular-nums text-emerald-400">{Math.round(progress)} %</p>
+          </div>
           <Button variant="ghost" size="sm" onClick={back}>
             {t('Annuler')}
           </Button>
