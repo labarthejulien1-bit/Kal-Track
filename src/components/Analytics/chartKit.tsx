@@ -5,13 +5,13 @@ import { Card } from '@/components/ui/card';
 import { t } from '@/i18n';
 
 export const axisProps = {
-  stroke: '#475569',
-  tick: { fill: '#94a3b8', fontSize: 10 },
-  tickLine: { stroke: '#475569' },
-  axisLine: { stroke: '#334155' },
+  stroke: 'var(--c-axis)',
+  tick: { fill: 'var(--c-tick)', fontSize: 10 },
+  tickLine: { stroke: 'var(--c-axis)' },
+  axisLine: { stroke: 'var(--c-axis-line)' },
 };
 
-export const gridProps = { stroke: '#1e293b', strokeDasharray: '3 3' };
+export const gridProps = { stroke: 'var(--c-grid)', strokeDasharray: '3 3' };
 
 export function ChartTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string; dataKey: string }>; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null;
@@ -128,7 +128,7 @@ export function StatGrid({ items }: { items: { label: string; value: React.React
       {items.map((i) => (
         <Card key={i.label} className="p-3">
           <p className="text-[10px] uppercase tracking-wide text-slate-500">{i.label}</p>
-          <p className="text-lg font-bold tabular-nums" style={{ color: i.color ?? '#f1f5f9' }}>{i.value}</p>
+          <p className="text-lg font-bold tabular-nums" style={{ color: i.color ?? 'var(--c-strong)' }}>{i.value}</p>
           {i.sub && <p className="text-[10px] text-slate-500">{i.sub}</p>}
         </Card>
       ))}

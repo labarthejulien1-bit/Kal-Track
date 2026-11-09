@@ -12,6 +12,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { todayISO } from '@/lib/utils';
 import { getLang, resolveLang, setLang } from '@/i18n';
 import { resolveUnits, setUnits } from '@/lib/units';
+import { applyTheme } from '@/lib/theme';
 
 const TABS: Tab[] = ['journal', 'analytics', 'weight', 'settings'];
 
@@ -32,6 +33,12 @@ export default function App() {
   const unitsKey = `${units.weight}-${units.height}-${units.water}`;
 
   const openAdd = useCallback((req: AddRequest = {}) => setAddRequest({ ...req }), []);
+
+  // Thème du profil (clair par défaut), réappliqué à chaque changement.
+  const theme = profile.theme ?? 'light';
+  useEffect(() => {
+    if (!loading) applyTheme(theme);
+  }, [theme, loading]);
 
   // Repasse automatiquement sur « aujourd'hui » quand l'appli est rouverte un autre jour.
   useEffect(() => {

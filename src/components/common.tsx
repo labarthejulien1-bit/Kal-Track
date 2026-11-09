@@ -11,7 +11,7 @@ export function Ring({
   size = 120,
   stroke = 12,
   color,
-  track = '#1e293b',
+  track = 'var(--c-track)',
   children,
   ticks = false,
 }: {
@@ -47,7 +47,7 @@ export function Ring({
         />
         {over > 0 && (
           <>
-            <circle cx={size / 2} cy={size / 2} r={r} stroke="#0f172a" strokeWidth={stroke + 4} fill="none" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - over)} />
+            <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--c-card-solid)" strokeWidth={stroke + 4} fill="none" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - over)} />
             <circle
               cx={size / 2}
               cy={size / 2}
@@ -74,7 +74,7 @@ export function Ring({
                 y1={size / 2 + r1 * Math.sin(a)}
                 x2={size / 2 + r2 * Math.cos(a)}
                 y2={size / 2 + r2 * Math.sin(a)}
-                stroke="#475569"
+                stroke="var(--c-axis)"
                 strokeWidth={i % 5 === 0 ? 2 : 1}
               />
             );

@@ -1,0 +1,91 @@
+/* Thème clair : surcouche appliquée quand <html class="light">. Inspiré des applis santé claires (fond gris doux, cartes blanches). */
+html.light {
+  color-scheme: light;
+  background: #f4f6fa;
+}
+html.light body {
+  background-color: #f4f6fa;
+  color: #0f172a;
+  background-image: radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.07), transparent 40%),
+    radial-gradient(circle at 100% 30%, rgba(99, 102, 241, 0.06), transparent 40%);
+}
+/* Cartes : blanches avec ombre douce */
+html.light .bg-slate-800\/40 {
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.05);
+  backdrop-filter: none;
+}
+/* Onglet sélectionné des sélecteurs segmentés */
+html.light .bg-slate-950 {
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+html.light .\[color-scheme\:dark\] { color-scheme: light; }
+html.light .ring-slate-900 { --tw-ring-color: #ffffff; }
+html.light .ring-white\/60 { --tw-ring-color: rgba(15, 23, 42, 0.35); }
+html.light .placeholder\:text-slate-500::placeholder { color: #9aa5b4; }
+html.light nav > div { box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.06); }
+html.light .bg-slate-900 { background-color: #ffffff; }
+html.light .bg-slate-900\/60 { background-color: #f5f7fa; }
+html.light .bg-slate-900\/70 { background-color: #f5f7fa; }
+html.light .bg-slate-900\/50 { background-color: #f5f7fa; }
+html.light .bg-slate-900\/40 { background-color: #f5f7fa; }
+html.light .bg-slate-950 { background-color: #ffffff; }
+html.light .bg-slate-950\/95 { background-color: #ffffff; }
+html.light .bg-slate-950\/80 { background-color: rgba(255,255,255,.92); }
+html.light .bg-slate-950\/50 { background-color: #eef1f5; }
+html.light .bg-slate-800 { background-color: #eef1f5; }
+html.light .bg-slate-800\/60 { background-color: #f5f7fa; }
+html.light .bg-slate-800\/50 { background-color: #f3f5f9; }
+html.light .bg-slate-800\/70 { background-color: #eceff4; }
+html.light .bg-slate-800\/95 { background-color: #ffffff; }
+html.light .bg-slate-700 { background-color: #d5dbe4; }
+html.light .bg-slate-700\/60 { background-color: #e8ecf2; }
+html.light .bg-slate-700\/70 { background-color: #e8ecf2; }
+html.light .bg-slate-700\/50 { background-color: #eef1f5; }
+html.light .bg-emerald-950\/90 { background-color: #ecfdf5; }
+html.light .bg-rose-950\/90 { background-color: #fff1f2; }
+html.light .bg-black\/70 { background-color: rgba(15,23,42,.35); }
+html.light .hover\:bg-slate-800:hover { background-color: #eef1f5; }
+html.light .hover\:bg-slate-700:hover { background-color: #e2e8f0; }
+html.light .hover\:bg-slate-700\/60:hover { background-color: #eef1f5; }
+html.light .border-slate-800 { border-color: #e6eaf0; }
+html.light .border-slate-700 { border-color: #dde3eb; }
+html.light .border-slate-600 { border-color: #cbd5e1; }
+html.light .text-slate-50 { color: #0f172a; }
+html.light .text-slate-100 { color: #0f172a; }
+html.light .text-slate-200 { color: #1e293b; }
+html.light .text-slate-300 { color: #334155; }
+html.light .text-slate-400 { color: #5f6b7c; }
+html.light .text-slate-500 { color: #7b8794; }
+html.light .text-emerald-400 { color: #059669; }
+html.light .text-emerald-300 { color: #047857; }
+html.light .text-emerald-100 { color: #065f46; }
+html.light .text-amber-400 { color: #d97706; }
+html.light .text-amber-300 { color: #b45309; }
+html.light .text-amber-200 { color: #92400e; }
+html.light .text-sky-400 { color: #0284c7; }
+html.light .text-sky-300 { color: #0369a1; }
+html.light .text-indigo-400 { color: #4f46e5; }
+html.light .text-indigo-300 { color: #4338ca; }
+html.light .text-indigo-200 { color: #3730a3; }
+html.light .text-rose-400 { color: #e11d48; }
+html.light .text-rose-300 { color: #be123c; }
+html.light .text-rose-200 { color: #9f1239; }
+html.light .text-rose-100 { color: #881337; }
+html.light .text-orange-400 { color: #ea580c; }
+html.light .text-red-400 { color: #dc2626; }
+html.light .hover\:text-slate-200:hover { color: #0f172a; }
+html.light .hover\:text-slate-100:hover { color: #0f172a; }
+html.light .hover\:text-rose-400:hover { color: #e11d48; }
+
+/* Variables de couleurs pour graphiques, jauges et anneaux */
+:root {
+  --c-track: #1e293b; --c-axis: #475569; --c-axis-line: #334155; --c-tick: #94a3b8; --c-grid: #1e293b;
+  --c-strong: #f1f5f9; --c-hover: #ffffff08; --c-label: #cbd5e1; --c-line: #334155; --c-card-solid: #0f172a;
+  --c-dot: #e2e8f0; --c-input: rgba(15, 23, 42, 0.6);
+}
+html.light {
+  --c-track: #e6eaf0; --c-axis: #cbd5e1; --c-axis-line: #e2e8f0; --c-tick: #64748b; --c-grid: #edf0f4;
+  --c-strong: #0f172a; --c-hover: #0f172a0a; --c-label: #475569; --c-line: #e2e8f0; --c-card-solid: #ffffff;
+  --c-dot: #ffffff; --c-input: #f5f7fa;
+}

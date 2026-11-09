@@ -81,7 +81,7 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
             ))}
             {days.map((d) => {
               const pct = d.calories / goals.calories;
-              const color = d.calories === 0 ? '#1e293b' : Math.abs(pct - 1) <= 0.1 ? COLORS.kcal : pct < 0.9 ? COLORS.lose : '#f43f5e';
+              const color = d.calories === 0 ? 'var(--c-track)' : Math.abs(pct - 1) <= 0.1 ? COLORS.kcal : pct < 0.9 ? COLORS.lose : '#f43f5e';
               return (
                 <button
                   key={d.date}
@@ -142,7 +142,7 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
                 <XAxis dataKey="label" {...axisProps} />
                 <YAxis {...axisProps} domain={[(min: number) => Math.floor(Math.min(min, wOut(profile.targetWeight)) - 1), (max: number) => Math.ceil(max + 1)]} unit={wUnit()} tickCount={6} />
                 <Tooltip content={<ChartTooltip unit={` ${wUnit()}`} />} />
-                <Line dataKey="Poids" name={t('Poids')} stroke="#64748b" strokeWidth={0} dot={{ r: 3, fill: '#94a3b8' }} />
+                <Line dataKey="Poids" name={t('Poids')} stroke="#64748b" strokeWidth={0} dot={{ r: 3, fill: 'var(--c-tick)' }} />
                 <Line dataKey="Tendance" name={t('Tendance')} stroke={COLORS.water} strokeWidth={2.5} dot={false} type="monotone" />
                 <ReferenceLine y={wOut(profile.targetWeight)} stroke={COLORS.kcal} strokeDasharray="5 4" label={{ value: t('Cible'), fill: COLORS.kcal, fontSize: 9, position: 'insideBottomRight' }} />
               </ComposedChart>

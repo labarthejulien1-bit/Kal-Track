@@ -68,7 +68,7 @@ export function WeekView({ anchor, setAnchor }: { anchor: string; setAnchor: (d:
               <CartesianGrid {...gridProps} vertical={false} />
               <XAxis dataKey="label" {...axisProps} />
               <YAxis {...axisProps} domain={[0, round(yMax, -2)]} tickCount={8} />
-              <Tooltip content={<ChartTooltip unit=" kcal" />} cursor={{ fill: '#ffffff08' }} />
+              <Tooltip content={<ChartTooltip unit=" kcal" />} cursor={{ fill: 'var(--c-hover)' }} />
               <Bar dataKey="Calories" name={t('Calories')} radius={[6, 6, 0, 0]}>
                 {data.map((d) => (
                   <Cell key={d.date} fill={(d.Calories ?? 0) > goals.calories * 1.1 ? '#f43f5e' : (d.Calories ?? 0) >= goals.calories * 0.9 ? COLORS.kcal : '#34d39988'} />
@@ -91,7 +91,7 @@ export function WeekView({ anchor, setAnchor }: { anchor: string; setAnchor: (d:
               <CartesianGrid {...gridProps} vertical={false} />
               <XAxis dataKey="label" {...axisProps} />
               <YAxis {...axisProps} tickCount={8} />
-              <Tooltip content={<ChartTooltip unit=" kcal" />} cursor={{ fill: '#ffffff08' }} />
+              <Tooltip content={<ChartTooltip unit=" kcal" />} cursor={{ fill: 'var(--c-hover)' }} />
               <Legend wrapperStyle={{ fontSize: 10 }} />
               <Bar dataKey="P (kcal)" name={t('Protéines')} stackId="m" fill={COLORS.protein} />
               <Bar dataKey="G (kcal)" name={t('Glucides')} stackId="m" fill={COLORS.carbs} />
@@ -130,7 +130,7 @@ export function MacroWeekChart({ data, dataKey, color, goal, avg, limit, height 
             <CartesianGrid {...gridProps} vertical={false} />
             <XAxis dataKey="label" {...axisProps} />
             <YAxis {...axisProps} tickCount={5} domain={[0, (max: number) => Math.ceil(Math.max(max, goal * 1.25) / 10) * 10]} unit="g" />
-            <Tooltip content={<ChartTooltip unit=" g" />} cursor={{ fill: '#ffffff08' }} />
+            <Tooltip content={<ChartTooltip unit=" g" />} cursor={{ fill: 'var(--c-hover)' }} />
             <Bar dataKey={dataKey} name={t(dataKey)} fill={color} radius={[4, 4, 0, 0]} />
             <ReferenceLine y={goal} stroke={COLORS.target} strokeDasharray={limit ? '4 3' : undefined} label={{ value: `${goal} g`, fill: COLORS.target, fontSize: 9, position: 'insideTopRight' }} />
           </ComposedChart>

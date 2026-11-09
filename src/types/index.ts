@@ -60,6 +60,7 @@ export interface Profile {
   model: string;
   accessCode: string; // code d'accès au serveur IA Kal-Track
   language?: 'auto' | 'fr' | 'en' | 'es' | 'pt' | 'de' | 'it';
+  theme?: 'light' | 'dark' | 'auto';
   units?: { weight?: 'kg' | 'lb'; height?: 'cm' | 'ftin'; water?: 'ml' | 'floz' };
   aiDetailLevel: 'standard' | 'detailed';
   createdAt: number;

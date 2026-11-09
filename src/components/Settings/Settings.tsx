@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Languages, Ruler, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
+import { Languages, Moon, Palette, Ruler, Sun, SunMoon, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { db, exportBackup, getStorageInfo, importBackup, requestPersistentStorag
 import { COLORS, MEAL_SHORT, MEAL_TYPES, downloadFile, round, todayISO } from '@/lib/utils';
 import type { ActivityLevel, BackupFile, Goal, GoalPace, MacroPreset, Profile, Sex } from '@/types';
 import { LANGS, detectLang, t, type LangSetting } from '@/i18n';
+import { applyTheme, type ThemeSetting } from '@/lib/theme';
 
 export function Settings() {
   const { profile: stored, loading } = useProfile();
@@ -264,6 +265,32 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           <p className="text-slate-400">{t("Une fois tes analyses du jour utilisées, tu peux continuer avec le code-barres, la saisie manuelle et tes favoris, puis l'IA revient le lendemain.")}</p>
         </div>
       </Sheet>
+
+      {/* ---------- Apparence ---------- */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-4 w-4 text-fuchsia-400" /> {t('Apparence')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SegmentedTabs<ThemeSetting>
+            value={profile.theme ?? 'light'}
+            onChange={async (theme) => {
+              applyTheme(theme);
+              await updateProfile({ theme });
+              dirty.current = true;
+              await flush();
+              await db.userProfile.update(1, { theme });
+            }}
+            options={[
+              { value: 'light', label: <span className="flex items-center justify-center gap-1.5"><Sun className="h-4 w-4" /> {t('Clair')}</span> },
+              { value: 'dark', label: <span className="flex items-center justify-center gap-1.5"><Moon className="h-4 w-4" /> {t('Sombre')}</span> },
+              { value: 'auto', label: <span className="flex items-center justify-center gap-1.5"><SunMoon className="h-4 w-4" /> {t('Auto')}</span> },
+            ]}
+          />
+        </CardContent>
+      </Card>
 
       {/* ---------- Langue ---------- */}
       <Card>
@@ -581,7 +608,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 
 function Zone({ label, value, color, active }: { label: string; value: number; color: string; active: boolean }) {
   return (
-    <div className="rounded-lg border p-1.5" style={{ borderColor: active ? color : '#334155', background: active ? `${color}18` : undefined }}>
+    <div className="rounded-lg border p-1.5" style={{ borderColor: active ? color : 'var(--c-line)', background: active ? `${color}18` : undefined }}>
       <div className="text-[10px]" style={{ color }}>{label}</div>
       <div className="font-semibold tabular-nums text-slate-200">{value}</div>
     </div>

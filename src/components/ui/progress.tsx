@@ -20,7 +20,7 @@ export function Progress({ value, max, color, className, showTicks }: { value: n
           style={{
             width: `${Math.max(overPct, 3)}%`,
             background: `linear-gradient(90deg, #991b1b, ${OVER_RED} 60%, #f87171)`,
-            boxShadow: '0 0 0 2px #0f172a, 0 0 8px rgba(239,68,68,.6)',
+            boxShadow: '0 0 0 2px var(--c-card-solid), 0 0 8px rgba(239,68,68,.6)',
           }}
         />
       )}

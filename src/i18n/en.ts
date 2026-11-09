@@ -1,5 +1,8 @@
 // Généré automatiquement depuis le texte français (clé) – ne pas modifier la clé.
 const d: Record<string, string> = {
+  "Apparence": "Appearance",
+  "Clair": "Light",
+  "Sombre": "Dark",
   "{u}/sem": "{u}/wk",
   "{u} / semaine": "{u} / week",
   "Protéines par {u} de poids": "Protein per {u} of body weight",

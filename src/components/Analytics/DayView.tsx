@@ -92,14 +92,14 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
           <ResponsiveContainer width="100%" height={210}>
             <BarChart data={vsGoal} margin={{ top: 16, right: 8, left: -18, bottom: 0 }}>
               <CartesianGrid {...gridProps} vertical={false} />
-              <XAxis dataKey="name" {...axisProps} interval={0} tick={{ fill: '#94a3b8', fontSize: 9 }} />
+              <XAxis dataKey="name" {...axisProps} interval={0} tick={{ fill: 'var(--c-tick)', fontSize: 9 }} />
               <YAxis {...axisProps} ticks={[0, 25, 50, 75, 100, 125, 150]} domain={[0, (max: number) => Math.max(150, max)]} unit="%" />
-              <Tooltip content={<ChartTooltip unit="%" />} cursor={{ fill: '#ffffff08' }} />
+              <Tooltip content={<ChartTooltip unit="%" />} cursor={{ fill: 'var(--c-hover)' }} />
               <Bar dataKey="pct" name={t('Objectif atteint')} radius={[6, 6, 0, 0]}>
                 {vsGoal.map((d) => (
                   <Cell key={d.name} fill={d.color} />
                 ))}
-                <LabelList dataKey="pct" position="top" fill="#cbd5e1" fontSize={10} formatter={(v: number) => `${v}%`} />
+                <LabelList dataKey="pct" position="top" fill="var(--c-label)" fontSize={10} formatter={(v: number) => `${v}%`} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -116,7 +116,7 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
               <CartesianGrid {...gridProps} vertical={false} />
               <XAxis dataKey="name" {...axisProps} />
               <YAxis {...axisProps} tickCount={6} unit="" />
-              <Tooltip content={<ChartTooltip unit=" kcal" />} cursor={{ fill: '#ffffff08' }} />
+              <Tooltip content={<ChartTooltip unit=" kcal" />} cursor={{ fill: 'var(--c-hover)' }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="Protéines" name={t('Protéines')} stackId="a" fill={COLORS.protein} />
               <Bar dataKey="Glucides" name={t('Glucides')} stackId="a" fill={COLORS.carbs} />

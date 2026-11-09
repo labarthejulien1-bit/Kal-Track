@@ -40,7 +40,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
   ({ className, children, style, ...props }, ref) => (
     <select
       ref={ref}
-      style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)', backgroundImage: SELECT_ARROW, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', ...style }}
+      style={{ backgroundColor: 'var(--c-input)', backgroundImage: SELECT_ARROW, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', ...style }}
       className={cn(
         'flex h-11 w-full appearance-none rounded-xl border border-slate-700 pl-3 pr-9 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 [color-scheme:dark]',
         className,

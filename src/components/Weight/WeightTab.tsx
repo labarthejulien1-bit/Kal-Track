@@ -215,7 +215,7 @@ export function WeightTab() {
                   domain={[(min: number) => Math.floor(Math.min(min, wOut(profile.targetWeight)) - 1), (max: number) => Math.ceil(Math.max(max, wOut(profile.targetWeight)) + 1)]}
                 />
                 <Tooltip content={(p) => <ChartTooltip active={p.active} payload={p.payload as never} label={(p.payload?.[0]?.payload as { label?: string } | undefined)?.label} unit={` ${wUnit()}`} />} />
-                <Area dataKey="Poids" name={t('Poids')} stroke={COLORS.water} strokeWidth={2.5} fill="url(#wFill)" type="linear" baseValue="dataMin" dot={{ r: 3.5, fill: '#e2e8f0', stroke: COLORS.water, strokeWidth: 2 }} activeDot={{ r: 6 }} isAnimationActive={false} />
+                <Area dataKey="Poids" name={t('Poids')} stroke={COLORS.water} strokeWidth={2.5} fill="url(#wFill)" type="linear" baseValue="dataMin" dot={{ r: 3.5, fill: 'var(--c-dot)', stroke: COLORS.water, strokeWidth: 2 }} activeDot={{ r: 6 }} isAnimationActive={false} />
                 <Line dataKey="Tendance" name={t('Tendance')} stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 4" type="monotone" dot={false} isAnimationActive={false} />
                 <ReferenceLine y={wOut(profile.targetWeight)} stroke={COLORS.kcal} strokeDasharray="6 4" label={{ value: `${t('Objectif')} ${fmtW(profile.targetWeight)}`, fill: COLORS.kcal, fontSize: 10, position: 'insideBottomRight' }} />
               </ComposedChart>

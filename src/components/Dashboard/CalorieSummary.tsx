@@ -41,7 +41,7 @@ export function CalorieSummary({ totals, goals, goal }: { totals: Nutrients; goa
 
 function ZoneChip({ label, value, color, active }: { label: string; value: number; color: string; active: boolean }) {
   return (
-    <div className="rounded-lg border px-2 py-1" style={{ borderColor: active ? color : '#334155', background: active ? `${color}18` : 'transparent' }}>
+    <div className="rounded-lg border px-2 py-1" style={{ borderColor: active ? color : 'var(--c-line)', background: active ? `${color}18` : 'transparent' }}>
       <div style={{ color }} className="font-semibold">{label}</div>
       <div className="tabular-nums text-slate-300">{value} kcal</div>
     </div>
