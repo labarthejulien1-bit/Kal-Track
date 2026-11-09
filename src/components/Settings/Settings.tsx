@@ -93,7 +93,8 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
   const [checking, setChecking] = useState(false);
   const [access, setAccess] = useState<{ ok: boolean; message: string; name?: string } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
-  const [showCode, setShowCode] = useState(!!profile.accessCode);
+  const [showCode, setShowCode] = useState(false);
+  const devTaps = useRef(0);
 
   // Statut de l'IA (accès inclus ou code personnel) et analyses restantes.
   useEffect(() => {
@@ -126,7 +127,8 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
       dirty.current = true;
       await flush();
       await db.userProfile.update(1, { accessCode: v });
-      toast(`Bienvenue ${r.name} ! L'IA est activée.`);
+      toast(`Code ${r.name} activé.`);
+      setShowCode(false);
     }
     setChecking(false);
   };
@@ -213,7 +215,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
             <p className={`flex items-start gap-2 rounded-xl p-2 text-xs ${access.ok ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/10 text-rose-300'}`}>
               {access.ok ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
               <span>
-                {access.ok && access.name && access.name !== 'Public' ? <b>{access.name} · </b> : null}
+                
                 {access.message}
               </span>
             </p>
@@ -222,11 +224,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Vérification de l'IA…
             </p>
           )}
-          {!showCode ? (
-            <button onClick={() => setShowCode(true)} className="text-xs font-medium text-indigo-300 underline-offset-2 hover:underline">
-              J'ai un code d'accès
-            </button>
-          ) : (
+          {showCode && (
             <div>
               <Label>Code d'accès (facultatif)</Label>
               <div className="flex gap-2">
@@ -262,7 +260,6 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           </p>
           <p>Tu disposes d'un nombre d'analyses par jour sur ce téléphone, remis à zéro chaque nuit à minuit.</p>
           <p className="text-slate-400">Une fois tes analyses du jour utilisées, tu peux continuer avec le code-barres, la saisie manuelle et tes favoris, puis l'IA revient le lendemain.</p>
-          <p className="text-slate-400">Tu as reçu un <b>code d'accès</b> personnel ? Appuie sur « J'ai un code d'accès » pour l'ajouter.</p>
         </div>
       </Sheet>
 
@@ -484,7 +481,19 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
 
       <div className="flex flex-col items-center gap-1 py-4 text-center text-[11px] text-slate-500">
         <img src="./logo.svg" alt="" className="h-12 w-12 rounded-2xl" />
-        <p className="font-semibold text-slate-400">Kal-Track v1.0</p>
+        <p
+          className="select-none font-semibold text-slate-400"
+          onClick={() => {
+            devTaps.current += 1;
+            if (devTaps.current >= 7) {
+              setShowCode(true);
+              devTaps.current = 0;
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+        >
+          Kal-Track v1.0
+        </p>
         <p>100 % local · aucune donnée envoyée hors de l'appareil, sauf les analyses IA vers Google Gemini et les recherches de code-barres vers Open Food Facts.</p>
       </div>
     </div>
