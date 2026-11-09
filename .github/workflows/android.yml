@@ -57,7 +57,10 @@ jobs:
             echo "Pas encore de clé de signature dans les secrets : AAB non fabriqué."
             exit 0
           fi
-          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.keystore"
+          # Retire espaces / retours à la ligne ajoutés par le copier-coller.
+          CLEAN=$(printf '%s' "$KEYSTORE_BASE64" | tr -d ' \n\r\t')
+          echo "Clé : ${#CLEAN} caractères (attendu 5776), contrôle $(printf '%s' "$CLEAN" | sha256sum | cut -c1-12) (attendu 18c970e07c6e)"
+          printf '%s' "$CLEAN" | base64 -d > "$RUNNER_TEMP/upload.keystore"
           KEYSTORE_FILE="$RUNNER_TEMP/upload.keystore" ./gradlew --no-daemon bundleRelease
           rm -f "$RUNNER_TEMP/upload.keystore"
       - uses: actions/upload-artifact@v4
