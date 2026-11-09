@@ -11,6 +11,7 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SystemBars: { insetsHandling: 'css', initialViewportFitValueHint: 'cover' },
+    LocalNotifications: { smallIcon: 'ic_stat_kaltrack', iconColor: '#059669' },
   },
 };
 

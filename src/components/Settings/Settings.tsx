@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Languages, Moon, Palette, Ruler, Sun, SunMoon, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
+import { Bell, Languages, Moon, Palette, Ruler, Sun, SunMoon, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
 import { CollapsibleCard } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { checkAccessCode, normalizeCode } from '@/services/geminiVision';
 import { ACTIVITY_FACTORS, MACRO_PRESETS, PACE_DELTAS, computeGoals, macroSplitFor } from '@/services/bmrCalculator';
 import { db, exportBackup, getStorageInfo, importBackup, requestPersistentStorage } from '@/db/database';
 import { saveFile } from '@/lib/native';
+import { notificationsSupported, requestNotificationPermission, sendTestReminder } from '@/lib/notifications';
 import { COLORS, MEAL_SHORT, MEAL_TYPES, round, todayISO } from '@/lib/utils';
 import type { ActivityLevel, BackupFile, Goal, GoalPace, MacroPreset, Profile, Sex } from '@/types';
 import { LANGS, detectLang, getLang, t, type LangSetting } from '@/i18n';
@@ -300,6 +301,67 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           />
 
       </CollapsibleCard>
+
+      {/* ---------- Rappel quotidien (application Android) ---------- */}
+      {notificationsSupported && (
+        <CollapsibleCard
+          id="s.reminder"
+          icon={<Bell className="h-4 w-4 text-orange-400" />}
+          title={t('Rappel quotidien')}
+          summary={profile.reminder?.enabled ? t('Tous les jours à {h}', { h: profile.reminder.time }) : t('Désactivée')}
+          actions={
+            <Switch
+              checked={!!profile.reminder?.enabled}
+              onCheckedChange={async (on) => {
+                if (on && !(await requestNotificationPermission())) {
+                  toast(t('Notifications refusées : autorise-les dans les paramètres Android de Kal-Track.'), 'error');
+                  return;
+                }
+                const reminder = { enabled: on, time: profile.reminder?.time ?? '19:30' };
+                await updateProfile({ reminder });
+                dirty.current = true;
+                await flush();
+                await db.userProfile.update(1, { reminder });
+                if (on) toast(t('Rappel activé'));
+              }}
+            />
+          }
+        >
+          <div className="space-y-3">
+            <p className="text-xs text-slate-400">
+              {t('Un seul message bienveillant par jour, adapté à ta journée (calories restantes, repas à noter…). Créé sur ton téléphone : aucune donnée envoyée.')}
+            </p>
+            <div>
+              <Label>{t('Heure du rappel')}</Label>
+              <Picker<string>
+                title={t('Heure du rappel')}
+                value={profile.reminder?.time ?? '19:30'}
+                onChange={async (time) => {
+                  const reminder = { enabled: !!profile.reminder?.enabled, time };
+                  await updateProfile({ reminder });
+                  dirty.current = true;
+                  await flush();
+                  await db.userProfile.update(1, { reminder });
+                }}
+                options={[
+                  { value: '08:00', label: '08:00', hint: t('Le matin, pour bien démarrer') },
+                  { value: '11:30', label: '11:30', hint: t('Avant le déjeuner') },
+                  { value: '17:00', label: '17:00', hint: t('En fin d’après-midi') },
+                  { value: '19:30', label: '19:30', hint: t('Avant le dîner (recommandé)') },
+                  { value: '21:00', label: '21:00', hint: t('En soirée, pour le bilan') },
+                ]}
+              />
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={async () => toast((await sendTestReminder()) ? t('Notification d’essai dans 5 secondes') : t('Notifications refusées : autorise-les dans les paramètres Android de Kal-Track.'), 'info')}
+            >
+              <Bell /> {t('Essayer')}
+            </Button>
+          </div>
+        </CollapsibleCard>
+      )}
 
       {/* ---------- Langue ---------- */}
       <CollapsibleCard

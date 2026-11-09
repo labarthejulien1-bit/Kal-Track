@@ -6,6 +6,7 @@ import { Analytics } from '@/components/Analytics/Analytics';
 import { WeightTab } from '@/components/Weight/WeightTab';
 import { Settings } from '@/components/Settings/Settings';
 import { CameraModal } from '@/components/Scan/CameraModal';
+import { ReminderScheduler } from '@/components/ReminderScheduler';
 import { Onboarding } from '@/components/Onboarding';
 import { ToastProvider } from '@/components/ui/toast';
 import { useProfile } from '@/hooks/useProfile';
@@ -77,6 +78,7 @@ export default function App() {
           {tab === 'weight' && <WeightTab />}
           {tab === 'settings' && <Settings />}
         </Layout>
+        <ReminderScheduler />
         <CameraModal key={`cam-${lang}`} request={addRequest} onClose={() => setAddRequest(null)} />
         <Onboarding open={!loading && !hasProfile && !onboarded} onDone={() => setOnboarded(true)} />
       </AppContext.Provider>

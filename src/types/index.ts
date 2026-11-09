@@ -59,6 +59,8 @@ export interface Profile {
   apiKey: string;
   model: string;
   accessCode: string; // code d'accès au serveur IA Kal-Track
+  /** Rappel quotidien (application Android) : 1 notification max par jour. */
+  reminder?: { enabled: boolean; time: string };
   language?: 'auto' | 'fr' | 'en' | 'es' | 'pt' | 'de' | 'it';
   theme?: 'light' | 'dark' | 'auto';
   units?: { weight?: 'kg' | 'lb'; height?: 'cm' | 'ftin'; water?: 'ml' | 'floz' };
