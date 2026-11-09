@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMealsRange } from '@/hooks/useMeals';
 import { useProfile } from '@/hooks/useProfile';
 import { useWeights, trendSeries } from '@/hooks/useWeights';
-import { COLORS, addMonths, capitalize, cn, endOfMonth, formatDate, round, startOfMonth, todayISO, fromISODate } from '@/lib/utils';
+import { COLORS, addDays, addMonths, capitalize, cn, endOfMonth, formatDate, round, startOfMonth, todayISO, fromISODate } from '@/lib/utils';
 import { ChartTooltip, StatGrid, ZoneLegend, axisProps, calorieReferenceLines, gridProps, seriesStats } from './chartKit';
 import { MacroWeekChart } from './WeekView';
+import { t } from '@/i18n';
 
 export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; setAnchor: (d: string) => void; onPickDay: (d: string) => void }) {
   const { goals, profile } = useProfile();
@@ -42,24 +43,24 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800/40 p-2">
-        <button className="rounded-full p-2 text-slate-300" onClick={() => setAnchor(addMonths(start, -1))} aria-label="Mois précédent">
+        <button className="rounded-full p-2 text-slate-300" onClick={() => setAnchor(addMonths(start, -1))} aria-label={t('Mois précédent')}>
           <ChevronLeft className="h-5 w-5" />
         </button>
         <p className="text-sm font-semibold text-slate-100">{capitalize(formatDate(start, { month: 'long', year: 'numeric' }))}</p>
-        <button className="rounded-full p-2 text-slate-300 disabled:opacity-30" disabled={addMonths(start, 1) > today} onClick={() => setAnchor(addMonths(start, 1))} aria-label="Mois suivant">
+        <button className="rounded-full p-2 text-slate-300 disabled:opacity-30" disabled={addMonths(start, 1) > today} onClick={() => setAnchor(addMonths(start, 1))} aria-label={t('Mois suivant')}>
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
 
       <StatGrid
         items={[
-          { label: 'Conformité', value: `${compliance}%`, sub: `${kcal.onTarget}/${kcal.logged} jours ± 10 %`, color: compliance >= 70 ? COLORS.kcal : compliance >= 40 ? COLORS.carbs : COLORS.fat },
-          { label: 'Moyenne / jour', value: round(kcal.avg), sub: `kcal · objectif ${goals.calories}`, color: COLORS.kcal },
-          { label: 'Jours suivis', value: `${kcal.logged}`, sub: `sur ${days.filter((d) => d.date <= today).length}` },
+          { label: t('Conformité'), value: `${compliance}%`, sub: t('{a}/{b} jours ± 10 %', { a: kcal.onTarget, b: kcal.logged }), color: compliance >= 70 ? COLORS.kcal : compliance >= 40 ? COLORS.carbs : COLORS.fat },
+          { label: t('Moyenne / jour'), value: round(kcal.avg), sub: t('kcal · objectif {n}', { n: goals.calories }), color: COLORS.kcal },
+          { label: t('Jours suivis'), value: `${kcal.logged}`, sub: t('sur {n}', { n: days.filter((d) => d.date <= today).length }) },
           {
-            label: 'Poids (tendance)',
+            label: t('Poids (tendance)'),
             value: wLast !== undefined ? `${wLast} kg` : '—',
-            sub: wFirst !== undefined && wLast !== undefined ? `${wLast - wFirst > 0 ? '+' : ''}${round(wLast - wFirst, 1)} kg ce mois` : 'Aucune pesée',
+            sub: wFirst !== undefined && wLast !== undefined ? t('{n} kg ce mois', { n: `${wLast - wFirst > 0 ? '+' : ''}${round(wLast - wFirst, 1)}` }) : t('Aucune pesée'),
             color: COLORS.water,
           },
         ]}
@@ -67,11 +68,11 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
 
       <Card>
         <CardHeader>
-          <CardTitle>Calendrier de conformité</CardTitle>
+          <CardTitle>{t('Calendrier de conformité')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-slate-500">
-            {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
+            {Array.from({ length: 7 }, (_, i) => formatDate(addDays('2024-01-01', i), { weekday: 'narrow' })).map((d, i) => (
               <span key={i}>{d}</span>
             ))}
             {Array.from({ length: firstDow }).map((_, i) => (
@@ -95,16 +96,16 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
             })}
           </div>
           <div className="mt-2 flex justify-center gap-3 text-[10px] text-slate-400">
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm" style={{ background: COLORS.lose }} /> Sous l'objectif</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm" style={{ background: COLORS.kcal }} /> Cible ± 10 %</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-rose-500" /> Au-dessus</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm" style={{ background: COLORS.lose }} /> {t("Sous l'objectif")}</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm" style={{ background: COLORS.kcal }} /> {t('Cible ± 10 %')}</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-rose-500" /> {t('Au-dessus')}</span>
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Évolution calorique</CardTitle>
+          <CardTitle>{t('Évolution calorique')}</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={240}>
@@ -119,7 +120,7 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
               <XAxis dataKey="label" {...axisProps} interval={2} />
               <YAxis {...axisProps} tickCount={8} domain={[0, (max: number) => Math.ceil(Math.max(max, goals.gainTarget) * 1.1 / 100) * 100]} />
               <Tooltip content={<ChartTooltip unit=" kcal" />} />
-              <Area dataKey="Calories" stroke={COLORS.kcal} fill="url(#kcalFill)" strokeWidth={2} connectNulls type="monotone" dot={{ r: 2 }} />
+              <Area dataKey="Calories" name={t('Calories')} stroke={COLORS.kcal} fill="url(#kcalFill)" strokeWidth={2} connectNulls type="monotone" dot={{ r: 2 }} />
               {calorieReferenceLines(goals)}
             </ComposedChart>
           </ResponsiveContainer>
@@ -129,8 +130,8 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
 
       <Card>
         <CardHeader>
-          <CardTitle>Suivi du poids</CardTitle>
-          <span className="text-[11px] text-slate-400">cible {profile.targetWeight} kg</span>
+          <CardTitle>{t('Suivi du poids')}</CardTitle>
+          <span className="text-[11px] text-slate-400">{t('cible')} {profile.targetWeight} kg</span>
         </CardHeader>
         <CardContent>
           {monthWeights.length ? (
@@ -140,13 +141,13 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
                 <XAxis dataKey="label" {...axisProps} />
                 <YAxis {...axisProps} domain={[(min: number) => Math.floor(Math.min(min, profile.targetWeight) - 1), (max: number) => Math.ceil(max + 1)]} unit="kg" tickCount={6} />
                 <Tooltip content={<ChartTooltip unit=" kg" />} />
-                <Line dataKey="Poids" stroke="#64748b" strokeWidth={0} dot={{ r: 3, fill: '#94a3b8' }} />
-                <Line dataKey="Tendance" stroke={COLORS.water} strokeWidth={2.5} dot={false} type="monotone" />
-                <ReferenceLine y={profile.targetWeight} stroke={COLORS.kcal} strokeDasharray="5 4" label={{ value: 'Cible', fill: COLORS.kcal, fontSize: 9, position: 'insideBottomRight' }} />
+                <Line dataKey="Poids" name={t('Poids')} stroke="#64748b" strokeWidth={0} dot={{ r: 3, fill: '#94a3b8' }} />
+                <Line dataKey="Tendance" name={t('Tendance')} stroke={COLORS.water} strokeWidth={2.5} dot={false} type="monotone" />
+                <ReferenceLine y={profile.targetWeight} stroke={COLORS.kcal} strokeDasharray="5 4" label={{ value: t('Cible'), fill: COLORS.kcal, fontSize: 9, position: 'insideBottomRight' }} />
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <p className="py-6 text-center text-xs text-slate-500">Aucune pesée ce mois-ci. Ajoute ton poids dans l'onglet Poids.</p>
+            <p className="py-6 text-center text-xs text-slate-500">{t("Aucune pesée ce mois-ci. Ajoute ton poids dans l'onglet Poids.")}</p>
           )}
         </CardContent>
       </Card>

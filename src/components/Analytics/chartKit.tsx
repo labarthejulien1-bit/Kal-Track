@@ -2,6 +2,7 @@ import { ReferenceLine } from 'recharts';
 import { COLORS, round } from '@/lib/utils';
 import type { Goals } from '@/types';
 import { Card } from '@/components/ui/card';
+import { t } from '@/i18n';
 
 export const axisProps = {
   stroke: '#475569',
@@ -33,14 +34,14 @@ export function ChartTooltip({ active, payload, label, unit = '' }: { active?: b
 /** Lignes de référence : objectif + limites perte / maintien / prise. */
 export function calorieReferenceLines(goals: Goals, opts: { showZones?: boolean } = {}) {
   const lines: React.ReactNode[] = [
-    <ReferenceLine key="target" y={goals.calories} stroke={COLORS.target} strokeWidth={2} label={{ value: `Objectif ${goals.calories}`, fill: COLORS.target, fontSize: 10, position: 'insideTopRight' }} ifOverflow="extendDomain" />,
+    <ReferenceLine key="target" y={goals.calories} stroke={COLORS.target} strokeWidth={2} label={{ value: `${t('Objectif')} ${goals.calories}`, fill: COLORS.target, fontSize: 10, position: 'insideTopRight' }} ifOverflow="extendDomain" />,
   ];
   if (opts.showZones !== false) {
     const z = (v: number) => Math.abs(v - goals.calories) > 1;
     lines.push(
-      z(goals.loseTarget) && <ReferenceLine key="lose" y={goals.loseTarget} stroke={COLORS.lose} strokeDasharray="6 4" label={{ value: `Perte ${goals.loseTarget}`, fill: COLORS.lose, fontSize: 9, position: 'insideBottomLeft' }} ifOverflow="extendDomain" />,
-      z(goals.maintenance) && <ReferenceLine key="maintain" y={goals.maintenance} stroke={COLORS.maintain} strokeDasharray="2 4" label={{ value: `Maintien ${goals.maintenance}`, fill: COLORS.maintain, fontSize: 9, position: 'insideTopLeft' }} ifOverflow="extendDomain" />,
-      z(goals.gainTarget) && <ReferenceLine key="gain" y={goals.gainTarget} stroke={COLORS.gain} strokeDasharray="6 4" label={{ value: `Prise ${goals.gainTarget}`, fill: COLORS.gain, fontSize: 9, position: 'insideTopLeft' }} ifOverflow="extendDomain" />,
+      z(goals.loseTarget) && <ReferenceLine key="lose" y={goals.loseTarget} stroke={COLORS.lose} strokeDasharray="6 4" label={{ value: `${t('Perte')} ${goals.loseTarget}`, fill: COLORS.lose, fontSize: 9, position: 'insideBottomLeft' }} ifOverflow="extendDomain" />,
+      z(goals.maintenance) && <ReferenceLine key="maintain" y={goals.maintenance} stroke={COLORS.maintain} strokeDasharray="2 4" label={{ value: `${t('Maintien')} ${goals.maintenance}`, fill: COLORS.maintain, fontSize: 9, position: 'insideTopLeft' }} ifOverflow="extendDomain" />,
+      z(goals.gainTarget) && <ReferenceLine key="gain" y={goals.gainTarget} stroke={COLORS.gain} strokeDasharray="6 4" label={{ value: `${t('Prise')} ${goals.gainTarget}`, fill: COLORS.gain, fontSize: 9, position: 'insideTopLeft' }} ifOverflow="extendDomain" />,
     );
   }
   return lines;
@@ -48,10 +49,10 @@ export function calorieReferenceLines(goals: Goals, opts: { showZones?: boolean 
 
 export function ZoneLegend() {
   const items = [
-    { c: COLORS.target, l: 'Objectif', dash: false },
-    { c: COLORS.lose, l: 'Limite perte', dash: true },
-    { c: COLORS.maintain, l: 'Maintien', dash: true },
-    { c: COLORS.gain, l: 'Limite prise', dash: true },
+    { c: COLORS.target, l: t('Objectif'), dash: false },
+    { c: COLORS.lose, l: t('Limite perte'), dash: true },
+    { c: COLORS.maintain, l: t('Maintien'), dash: true },
+    { c: COLORS.gain, l: t('Limite prise'), dash: true },
   ];
   return (
     <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[10px] text-slate-400">
@@ -87,7 +88,7 @@ export function GraduatedGauge({
   const pos = (v: number) => `${Math.min(100, (v / scaleMax) * 100)}%`;
   const ticks = Array.from({ length: 7 }, (_, i) => (scaleMax * i) / 6);
   const pct = goal > 0 ? (value / goal) * 100 : 0;
-  const status = isLimit ? (pct > 100 ? 'Limite dépassée' : 'Sous la limite') : pct < 80 ? 'Insuffisant' : pct <= 110 ? 'Dans la cible' : 'Excédent';
+  const status = t(isLimit ? (pct > 100 ? 'Limite dépassée' : 'Sous la limite') : pct < 80 ? 'Insuffisant' : pct <= 110 ? 'Dans la cible' : 'Excédent');
   const statusColor = isLimit ? (pct > 100 ? '#f43f5e' : '#10b981') : pct < 80 ? '#f59e0b' : pct <= 110 ? '#10b981' : '#f43f5e';
   return (
     <div className="space-y-1">

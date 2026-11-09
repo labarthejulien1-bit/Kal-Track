@@ -162,7 +162,8 @@ export default {
             : perDevice
               ? 'Le quota du jour de ce code est épuisé. Réessaie demain.'
               : `Tu as utilisé tes ${limit} analyses IA du jour. Réessaie demain.`;
-      return json({ error: { code: 'quota', message } }, 429, cors);
+      const reason = taken.reason === 'user' && perDevice ? 'group' : taken.reason;
+      return json({ error: { code: 'quota', reason, limit: reason === 'device' ? perDevice : limit, message } }, 429, cors);
     }
 
     const model = env.MODEL || 'gemini-3.5-flash-lite';

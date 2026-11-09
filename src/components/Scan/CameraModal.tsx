@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/toast';
 import type { AddMode, AddRequest } from '@/components/AppContext';
 import { MEAL_LABELS, guessMealType, haptic, round, todayISO, fromISODate } from '@/lib/utils';
 import type { Meal, MealAnalysis, MealItem, MealType, MealSource } from '@/types';
+import { locale, t } from '@/i18n';
 
 type Step = AddMode | 'analyzing' | 'review' | 'photo-preview';
 
@@ -36,7 +37,7 @@ function n(v: unknown, d = 1) {
 
 function buildMeal(d: Draft, timestamp: number): Meal {
   const items: MealItem[] = (Array.isArray(d.items) ? d.items : []).map((it) => ({
-    name: String(it?.name ?? 'Aliment'),
+    name: String(it?.name ?? t('Aliment')),
     quantity_g: n(it?.quantity_g, 0),
     calories: n(it?.calories, 0),
     protein: n(it?.protein),
@@ -240,7 +241,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
       try {
         const p = await fetchProductByBarcode(code);
         if (!p) {
-          setError(`Produit ${code} introuvable dans Open Food Facts. Photographie l'étiquette nutritionnelle à la place.`);
+          setError(t("Produit {code} introuvable dans Open Food Facts. Photographie l'étiquette nutritionnelle à la place.", { code }));
           setStep('label');
           return;
         }
@@ -260,11 +261,11 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
     if (saving) return;
     const current = draftRef.current ?? draft;
     if (!current) {
-      toast('Aucune donnée à enregistrer, recommence l’ajout.', 'error');
+      toast(t('Aucune donnée à enregistrer, recommence l’ajout.'), 'error');
       return;
     }
     if (!String(current.title ?? '').trim()) {
-      toast('Donne un nom au repas', 'error');
+      toast(t('Donne un nom au repas'), 'error');
       return;
     }
     (document.activeElement as HTMLElement | null)?.blur?.();
@@ -279,14 +280,14 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
         if (!meal.image) throw e;
         console.error('Échec avec photo, nouvel essai sans photo', e);
         await saveMeal({ ...meal, image: undefined });
-        toast('Repas enregistré sans la photo (stockage indisponible)', 'info');
+        toast(t('Repas enregistré sans la photo (stockage indisponible)'), 'info');
       }
       haptic(25);
-      toast(request?.edit ? 'Repas mis à jour' : `Ajouté au ${MEAL_LABELS[meal.mealType].toLowerCase()}`);
+      toast(request?.edit ? t('Repas mis à jour') : t('Ajouté au {meal}', { meal: MEAL_LABELS[meal.mealType].toLowerCase() }));
       onClose();
     } catch (e) {
       console.error(e);
-      toast(`Enregistrement impossible : ${(e as Error)?.message || e}`, 'error');
+      toast(t('Enregistrement impossible : {msg}', { msg: String((e as Error)?.message || e) }), 'error');
     } finally {
       setSaving(false);
     }
@@ -300,10 +301,10 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   };
 
   const title = request?.edit
-    ? 'Modifier le repas'
+    ? t('Modifier le repas')
     : step === 'review'
-      ? 'Vérifier & enregistrer'
-      : `Ajouter · ${MEAL_LABELS[mealType]}${date !== todayISO() ? ` (${fromISODate(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })})` : ''}`;
+      ? t('Vérifier & enregistrer')
+      : `${t('Ajouter')} · ${MEAL_LABELS[mealType]}${date !== todayISO() ? ` (${fromISODate(date).toLocaleDateString(locale(), { day: 'numeric', month: 'short' })})` : ''}`;
 
   const filteredRecent = recent.filter((m) => m.title.toLowerCase().includes(search.toLowerCase()));
 
@@ -318,12 +319,12 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
           <div className="flex gap-2">
             {!request?.edit && (
               <Button variant="secondary" onClick={back} className="flex-none">
-                <ArrowLeft /> Retour
+                <ArrowLeft /> {t('Retour')}
               </Button>
             )}
             <Button type="button" className="flex-1" onClick={save} disabled={saving}>
               {saving && <Loader2 className="animate-spin" />}
-              {request?.edit ? 'Mettre à jour' : 'Enregistrer'} · {round(draft?.calories ?? 0)} kcal
+              {request?.edit ? t('Mettre à jour') : t('Enregistrer')} · {round(draft?.calories ?? 0)} kcal
             </Button>
           </div>
         ) : undefined
@@ -343,12 +344,12 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
 
       {step === 'choose' && (
         <div className="grid grid-cols-2 gap-2 pb-2">
-          <ModeButton icon={Camera} color="#10b981" title="Photo du plat" text="Analyse IA détaillée" onClick={() => setStep('photo')} big />
-          <ModeButton icon={MessageSquareText} color="#d946ef" title="Décrire" text="Texte libre → IA" onClick={() => setStep('text')} big />
-          <ModeButton icon={ScanText} color="#f59e0b" title="Étiquette" text="Tableau nutritionnel" onClick={() => setStep('label')} />
-          <ModeButton icon={Barcode} color="#6366f1" title="Code-barres" text="Produit emballé" onClick={() => setStep('barcode')} />
-          <ModeButton icon={History} color="#0ea5e9" title="Récents & favoris" text={`${recent.length} enregistrés`} onClick={() => setStep('recent')} />
-          <ModeButton icon={Keyboard} color="#94a3b8" title="Saisie manuelle" text="Valeurs connues" onClick={startManual} />
+          <ModeButton icon={Camera} color="#10b981" title={t('Photo du plat')} text={t('Analyse IA détaillée')} onClick={() => setStep('photo')} big />
+          <ModeButton icon={MessageSquareText} color="#d946ef" title={t('Décrire')} text={t('Texte libre → IA')} onClick={() => setStep('text')} big />
+          <ModeButton icon={ScanText} color="#f59e0b" title={t('Étiquette')} text={t('Tableau nutritionnel')} onClick={() => setStep('label')} />
+          <ModeButton icon={Barcode} color="#6366f1" title={t('Code-barres')} text={t('Produit emballé')} onClick={() => setStep('barcode')} />
+          <ModeButton icon={History} color="#0ea5e9" title={t('Récents & favoris')} text={t('{n} enregistrés', { n: recent.length })} onClick={() => setStep('recent')} />
+          <ModeButton icon={Keyboard} color="#94a3b8" title={t('Saisie manuelle')} text={t('Valeurs connues')} onClick={startManual} />
         </div>
       )}
 
@@ -357,19 +358,19 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
           <BackLink onClick={back} />
           <div className="rounded-2xl border border-dashed border-slate-700 p-5 text-center">
             {step === 'photo' ? <Camera className="mx-auto h-10 w-10 text-emerald-400" /> : <ScanText className="mx-auto h-10 w-10 text-amber-400" />}
-            <p className="mt-2 text-sm font-medium text-slate-200">{step === 'photo' ? 'Photographie ton assiette' : "Photographie l'emballage"}</p>
+            <p className="mt-2 text-sm font-medium text-slate-200">{step === 'photo' ? t('Photographie ton assiette') : t("Photographie l'emballage")}</p>
             <p className="mt-1 text-xs text-slate-500">
               {step === 'photo'
-                ? 'Astuce : prends la photo du dessus, en entier, avec une fourchette visible comme repère de taille.'
-                : 'Cadre le tableau nutritionnel (et si possible le nom et le code-barres). L’IA lit les valeurs pour 100 g.'}
+                ? t('Astuce : prends la photo du dessus, en entier, avec une fourchette visible comme repère de taille.')
+                : t('Cadre le tableau nutritionnel (et si possible le nom et le code-barres). L’IA lit les valeurs pour 100 g.')}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button onClick={() => pickPhoto(step, true)} size="lg">
-              <Camera /> Caméra
+              <Camera /> {t('Caméra')}
             </Button>
             <Button variant="secondary" onClick={() => pickPhoto(step, false)} size="lg">
-              <ImagePlus /> Galerie
+              <ImagePlus /> {t('Galerie')}
             </Button>
           </div>
         </div>
@@ -380,14 +381,14 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
           <BackLink onClick={() => setStep('photo')} />
           <img src={photo.dataUrl} alt="" className="max-h-72 w-full rounded-2xl object-cover" />
           <p className="text-center text-[11px] text-slate-500">
-            {photo.width}×{photo.height} · {round(photo.sizeBytes / 1024)} Ko
+            {photo.width}×{photo.height} · {round(photo.sizeBytes / 1024)} {t('Ko')}
           </p>
           <div>
-            <Label>Précisions pour l'IA (optionnel)</Label>
-            <Textarea value={hint} onChange={(e) => setHint(e.target.value)} placeholder="Ex. : cuit à l'huile d'olive, 150 g de riz, sauce à part, pain complet…" className="min-h-[70px]" />
+            <Label>{t("Précisions pour l'IA (optionnel)")}</Label>
+            <Textarea value={hint} onChange={(e) => setHint(e.target.value)} placeholder={t("Ex. : cuit à l'huile d'olive, 150 g de riz, sauce à part, pain complet…")} className="min-h-[70px]" />
           </div>
           <Button size="lg" className="w-full" onClick={runPhoto}>
-            <Sparkles /> Analyser avec l'IA
+            <Sparkles /> {t("Analyser avec l'IA")}
           </Button>
         </div>
       )}
@@ -397,7 +398,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
           <BackLink onClick={back} />
           <BarcodeScanner onDetected={onBarcode} />
           <button onClick={() => setStep('label')} className="w-full text-center text-xs text-amber-300">
-            Pas de code-barres ? Photographier l'étiquette →
+            {t("Pas de code-barres ? Photographier l'étiquette →")}
           </button>
         </div>
       )}
@@ -405,17 +406,17 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
       {step === 'text' && (
         <div className="space-y-3 pb-2">
           <BackLink onClick={back} />
-          <Label>Décris ce que tu as mangé</Label>
-          <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Ex. : 2 œufs brouillés au beurre, 1 tranche de pain complet, un café avec un sucre" className="min-h-[120px]" autoFocus />
+          <Label>{t('Décris ce que tu as mangé')}</Label>
+          <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder={t('Ex. : 2 œufs brouillés au beurre, 1 tranche de pain complet, un café avec un sucre')} className="min-h-[120px]" autoFocus />
           <div className="flex flex-wrap gap-1.5">
-            {['Un bol de muesli avec lait demi-écrémé', 'Burger frites menu moyen', 'Salade César avec poulet', 'Pomme et 20 g d’amandes'].map((ex) => (
+            {['Un bol de muesli avec lait demi-écrémé', 'Burger frites menu moyen', 'Salade César avec poulet', 'Pomme et 20 g d’amandes'].map((k) => t(k)).map((ex) => (
               <button key={ex} onClick={() => setText(ex)} className="rounded-full border border-slate-700 px-2.5 py-1 text-[11px] text-slate-400">
                 {ex}
               </button>
             ))}
           </div>
           <Button size="lg" className="w-full" onClick={runText} disabled={!text.trim()}>
-            <Sparkles /> Analyser
+            <Sparkles /> {t('Analyser')}
           </Button>
         </div>
       )}
@@ -425,9 +426,9 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
           <BackLink onClick={back} />
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-            <Input placeholder="Rechercher" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            <Input placeholder={t('Rechercher')} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
-          {filteredRecent.length === 0 && <p className="py-6 text-center text-sm text-slate-500">Aucun repas enregistré pour l'instant.</p>}
+          {filteredRecent.length === 0 && <p className="py-6 text-center text-sm text-slate-500">{t("Aucun repas enregistré pour l'instant.")}</p>}
           {filteredRecent.map((m) => (
             <button
               key={m.id}
@@ -444,7 +445,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
                   {m.title}
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  {round(m.calories)} kcal · P{round(m.protein)} G{round(m.carbs)} L{round(m.fat)}
+                  {round(m.calories)} kcal · {t('P')}{round(m.protein)} {t('G')}{round(m.carbs)} {t('L')}{round(m.fat)}
                 </p>
               </div>
             </button>
@@ -459,9 +460,9 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
             <Loader2 className="h-10 w-10 animate-spin text-emerald-400" />
             <Sparkles className="absolute -right-2 -top-2 h-4 w-4 animate-pulse text-amber-300" />
           </div>
-          <p className="text-sm text-slate-300">{LOADING_MESSAGES[loadingMsg]}</p>
+          <p className="text-sm text-slate-300">{t(LOADING_MESSAGES[loadingMsg])}</p>
           <Button variant="ghost" size="sm" onClick={back}>
-            Annuler
+            {t('Annuler')}
           </Button>
         </div>
       )}
@@ -488,7 +489,7 @@ function ModeButton({ icon: Icon, color, title, text, onClick, big }: { icon: Re
 function BackLink({ onClick }: { onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex items-center gap-1 text-xs text-slate-400">
-      <ArrowLeft className="h-3.5 w-3.5" /> Autres méthodes
+      <ArrowLeft className="h-3.5 w-3.5" /> {t('Autres méthodes')}
     </button>
   );
 }

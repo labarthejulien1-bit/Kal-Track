@@ -1,6 +1,7 @@
 import type { MealAnalysis, Nutrients } from '@/types';
 import { round } from '@/lib/utils';
 import { scaleNutrients } from './geminiVision';
+import { getLang, t } from '@/i18n';
 
 /** Recherche d'un produit par code-barres dans la base ouverte Open Food Facts. */
 export async function fetchProductByBarcode(code: string, signal?: AbortSignal): Promise<MealAnalysis | null> {
@@ -9,6 +10,7 @@ export async function fetchProductByBarcode(code: string, signal?: AbortSignal):
   const fields = [
     'product_name',
     'product_name_fr',
+    `product_name_${getLang()}`,
     'brands',
     'quantity',
     'serving_quantity',
@@ -37,7 +39,7 @@ export async function fetchProductByBarcode(code: string, signal?: AbortSignal):
     fiber: round(Number(n.fiber_100g) || 0, 1),
   };
   const serving = Number(p.serving_quantity) > 0 ? Number(p.serving_quantity) : 100;
-  const name = [p.product_name_fr || p.product_name || 'Produit', p.brands?.split(',')[0]].filter(Boolean).join(' – ');
+  const name = [p[`product_name_${getLang()}`] || p.product_name || p.product_name_fr || t('Produit'), p.brands?.split(',')[0]].filter(Boolean).join(' – ');
   const totals = scaleNutrients(per100g, serving);
   return {
     title: name,
@@ -47,7 +49,7 @@ export async function fetchProductByBarcode(code: string, signal?: AbortSignal):
     barcode: clean,
     nutriScore: p.nutriscore_grade && /^[a-e]$/i.test(p.nutriscore_grade) ? p.nutriscore_grade.toUpperCase() : undefined,
     confidence: 1,
-    confidence_note: `Données Open Food Facts${p.serving_size ? ` · portion indiquée : ${p.serving_size}` : ''}${p.quantity ? ` · emballage : ${p.quantity}` : ''}`,
+    confidence_note: `${t('Données Open Food Facts')}${p.serving_size ? ` · ${t('portion indiquée :')} ${p.serving_size}` : ''}${p.quantity ? ` · ${t('emballage :')} ${p.quantity}` : ''}`,
     items: [{ name, quantity_g: serving, ...totals }],
     imageUrl: p.image_front_small_url,
   };

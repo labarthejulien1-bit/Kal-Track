@@ -14,6 +14,7 @@ import { adaptiveTdee, bmiCategory } from '@/services/bmrCalculator';
 import { COLORS, addDays, daysBetween, formatDate, fromISODate, haptic, round, todayISO, capitalize } from '@/lib/utils';
 import { ChartTooltip, axisProps, gridProps } from '@/components/Analytics/chartKit';
 import { db } from '@/db/database';
+import { decimalSep, locale, t } from '@/i18n';
 
 type Range = '1M' | '3M' | '6M' | '1A' | 'Tout';
 const RANGE_DAYS: Record<Range, number> = { '1M': 30, '3M': 91, '6M': 182, '1A': 365, Tout: 100000 };
@@ -35,10 +36,10 @@ export function WeightTab() {
 
   const save = async () => {
     const w = currentValue;
-    if (!w || w < 20 || w > 400) return toast('Poids invalide', 'error');
+    if (!w || w < 20 || w > 400) return toast(t('Poids invalide'), 'error');
     await upsertWeight(date, round(w, 1), note || undefined);
     haptic(25);
-    toast(`Poids enregistré pour ${date === today ? "aujourd'hui" : formatDate(date, { day: 'numeric', month: 'long' })}`);
+    toast(t('Poids enregistré pour {d}', { d: date === today ? t("aujourd'hui") : formatDate(date, { day: 'numeric', month: 'long' }) }));
     setWeight('');
     setNote('');
   };
@@ -52,23 +53,23 @@ export function WeightTab() {
   const fromTs = fromISODate(from).getTime();
   const toTs = fromISODate(today).getTime();
   const chartData = trend
-    .filter((t) => t.date >= from)
-    .map((t) => ({ x: fromISODate(t.date).getTime(), label: capitalize(formatDate(t.date, { weekday: 'short', day: 'numeric', month: 'short' })), Poids: t.weight, Tendance: t.trend }));
+    .filter((p) => p.date >= from)
+    .map((p) => ({ x: fromISODate(p.date).getTime(), label: capitalize(formatDate(p.date, { weekday: 'short', day: 'numeric', month: 'short' })), Poids: p.weight, Tendance: p.trend }));
   const xTicks = Array.from({ length: 5 }, (_, i) => Math.round(fromTs + ((toTs - fromTs) * i) / 4));
   const spanDays = (toTs - fromTs) / 86400000;
   const fmtTick = (v: number) => {
     const d = new Date(v);
     return spanDays > 400
-      ? d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })
-      : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+      ? d.toLocaleDateString(locale(), { month: 'short', year: '2-digit' })
+      : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
   };
 
   // Projection par régression linéaire sur la tendance des 30 derniers jours.
   const projection = useMemo(() => {
-    const recent = trend.filter((t) => t.date >= addDays(today, -30));
+    const recent = trend.filter((p) => p.date >= addDays(today, -30));
     if (recent.length < 3) return null;
-    const xs = recent.map((t) => daysBetween(recent[0].date, t.date));
-    const ys = recent.map((t) => t.trend);
+    const xs = recent.map((p) => daysBetween(recent[0].date, p.date));
+    const ys = recent.map((p) => p.trend);
     const n = xs.length;
     const mx = xs.reduce((a, b) => a + b, 0) / n;
     const my = ys.reduce((a, b) => a + b, 0) / n;
@@ -88,7 +89,7 @@ export function WeightTab() {
   const winStart = addDays(today, -27);
   const { days: intakeDays } = useMealsRange(winStart, today);
   const adaptive = useMemo(() => {
-    const inWin = trend.filter((t) => t.date >= winStart);
+    const inWin = trend.filter((p) => p.date >= winStart);
     if (inWin.length < 2) return null;
     const span = daysBetween(inWin[0].date, inWin[inWin.length - 1].date);
     return adaptiveTdee(
@@ -111,11 +112,11 @@ export function WeightTab() {
 
   return (
     <div className="space-y-3">
-      <h1 className="pt-1 text-lg font-bold text-slate-50">Poids</h1>
+      <h1 className="pt-1 text-lg font-bold text-slate-50">{t('Poids')}</h1>
 
       <Card className="p-4">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-200">
-          <Scale className="h-4 w-4 text-sky-400" /> Nouvelle pesée
+          <Scale className="h-4 w-4 text-sky-400" /> {t('Nouvelle pesée')}
         </div>
         <div className="flex items-center justify-center gap-3">
           <button className="rounded-full bg-slate-700/70 p-3" onClick={() => bump(-0.1)} aria-label="-0,1 kg">
@@ -126,7 +127,7 @@ export function WeightTab() {
               type="text"
               inputMode="decimal"
               autoComplete="off"
-              value={weight === '' ? String(round(currentValue, 1)).replace('.', ',') : weight}
+              value={weight === '' ? String(round(currentValue, 1)).replace('.', decimalSep()) : weight}
               onChange={(e) => setWeight(e.target.value.replace(/[^0-9.,]/g, '') || ' ')}
               onFocus={(e) => e.target.select()}
               className="w-36 bg-transparent text-center text-4xl font-bold tabular-nums text-slate-50 focus:outline-none"
@@ -139,37 +140,37 @@ export function WeightTab() {
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div>
-            <Label>Date</Label>
+            <Label>{t('Date')}</Label>
             <Input type="date" max={today} value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
           </div>
           <div>
-            <Label>Note (optionnel)</Label>
-            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="à jeun, après sport…" />
+            <Label>{t('Note (optionnel)')}</Label>
+            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('à jeun, après sport…')} />
           </div>
         </div>
         <Button className="mt-3 w-full" onClick={save}>
-          Enregistrer {logs.some((l) => l.date === date) && '(remplacer)'}
+          {t('Enregistrer')} {logs.some((l) => l.date === date) && t('(remplacer)')}
         </Button>
       </Card>
 
       <div className="grid grid-cols-2 gap-2">
-        <MiniStat label="Actuel" value={last ? `${last.weight} kg` : '—'} sub={latestTrend ? `tendance ${latestTrend} kg` : undefined} color={COLORS.water} />
+        <MiniStat label={t('Actuel')} value={last ? `${last.weight} kg` : '—'} sub={latestTrend ? t('tendance {n} kg', { n: latestTrend }) : undefined} color={COLORS.water} />
         <MiniStat
-          label="Évolution totale"
+          label={t('Évolution totale')}
           value={`${totalChange > 0 ? '+' : ''}${round(totalChange, 1)} kg`}
-          sub={first ? `depuis le ${formatDate(first.date, { day: 'numeric', month: 'short', year: '2-digit' })}` : undefined}
+          sub={first ? t('depuis le {d}', { d: formatDate(first.date, { day: 'numeric', month: 'short', year: '2-digit' }) }) : undefined}
           color={totalChange <= 0 ? COLORS.kcal : COLORS.gain}
           icon={totalChange <= 0 ? <TrendingDown className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
         />
-        <MiniStat label="IMC" value={round(bmi, 1)} sub={cat.label} color={cat.color} />
-        <MiniStat label="Objectif" value={`${profile.targetWeight} kg`} sub={last ? `${toGo > 0 ? '+' : ''}${round(toGo, 1)} kg restants` : undefined} color={COLORS.kcal} icon={<Target className="h-4 w-4" />} />
+        <MiniStat label={t('IMC')} value={round(bmi, 1)} sub={cat.label} color={cat.color} />
+        <MiniStat label={t('Objectif')} value={`${profile.targetWeight} kg`} sub={last ? t('{n} kg restants', { n: `${toGo > 0 ? '+' : ''}${round(toGo, 1)}` }) : undefined} color={COLORS.kcal} icon={<Target className="h-4 w-4" />} />
       </div>
 
       {first && last && Math.abs(first.weight - profile.targetWeight) > 0.1 && (
         <Card className="p-4">
           <div className="mb-1 flex justify-between text-xs text-slate-400">
             <span>{first.weight} kg</span>
-            <span className="font-semibold text-emerald-400">{round(progressPct)}% du chemin</span>
+            <span className="font-semibold text-emerald-400">{t('{n}% du chemin', { n: round(progressPct) })}</span>
             <span>{profile.targetWeight} kg</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-slate-700">
@@ -177,10 +178,10 @@ export function WeightTab() {
           </div>
           {projection && (
             <p className="mt-2 text-xs text-slate-400">
-              Rythme actuel : <b className="text-slate-200">{projection.perWeek > 0 ? '+' : ''}{round(projection.perWeek, 2)} kg/sem</b>
+              {t('Rythme actuel :')} <b className="text-slate-200">{projection.perWeek > 0 ? '+' : ''}{round(projection.perWeek, 2)} {t('kg/sem')}</b>
               {projection.eta && (
                 <>
-                  {' '}· objectif estimé le <b className="text-emerald-300">{formatDate(projection.eta, { day: 'numeric', month: 'long', year: 'numeric' })}</b>
+                  {' '}· {t('objectif estimé le')} <b className="text-emerald-300">{formatDate(projection.eta, { day: 'numeric', month: 'long', year: 'numeric' })}</b>
                 </>
               )}
             </p>
@@ -190,10 +191,10 @@ export function WeightTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Courbe de poids</CardTitle>
+          <CardTitle>{t('Courbe de poids')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <SegmentedTabs value={range} onChange={setRange} options={(['1M', '3M', '6M', '1A', 'Tout'] as Range[]).map((r) => ({ value: r, label: r }))} />
+          <SegmentedTabs value={range} onChange={setRange} options={(['1M', '3M', '6M', '1A', 'Tout'] as Range[]).map((r) => ({ value: r, label: t(r) }))} />
           {chartData.length ? (
             <ResponsiveContainer width="100%" height={250}>
               <ComposedChart data={chartData} margin={{ top: 10, right: 6, left: -14, bottom: 0 }}>
@@ -212,15 +213,15 @@ export function WeightTab() {
                   domain={[(min: number) => Math.floor(Math.min(min, profile.targetWeight) - 1), (max: number) => Math.ceil(Math.max(max, profile.targetWeight) + 1)]}
                 />
                 <Tooltip content={(p) => <ChartTooltip active={p.active} payload={p.payload as never} label={(p.payload?.[0]?.payload as { label?: string } | undefined)?.label} unit=" kg" />} />
-                <Area dataKey="Poids" name="Poids" stroke={COLORS.water} strokeWidth={2.5} fill="url(#wFill)" type="linear" baseValue="dataMin" dot={{ r: 3.5, fill: '#e2e8f0', stroke: COLORS.water, strokeWidth: 2 }} activeDot={{ r: 6 }} isAnimationActive={false} />
-                <Line dataKey="Tendance" name="Tendance" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 4" type="monotone" dot={false} isAnimationActive={false} />
-                <ReferenceLine y={profile.targetWeight} stroke={COLORS.kcal} strokeDasharray="6 4" label={{ value: `Objectif ${profile.targetWeight} kg`, fill: COLORS.kcal, fontSize: 10, position: 'insideBottomRight' }} />
+                <Area dataKey="Poids" name={t('Poids')} stroke={COLORS.water} strokeWidth={2.5} fill="url(#wFill)" type="linear" baseValue="dataMin" dot={{ r: 3.5, fill: '#e2e8f0', stroke: COLORS.water, strokeWidth: 2 }} activeDot={{ r: 6 }} isAnimationActive={false} />
+                <Line dataKey="Tendance" name={t('Tendance')} stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 4" type="monotone" dot={false} isAnimationActive={false} />
+                <ReferenceLine y={profile.targetWeight} stroke={COLORS.kcal} strokeDasharray="6 4" label={{ value: `${t('Objectif')} ${profile.targetWeight} kg`, fill: COLORS.kcal, fontSize: 10, position: 'insideBottomRight' }} />
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState icon={<Scale className="h-8 w-8" />} title="Pas encore de pesée" text="Ajoute ton poids pour voir la courbe." />
+            <EmptyState icon={<Scale className="h-8 w-8" />} title={t('Pas encore de pesée')} text={t('Ajoute ton poids pour voir la courbe.')} />
           )}
-          <p className="text-center text-[10px] text-slate-500">Courbe bleue = tes pesées · pointillés gris = tendance lissée</p>
+          <p className="text-center text-[10px] text-slate-500">{t('Courbe bleue = tes pesées · pointillés gris = tendance lissée')}</p>
         </CardContent>
       </Card>
 
@@ -230,20 +231,20 @@ export function WeightTab() {
             <Brain className="h-5 w-5" />
           </span>
           <div className="text-xs text-slate-300">
-            <p className="text-sm font-semibold text-slate-100">Dépense adaptative</p>
+            <p className="text-sm font-semibold text-slate-100">{t('Dépense adaptative')}</p>
             {adaptive ? (
               <>
                 <p className="mt-1">
-                  D'après tes apports et ta tendance de poids sur 4 semaines, ta dépense réelle est estimée à <b className="text-indigo-300">{adaptive} kcal/j</b> (formule théorique : {goals.tdee} kcal).
+                  {t("D'après tes apports et ta tendance de poids sur 4 semaines, ta dépense réelle est estimée à")} <b className="text-indigo-300">{adaptive} {t('kcal/j')}</b> ({t('formule théorique : {n} kcal', { n: goals.tdee })}).
                 </p>
                 <p className="mt-1 text-slate-400">
                   {Math.abs(adaptive - goals.tdee) > 150
-                    ? `Écart de ${round(adaptive - goals.tdee)} kcal : tu peux ajuster ton objectif via la surcharge manuelle (Réglages).`
-                    : 'Ton estimation théorique est cohérente avec tes résultats réels 👍'}
+                    ? t('Écart de {n} kcal : tu peux ajuster ton objectif via la surcharge manuelle (Réglages).', { n: round(adaptive - goals.tdee) })
+                    : t('Ton estimation théorique est cohérente avec tes résultats réels 👍')}
                 </p>
               </>
             ) : (
-              <p className="mt-1 text-slate-400">Enregistre tes repas au moins 7 jours et 2 pesées sur 4 semaines pour obtenir une estimation personnalisée de ta dépense.</p>
+              <p className="mt-1 text-slate-400">{t('Enregistre tes repas au moins 7 jours et 2 pesées sur 4 semaines pour obtenir une estimation personnalisée de ta dépense.')}</p>
             )}
           </div>
         </div>
@@ -251,10 +252,10 @@ export function WeightTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Historique ({logs.length})</CardTitle>
+          <CardTitle>{t('Historique ({n})', { n: logs.length })}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1.5">
-          {reversed.length === 0 && <p className="py-4 text-center text-xs text-slate-500">Aucune pesée enregistrée.</p>}
+          {reversed.length === 0 && <p className="py-4 text-center text-xs text-slate-500">{t('Aucune pesée enregistrée.')}</p>}
           {reversed.map((l, i) => {
             const prev = reversed[i + 1];
             const diff = prev ? l.weight - prev.weight : 0;
@@ -281,7 +282,7 @@ export function WeightTab() {
                     setNote(l.note ?? '');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  aria-label="Modifier"
+                  aria-label={t('Modifier')}
                 >
                   <Pencil className="h-4 w-4" />
                 </button>
@@ -290,9 +291,9 @@ export function WeightTab() {
                   onClick={async () => {
                     const backup = { ...l };
                     await deleteWeight(l.id!);
-                    toast('Pesée supprimée', 'info', { label: 'Annuler', onClick: () => db.weightLogs.put(backup) });
+                    toast(t('Pesée supprimée'), 'info', { label: t('Annuler'), onClick: () => db.weightLogs.put(backup) });
                   }}
-                  aria-label="Supprimer"
+                  aria-label={t('Supprimer')}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>

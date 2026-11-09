@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
+import { Languages, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/input';
@@ -10,10 +10,11 @@ import { Sheet } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { ensureProfile, useProfile } from '@/hooks/useProfile';
 import { checkAccessCode, normalizeCode } from '@/services/geminiVision';
-import { ACTIVITY_FACTORS, GOAL_LABELS, MACRO_PRESETS, PACE_DELTAS, computeGoals, macroSplitFor } from '@/services/bmrCalculator';
+import { ACTIVITY_FACTORS, MACRO_PRESETS, PACE_DELTAS, computeGoals, macroSplitFor } from '@/services/bmrCalculator';
 import { db, exportBackup, getStorageInfo, importBackup, requestPersistentStorage } from '@/db/database';
-import { COLORS, MEAL_LABELS, MEAL_TYPES, downloadFile, round, todayISO } from '@/lib/utils';
+import { COLORS, MEAL_SHORT, MEAL_TYPES, downloadFile, round, todayISO } from '@/lib/utils';
 import type { ActivityLevel, BackupFile, Goal, GoalPace, MacroPreset, Profile, Sex } from '@/types';
+import { LANGS, detectLang, t, type LangSetting } from '@/i18n';
 
 export function Settings() {
   const { profile: stored, loading } = useProfile();
@@ -65,8 +66,8 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
   // Enregistrement automatique 400 ms après la dernière modification.
   useEffect(() => {
     if (!dirty.current) return;
-    const t = setTimeout(flush, 400);
-    return () => clearTimeout(t);
+    const timer = setTimeout(flush, 400);
+    return () => clearTimeout(timer);
   }, [draft, flush]);
 
   // Sauvegarde immédiate si l'appli passe en arrière-plan ou si on change d'onglet.
@@ -85,7 +86,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
     (document.activeElement as HTMLElement | null)?.blur();
     dirty.current = true;
     await flush();
-    toast('Profil enregistré');
+    toast(t('Profil enregistré'));
   };
 
   // --- IA (serveur Kal-Track : clé et modèle gérés côté serveur) ---
@@ -110,7 +111,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
     await db.userProfile.update(1, { accessCode: '' });
     setShowCode(false);
     setAccess(await checkAccessCode(''));
-    toast("Code retiré : tu utilises l'IA incluse.", 'info');
+    toast(t("Code retiré : tu utilises l'IA incluse."), 'info');
   };
 
   const verify = async () => {
@@ -127,7 +128,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
       dirty.current = true;
       await flush();
       await db.userProfile.update(1, { accessCode: v });
-      toast(`Code ${r.name} activé.`);
+      toast(t('Code {name} activé.', { name: r.name ?? '' }));
       setShowCode(false);
     }
     setChecking(false);
@@ -147,50 +148,50 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
     const data = await exportBackup();
     if (!includeKey && data.profile) data.profile = { ...data.profile, apiKey: '', accessCode: '' };
     downloadFile(`kal-track-sauvegarde-${todayISO()}.json`, JSON.stringify(data));
-    toast(`Sauvegarde exportée (${data.meals.length} repas, ${data.weightLogs.length} pesées)`);
+    toast(t('Sauvegarde exportée ({a} repas, {b} pesées)', { a: data.meals.length, b: data.weightLogs.length }));
   };
 
   const doImport = async (file?: File) => {
     if (!file) return;
     try {
       const data = JSON.parse(await file.text()) as BackupFile;
-      if (!confirm(`Importer ${data.meals?.length ?? 0} repas et ${data.weightLogs?.length ?? 0} pesées ?\nLes données actuelles seront remplacées.`)) return;
+      if (!confirm(t('Importer {a} repas et {b} pesées ?\nLes données actuelles seront remplacées.', { a: data.meals?.length ?? 0, b: data.weightLogs?.length ?? 0 }))) return;
       dirty.current = false;
       await importBackup(data, { includeApiKey: !!(data.profile?.apiKey || data.profile?.accessCode) });
       setDraft(await ensureProfile());
-      toast('Sauvegarde importée avec succès');
+      toast(t('Sauvegarde importée avec succès'));
       refreshStorage();
     } catch (e) {
-      toast((e as Error).message || 'Import impossible', 'error');
+      toast(t((e as Error).message || 'Import impossible'), 'error');
     }
   };
 
   const resetAll = async () => {
-    if (!confirm('Supprimer définitivement TOUTES les données (repas, pesées, profil) ?')) return;
-    if (!confirm('Dernière confirmation : cette action est irréversible. Continuer ?')) return;
+    if (!confirm(t('Supprimer définitivement TOUTES les données (repas, pesées, profil) ?'))) return;
+    if (!confirm(t('Dernière confirmation : cette action est irréversible. Continuer ?'))) return;
     dirty.current = false;
     await Promise.all([db.meals.clear(), db.weightLogs.clear(), db.waterLogs.clear(), db.userProfile.clear()]);
     setDraft(null);
-    toast('Toutes les données ont été supprimées', 'info');
+    toast(t('Toutes les données ont été supprimées'), 'info');
   };
 
   const split = macroSplitFor(profile);
   const splitSum = split.protein + split.carbs + split.fat;
-  const mealSum = MEAL_TYPES.reduce((s, t) => s + (profile.mealSplit[t] || 0), 0);
+  const mealSum = MEAL_TYPES.reduce((acc, mt) => acc + (profile.mealSplit[mt] || 0), 0);
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between pt-1">
-        <h1 className="text-lg font-bold text-slate-50">Réglages</h1>
+        <h1 className="text-lg font-bold text-slate-50">{t('Réglages')}</h1>
         <span className="flex items-center gap-1 text-xs text-slate-400">
           {saveState === 'saving' && (
             <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Enregistrement…
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('Enregistrement…')}
             </>
           )}
           {saveState === 'saved' && (
             <>
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> Enregistré
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> {t('Enregistré')}
             </>
           )}
         </span>
@@ -200,12 +201,12 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-indigo-400" /> Analyse IA des repas
+            <Sparkles className="h-4 w-4 text-indigo-400" /> {t('Analyse IA des repas')}
           </CardTitle>
           <button
             onClick={() => setShowHelp(true)}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-400/40 active:scale-95"
-            aria-label="À propos de l'analyse IA"
+            aria-label={t("À propos de l'analyse IA")}
           >
             <HelpCircle className="h-5 w-5" />
           </button>
@@ -221,12 +222,12 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
             </p>
           ) : (
             <p className="flex items-center gap-2 text-xs text-slate-500">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Vérification de l'IA…
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("Vérification de l'IA…")}
             </p>
           )}
           {showCode && (
             <div>
-              <Label>Code d'accès (facultatif)</Label>
+              <Label>{t("Code d'accès (facultatif)")}</Label>
               <div className="flex gap-2">
                 <Input
                   value={code}
@@ -244,59 +245,89 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
               </div>
               {profile.accessCode && (
                 <button onClick={removeCode} className="mt-1.5 text-[11px] text-slate-400 underline">
-                  Retirer mon code
+                  {t('Retirer mon code')}
                 </button>
               )}
             </div>
           )}
-          <p className="text-[11px] text-slate-500">Tes repas restent sur ton téléphone. Seules les photos et descriptions à analyser sont envoyées à l'IA, de façon sécurisée.</p>
+          <p className="text-[11px] text-slate-500">{t("Tes repas restent sur ton téléphone. Seules les photos et descriptions à analyser sont envoyées à l'IA, de façon sécurisée.")}</p>
         </CardContent>
       </Card>
 
-      <Sheet open={showHelp} onClose={() => setShowHelp(false)} title="L'analyse IA">
+      <Sheet open={showHelp} onClose={() => setShowHelp(false)} title={t("L'analyse IA")}>
         <div className="space-y-3 pb-4 text-sm text-slate-300">
           <p>
-            L'analyse de tes repas par l'IA (photo, étiquette, description) est <b>incluse</b> dans Kal-Track, sans clé ni inscription.
+            {t("L'analyse de tes repas par l'IA (photo, étiquette, description) est incluse dans Kal-Track, sans clé ni inscription.")}
           </p>
-          <p>Tu disposes d'un nombre d'analyses par jour sur ce téléphone, remis à zéro chaque nuit à minuit.</p>
-          <p className="text-slate-400">Une fois tes analyses du jour utilisées, tu peux continuer avec le code-barres, la saisie manuelle et tes favoris, puis l'IA revient le lendemain.</p>
+          <p>{t("Tu disposes d'un nombre d'analyses par jour sur ce téléphone, remis à zéro chaque nuit à minuit.")}</p>
+          <p className="text-slate-400">{t("Une fois tes analyses du jour utilisées, tu peux continuer avec le code-barres, la saisie manuelle et tes favoris, puis l'IA revient le lendemain.")}</p>
         </div>
       </Sheet>
+
+      {/* ---------- Langue ---------- */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Languages className="h-4 w-4 text-sky-400" /> {t('Langue')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Select
+            value={profile.language ?? 'auto'}
+            onChange={async (e) => {
+              const language = e.target.value as LangSetting;
+              await updateProfile({ language });
+              dirty.current = true;
+              await flush();
+              await db.userProfile.update(1, { language });
+            }}
+          >
+            <option value="auto">
+              {t('Automatique (langue du téléphone)')} · {LANGS.find((l) => l.code === detectLang())?.label}
+            </option>
+            {LANGS.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.flag} {l.label}
+              </option>
+            ))}
+          </Select>
+        </CardContent>
+      </Card>
 
       {/* ---------- Profil ---------- */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <User className="h-4 w-4 text-emerald-400" /> Profil
+            <User className="h-4 w-4 text-emerald-400" /> {t('Profil')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label>Prénom</Label>
-            <Input value={profile.name} onChange={(e) => updateProfile({ name: e.target.value })} placeholder="Optionnel" autoComplete="given-name" autoCapitalize="words" className="text-base" />
+            <Label>{t('Prénom')}</Label>
+            <Input value={profile.name} onChange={(e) => updateProfile({ name: e.target.value })} placeholder={t('Optionnel')} autoComplete="given-name" autoCapitalize="words" className="text-base" />
           </div>
           <div>
-            <Label>Sexe</Label>
+            <Label>{t('Sexe')}</Label>
             <SegmentedTabs<Sex>
               value={profile.sex}
               onChange={(v) => updateProfile({ sex: v })}
               options={[
-                { value: 'male', label: 'Homme' },
-                { value: 'female', label: 'Femme' },
+                { value: 'male', label: t('Homme') },
+                { value: 'female', label: t('Femme') },
               ]}
             />
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <NumberField label="Âge" value={profile.age} onChange={(v) => updateProfile({ age: v })} unit="ans" />
-            <NumberField label="Taille" value={profile.height} onChange={(v) => updateProfile({ height: v })} unit="cm" />
-            <NumberField label="Poids" value={profile.weight} onChange={(v) => updateProfile({ weight: v })} unit="kg" step={0.1} />
+            <NumberField label={t('Âge')} value={profile.age} onChange={(v) => updateProfile({ age: v })} unit={t('ans')} />
+            <NumberField label={t('Taille')} value={profile.height} onChange={(v) => updateProfile({ height: v })} unit="cm" />
+            <NumberField label={t('Poids')} value={profile.weight} onChange={(v) => updateProfile({ weight: v })} unit="kg" step={0.1} />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <NumberField label="Poids cible" value={profile.targetWeight} onChange={(v) => updateProfile({ targetWeight: v })} unit="kg" step={0.1} />
-            <NumberField label="Masse grasse (optionnel)" value={profile.bodyFat ?? 0} onChange={(v) => updateProfile({ bodyFat: v || undefined })} unit="%" allowEmpty placeholder="—" />
+            <NumberField label={t('Poids cible')} value={profile.targetWeight} onChange={(v) => updateProfile({ targetWeight: v })} unit="kg" step={0.1} />
+            <NumberField label={t('Masse grasse (optionnel)')} value={profile.bodyFat ?? 0} onChange={(v) => updateProfile({ bodyFat: v || undefined })} unit="%" allowEmpty placeholder="—" />
           </div>
           <div>
-            <Label>Activité quotidienne (hors sport)</Label>
+            <Label>{t('Activité quotidienne (hors sport)')}</Label>
             <Select value={profile.activityLevel} onChange={(e) => updateProfile({ activityLevel: e.target.value as ActivityLevel })}>
               {Object.entries(ACTIVITY_FACTORS).map(([k, v]) => (
                 <option key={k} value={k}>
@@ -306,16 +337,16 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <NumberField label="Séances de sport / semaine" value={profile.workoutsPerWeek} onChange={(v) => updateProfile({ workoutsPerWeek: v })} unit="×" />
-            <NumberField label="Durée moyenne" value={profile.workoutMinutes} onChange={(v) => updateProfile({ workoutMinutes: v })} unit="min" step={5} />
+            <NumberField label={t('Séances de sport / semaine')} value={profile.workoutsPerWeek} onChange={(v) => updateProfile({ workoutsPerWeek: v })} unit="×" />
+            <NumberField label={t('Durée moyenne')} value={profile.workoutMinutes} onChange={(v) => updateProfile({ workoutMinutes: v })} unit="min" step={5} />
           </div>
           <div>
-            <Label>Objectif</Label>
-            <SegmentedTabs<Goal> value={profile.goal} onChange={(v) => updateProfile({ goal: v })} options={(['lose', 'maintain', 'gain'] as Goal[]).map((g) => ({ value: g, label: GOAL_LABELS[g].replace(' de poids', '') }))} />
+            <Label>{t('Objectif')}</Label>
+            <SegmentedTabs<Goal> value={profile.goal} onChange={(v) => updateProfile({ goal: v })} options={(['lose', 'maintain', 'gain'] as Goal[]).map((g) => ({ value: g, label: { lose: t('Perte'), maintain: t('Maintien'), gain: t('Prise') }[g] }))} />
           </div>
           {profile.goal !== 'maintain' && (
             <div>
-              <Label>Rythme</Label>
+              <Label>{t('Rythme')}</Label>
               <div className="grid grid-cols-3 gap-1.5">
                 {(Object.keys(PACE_DELTAS) as GoalPace[]).map((p) => {
                   const d = PACE_DELTAS[p][profile.goal === 'lose' ? 'lose' : 'gain'];
@@ -327,8 +358,8 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
                       className={`rounded-xl border p-2 text-center text-xs ${active ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 text-slate-400'}`}
                     >
                       <div className="font-semibold">{PACE_DELTAS[p].label}</div>
-                      <div>{d > 0 ? '+' : ''}{d} kcal/j</div>
-                      <div className="text-[10px] opacity-70">≈ {d > 0 ? '+' : ''}{round((d * 7) / 7700, 2)} kg/sem</div>
+                      <div>{d > 0 ? '+' : ''}{d} {t('kcal/j')}</div>
+                      <div className="text-[10px] opacity-70">≈ {d > 0 ? '+' : ''}{round((d * 7) / 7700, 2)} {t('kg/sem')}</div>
                     </button>
                   );
                 })}
@@ -336,36 +367,36 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
             </div>
           )}
           <div>
-            <Label>Répartition des macronutriments</Label>
+            <Label>{t('Répartition des macronutriments')}</Label>
             <Select value={profile.macroPreset} onChange={(e) => updateProfile({ macroPreset: e.target.value as MacroPreset })}>
               {Object.entries(MACRO_PRESETS).map(([k, v]) => (
                 <option key={k} value={k}>
                   {v.label}
                 </option>
               ))}
-              <option value="custom">Personnalisée</option>
+              <option value="custom">{t('Personnalisée')}</option>
             </Select>
             {profile.macroPreset === 'custom' && (
               <div className="mt-2 grid grid-cols-3 gap-2">
-                <NumberField label="Protéines" value={profile.macroSplit.protein} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, protein: v } })} unit="%" color={COLORS.protein} />
-                <NumberField label="Glucides" value={profile.macroSplit.carbs} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, carbs: v } })} unit="%" color={COLORS.carbs} />
-                <NumberField label="Lipides" value={profile.macroSplit.fat} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, fat: v } })} unit="%" color={COLORS.fat} />
+                <NumberField label={t('Protéines')} value={profile.macroSplit.protein} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, protein: v } })} unit="%" color={COLORS.protein} />
+                <NumberField label={t('Glucides')} value={profile.macroSplit.carbs} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, carbs: v } })} unit="%" color={COLORS.carbs} />
+                <NumberField label={t('Lipides')} value={profile.macroSplit.fat} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, fat: v } })} unit="%" color={COLORS.fat} />
               </div>
             )}
-            {splitSum !== 100 && <p className="mt-1 text-[11px] text-amber-400">Le total fait {splitSum}% (devrait faire 100 %).</p>}
+            {splitSum !== 100 && <p className="mt-1 text-[11px] text-amber-400">{t('Le total fait {n}% (devrait faire 100 %).', { n: splitSum })}</p>}
           </div>
           <div>
-            <Label>Répartition des calories par repas</Label>
+            <Label>{t('Répartition des calories par repas')}</Label>
             <div className="grid grid-cols-4 gap-2">
-              {MEAL_TYPES.map((t) => (
-                <NumberField key={t} label={MEAL_LABELS[t].replace('Petit-déjeuner', 'P.-déj')} value={profile.mealSplit[t]} onChange={(v) => updateProfile({ mealSplit: { ...profile.mealSplit, [t]: v } })} unit="%" />
+              {MEAL_TYPES.map((mt) => (
+                <NumberField key={mt} label={MEAL_SHORT[mt]} value={profile.mealSplit[mt]} onChange={(v) => updateProfile({ mealSplit: { ...profile.mealSplit, [mt]: v } })} unit="%" />
               ))}
             </div>
-            {mealSum !== 100 && <p className="mt-1 text-[11px] text-amber-400">Le total fait {mealSum}% (devrait faire 100 %).</p>}
+            {mealSum !== 100 && <p className="mt-1 text-[11px] text-amber-400">{t('Le total fait {n}% (devrait faire 100 %).', { n: mealSum })}</p>}
           </div>
-          <NumberField label="Objectif d'hydratation (0 = automatique)" value={profile.waterGoalMl ?? 0} onChange={(v) => updateProfile({ waterGoalMl: v || undefined })} unit="ml" allowEmpty placeholder="Auto" />
+          <NumberField label={t("Objectif d'hydratation (0 = automatique)")} value={profile.waterGoalMl ?? 0} onChange={(v) => updateProfile({ waterGoalMl: v || undefined })} unit="ml" allowEmpty placeholder={t('Auto')} />
           <Button className="w-full" onClick={saveNow}>
-            <CheckCircle2 /> Enregistrer le profil
+            <CheckCircle2 /> {t('Enregistrer le profil')}
           </Button>
         </CardContent>
       </Card>
@@ -374,28 +405,28 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calculator className="h-4 w-4 text-amber-400" /> Calcul de tes besoins
+            <Calculator className="h-4 w-4 text-amber-400" /> {t('Calcul de tes besoins')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-xs">
-          <Row label={`Métabolisme de base (${goals.bmrMethod})`} value={`${goals.bmr} kcal`} />
-          <Row label="Dépense totale (TDEE, activité + sport)" value={`${goals.tdee} kcal`} />
+          <Row label={`${t('Métabolisme de base')} (${goals.bmrMethod})`} value={`${goals.bmr} kcal`} />
+          <Row label={t('Dépense totale (TDEE, activité + sport)')} value={`${goals.tdee} kcal`} />
           <div className="grid grid-cols-3 gap-2 py-1 text-center">
-            <Zone label="Perte" value={goals.loseTarget} color={COLORS.lose} active={profile.goal === 'lose'} />
-            <Zone label="Maintien" value={goals.maintenance} color={COLORS.maintain} active={profile.goal === 'maintain'} />
-            <Zone label="Prise" value={goals.gainTarget} color={COLORS.gain} active={profile.goal === 'gain'} />
+            <Zone label={t('Perte')} value={goals.loseTarget} color={COLORS.lose} active={profile.goal === 'lose'} />
+            <Zone label={t('Maintien')} value={goals.maintenance} color={COLORS.maintain} active={profile.goal === 'maintain'} />
+            <Zone label={t('Prise')} value={goals.gainTarget} color={COLORS.gain} active={profile.goal === 'gain'} />
           </div>
-          <Row label="Objectif quotidien" value={<b className="text-emerald-400">{goals.calories} kcal</b>} />
-          <Row label="Protéines / Glucides / Lipides" value={`${goals.protein} g · ${goals.carbs} g · ${goals.fat} g`} />
-          <Row label="Protéines par kg de poids" value={`${round(goals.protein / Math.max(1, profile.weight), 1)} g/kg`} />
-          <Row label="Limite de sucres (OMS < 10 %)" value={`${goals.sugar} g`} />
-          <Row label="Fibres recommandées" value={`${goals.fiber} g`} />
-          <Row label="Variation attendue" value={`${goals.weeklyChangeKg > 0 ? '+' : ''}${goals.weeklyChangeKg} kg / semaine`} />
-          {goals.weeksToTarget !== null && <Row label="Temps estimé jusqu'au poids cible" value={`≈ ${Math.ceil(goals.weeksToTarget)} semaines`} />}
-          <Row label="IMC" value={goals.bmi} />
+          <Row label={t('Objectif quotidien')} value={<b className="text-emerald-400">{goals.calories} kcal</b>} />
+          <Row label={t('Protéines / Glucides / Lipides')} value={`${goals.protein} g · ${goals.carbs} g · ${goals.fat} g`} />
+          <Row label={t('Protéines par kg de poids')} value={`${round(goals.protein / Math.max(1, profile.weight), 1)} g/kg`} />
+          <Row label={t('Limite de sucres (OMS < 10 %)')} value={`${goals.sugar} g`} />
+          <Row label={t('Fibres recommandées')} value={`${goals.fiber} g`} />
+          <Row label={t('Variation attendue')} value={`${goals.weeklyChangeKg > 0 ? '+' : ''}${goals.weeklyChangeKg} ${t('kg / semaine')}`} />
+          {goals.weeksToTarget !== null && <Row label={t("Temps estimé jusqu'au poids cible")} value={t('≈ {n} semaines', { n: Math.ceil(goals.weeksToTarget) })} />}
+          <Row label={t('IMC')} value={goals.bmi} />
           {goals.clamped && (
             <p className="flex gap-1.5 rounded-lg bg-amber-500/10 p-2 text-amber-300">
-              <Info className="h-4 w-4 shrink-0" /> Objectif relevé au minimum de sécurité ({goals.minSafe} kcal). Un déficit plus important est déconseillé.
+              <Info className="h-4 w-4 shrink-0" /> {t('Objectif relevé au minimum de sécurité ({n} kcal). Un déficit plus important est déconseillé.', { n: goals.minSafe })}
             </p>
           )}
         </CardContent>
@@ -405,7 +436,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-rose-400" /> Surcharge manuelle
+            <SlidersHorizontal className="h-4 w-4 text-rose-400" /> {t('Surcharge manuelle')}
           </CardTitle>
           <Switch
             checked={profile.manualOverride}
@@ -420,17 +451,17 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
         <CardContent>
           {profile.manualOverride ? (
             <div className="grid grid-cols-2 gap-2">
-              <NumberField label="Calories" value={profile.overrides.calories} onChange={(v) => updateProfile({ overrides: { ...profile.overrides, calories: v } })} unit="kcal" color={COLORS.kcal} />
-              <NumberField label="Protéines" value={profile.overrides.protein} onChange={(v) => updateProfile({ overrides: { ...profile.overrides, protein: v } })} unit="g" color={COLORS.protein} />
-              <NumberField label="Glucides" value={profile.overrides.carbs} onChange={(v) => updateProfile({ overrides: { ...profile.overrides, carbs: v } })} unit="g" color={COLORS.carbs} />
-              <NumberField label="Lipides" value={profile.overrides.fat} onChange={(v) => updateProfile({ overrides: { ...profile.overrides, fat: v } })} unit="g" color={COLORS.fat} />
-              <NumberField label="Sucres (limite)" value={profile.overrides.sugar} onChange={(v) => updateProfile({ overrides: { ...profile.overrides, sugar: v } })} unit="g" color={COLORS.sugar} />
+              <NumberField label={t('Calories')} value={profile.overrides.calories} onChange={(v) => updateProfile({ overrides: { ...profile.overrides, calories: v } })} unit="kcal" color={COLORS.kcal} />
+              <NumberField label={t('Protéines')} value={profile.overrides.protein} onChange={(v) => updateProfile({ overrides: { ...profile.overrides, protein: v } })} unit="g" color={COLORS.protein} />
+              <NumberField label={t('Glucides')} value={profile.overrides.carbs} onChange={(v) => updateProfile({ overrides: { ...profile.overrides, carbs: v } })} unit="g" color={COLORS.carbs} />
+              <NumberField label={t('Lipides')} value={profile.overrides.fat} onChange={(v) => updateProfile({ overrides: { ...profile.overrides, fat: v } })} unit="g" color={COLORS.fat} />
+              <NumberField label={t('Sucres (limite)')} value={profile.overrides.sugar} onChange={(v) => updateProfile({ overrides: { ...profile.overrides, sugar: v } })} unit="g" color={COLORS.sugar} />
               <div className="flex items-end text-[11px] text-slate-500">
-                Macros = {round(profile.overrides.protein * 4 + profile.overrides.carbs * 4 + profile.overrides.fat * 9)} kcal
+                {t('Macros')} = {round(profile.overrides.protein * 4 + profile.overrides.carbs * 4 + profile.overrides.fat * 9)} kcal
               </div>
             </div>
           ) : (
-            <p className="text-xs text-slate-500">Active pour fixer toi-même tes objectifs de calories et de macros en grammes (ex. plan d'un diététicien).</p>
+            <p className="text-xs text-slate-500">{t("Active pour fixer toi-même tes objectifs de calories et de macros en grammes (ex. plan d'un diététicien).")}</p>
           )}
         </CardContent>
       </Card>
@@ -439,7 +470,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-sky-400" /> Données & sauvegarde
+            <Database className="h-4 w-4 text-sky-400" /> {t('Données & sauvegarde')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -447,34 +478,34 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
             <div className="flex items-center gap-2">
               <ShieldCheck className={`h-5 w-5 ${storage?.persisted ? 'text-emerald-400' : 'text-amber-400'}`} />
               <div>
-                <p className="font-semibold text-slate-200">{storage?.persisted ? 'Stockage persistant activé' : 'Stockage non persistant'}</p>
+                <p className="font-semibold text-slate-200">{storage?.persisted ? t('Stockage persistant activé') : t('Stockage non persistant')}</p>
                 <p className="text-slate-500">
-                  {storage ? `${(storage.usage / 1024 / 1024).toFixed(1)} Mo utilisés` : '…'}
-                  {storage?.persisted ? ' · protégé contre le nettoyage automatique' : ' · installe l’appli sur l’écran d’accueil'}
+                  {storage ? t('{n} Mo utilisés', { n: (storage.usage / 1024 / 1024).toFixed(1) }) : '…'}
+                  {storage?.persisted ? ` · ${t('protégé contre le nettoyage automatique')}` : ` · ${t('installe l’appli sur l’écran d’accueil')}`}
                 </p>
               </div>
             </div>
             {!storage?.persisted && (
-              <Button size="sm" variant="secondary" onClick={async () => { const ok = await requestPersistentStorage(); toast(ok ? 'Stockage persistant accordé' : 'Refusé par le navigateur', ok ? 'success' : 'error'); refreshStorage(); }}>
-                Activer
+              <Button size="sm" variant="secondary" onClick={async () => { const ok = await requestPersistentStorage(); toast(ok ? t('Stockage persistant accordé') : t('Refusé par le navigateur'), ok ? 'success' : 'error'); refreshStorage(); }}>
+                {t('Activer')}
               </Button>
             )}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button variant="secondary" onClick={doExport}>
-              <Download /> Exporter (JSON)
+              <Download /> {t('Exporter (JSON)')}
             </Button>
             <Button variant="secondary" onClick={() => fileRef.current?.click()}>
-              <Upload /> Importer (JSON)
+              <Upload /> {t('Importer (JSON)')}
             </Button>
           </div>
           <label className="flex items-center justify-between text-xs text-slate-400">
-            Inclure le code d'accès IA dans l'export
+            {t("Inclure le code d'accès IA dans l'export")}
             <Switch checked={includeKey} onCheckedChange={setIncludeKey} />
           </label>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => { doImport(e.target.files?.[0]); e.target.value = ''; }} />
           <Button variant="ghost" className="w-full text-rose-400" onClick={resetAll}>
-            <Trash2 /> Effacer toutes les données
+            <Trash2 /> {t('Effacer toutes les données')}
           </Button>
         </CardContent>
       </Card>
@@ -494,7 +525,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
         >
           Kal-Track v1.0
         </p>
-        <p>100 % local · aucune donnée envoyée hors de l'appareil, sauf les analyses IA vers Google Gemini et les recherches de code-barres vers Open Food Facts.</p>
+        <p>{t("100 % local · aucune donnée envoyée hors de l'appareil, sauf les analyses IA vers Google Gemini et les recherches de code-barres vers Open Food Facts.")}</p>
       </div>
     </div>
   );

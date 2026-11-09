@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Check, Trash2, Sparkles, Plus } from 'lucide-react';
 import { Input, Label } from '@/components/ui/input';
 import { DecimalInput, NumberField, NutriScoreBadge } from '@/components/common';
-import { COLORS, MEAL_EMOJI, MEAL_LABELS, MEAL_TYPES, cn, round, todayISO } from '@/lib/utils';
+import { COLORS, MEAL_EMOJI, MEAL_SHORT, MEAL_TYPES, cn, round, todayISO } from '@/lib/utils';
 import type { MealItem, MealType, MealSource, Nutrients } from '@/types';
 import { scaleNutrients } from '@/services/geminiVision';
+import { t } from '@/i18n';
 
 export interface Draft extends Nutrients {
   id?: number;
@@ -97,7 +98,7 @@ export function MealReviewForm({ initial, onChange }: { initial: Draft; onChange
   };
 
   const addItem = () => {
-    const items = [...d.items, { name: 'Nouvel aliment', quantity_g: 100, calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, fiber: 0 }];
+    const items = [...d.items, { name: t('Nouvel aliment'), quantity_g: 100, calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, fiber: 0 }];
     update({ items });
   };
 
@@ -105,9 +106,9 @@ export function MealReviewForm({ initial, onChange }: { initial: Draft; onChange
   const mismatch = d.calories > 0 && macroKcal > 0 && Math.abs(macroKcal - d.calories) / d.calories > 0.15;
 
   const split = useMemo(() => {
-    const t = d.protein * 4 + d.carbs * 4 + d.fat * 9;
-    if (!t) return null;
-    return { p: (d.protein * 400) / t, c: (d.carbs * 400) / t, f: (d.fat * 900) / t };
+    const tot = d.protein * 4 + d.carbs * 4 + d.fat * 9;
+    if (!tot) return null;
+    return { p: (d.protein * 400) / tot, c: (d.carbs * 400) / tot, f: (d.fat * 900) / tot };
   }, [d.protein, d.carbs, d.fat]);
 
   return (
@@ -117,14 +118,14 @@ export function MealReviewForm({ initial, onChange }: { initial: Draft; onChange
           <img src={d.image} alt="" className="max-h-56 w-full object-cover" />
           {d.confidence !== undefined && (
             <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-slate-950/80 px-2 py-1 text-[11px] text-emerald-300">
-              <Sparkles className="h-3 w-3" /> Confiance {round(d.confidence * 100)}%
+              <Sparkles className="h-3 w-3" /> {t('Confiance')} {round(d.confidence * 100)}%
             </span>
           )}
         </div>
       )}
 
       <div>
-        <Label>Nom du plat</Label>
+        <Label>{t('Nom du plat')}</Label>
         <Input value={d.title} onChange={(e) => update({ title: e.target.value })} />
         <div className="mt-1 flex items-center gap-2">
           <NutriScoreBadge grade={d.nutriScore} />
@@ -134,23 +135,23 @@ export function MealReviewForm({ initial, onChange }: { initial: Draft; onChange
 
       <div className="grid grid-cols-[1fr_auto] gap-2">
         <div>
-          <Label>Repas</Label>
+          <Label>{t('Repas|type')}</Label>
           <div className="grid grid-cols-4 gap-1">
-            {MEAL_TYPES.map((t) => (
+            {MEAL_TYPES.map((mt) => (
               <button
-                key={t}
+                key={mt}
                 type="button"
-                onClick={() => update({ mealType: t })}
-                className={cn('flex flex-col items-center rounded-xl border py-1.5 text-[10px]', d.mealType === t ? 'border-emerald-500 bg-emerald-500/15 text-emerald-300' : 'border-slate-700 text-slate-400')}
+                onClick={() => update({ mealType: mt })}
+                className={cn('flex flex-col items-center rounded-xl border py-1.5 text-[10px]', d.mealType === mt ? 'border-emerald-500 bg-emerald-500/15 text-emerald-300' : 'border-slate-700 text-slate-400')}
               >
-                <span className="text-base">{MEAL_EMOJI[t]}</span>
-                {MEAL_LABELS[t].replace('Petit-déjeuner', 'P.-déj')}
+                <span className="text-base">{MEAL_EMOJI[mt]}</span>
+                {MEAL_SHORT[mt]}
               </button>
             ))}
           </div>
         </div>
         <div>
-          <Label>Date</Label>
+          <Label>{t('Date')}</Label>
           <input
             type="date"
             max={todayISO()}
@@ -163,25 +164,25 @@ export function MealReviewForm({ initial, onChange }: { initial: Draft; onChange
 
       {d.per100g ? (
         <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-3">
-          <Label>Quantité consommée</Label>
+          <Label>{t('Quantité consommée')}</Label>
           <div className="flex items-center gap-2">
             <NumberField label="" value={grams} onChange={applyGrams} unit="g" />
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {[...(d.servingSize_g && d.servingSize_g !== 100 ? [d.servingSize_g] : []), 30, 50, 100, 150, 200, 250].map((g, i) => (
               <button key={`${g}-${i}`} type="button" onClick={() => applyGrams(g)} className={cn('rounded-full border px-2.5 py-1 text-xs', grams === g ? 'border-emerald-500 text-emerald-300' : 'border-slate-700 text-slate-400')}>
-                {i === 0 && d.servingSize_g && d.servingSize_g !== 100 ? `1 portion (${g} g)` : `${g} g`}
+                {i === 0 && d.servingSize_g && d.servingSize_g !== 100 ? t('1 portion ({g} g)', { g }) : `${g} g`}
               </button>
             ))}
           </div>
           <p className="mt-2 text-[11px] text-slate-500">
-            Pour 100 g : {d.per100g.calories} kcal · P {d.per100g.protein} · G {d.per100g.carbs} (sucres {d.per100g.sugar}) · L {d.per100g.fat}
+            {t('Pour 100 g')} : {d.per100g.calories} kcal · {t('P')} {d.per100g.protein} · {t('G')} {d.per100g.carbs} ({t('sucres')} {d.per100g.sugar}) · {t('L')} {d.per100g.fat}
           </p>
         </div>
       ) : (
         base.calories > 0 && (
           <div>
-            <Label>Ajuster la portion</Label>
+            <Label>{t('Ajuster la portion')}</Label>
             <div className="flex gap-1.5">
               {[0.5, 0.75, 1, 1.25, 1.5, 2].map((m) => (
                 <button key={m} type="button" onClick={() => applyMult(m)} className={cn('flex-1 rounded-lg border py-1.5 text-xs', mult === m ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 text-slate-400')}>
@@ -194,12 +195,12 @@ export function MealReviewForm({ initial, onChange }: { initial: Draft; onChange
       )}
 
       <div className="grid grid-cols-2 gap-2">
-        <NumberField label="Calories" value={d.calories} onChange={(v) => update({ calories: v })} unit="kcal" color={COLORS.kcal} />
-        <NumberField label="Protéines" value={d.protein} onChange={(v) => update({ protein: v })} unit="g" color={COLORS.protein} step={0.1} />
-        <NumberField label="Glucides" value={d.carbs} onChange={(v) => update({ carbs: v })} unit="g" color={COLORS.carbs} step={0.1} />
-        <NumberField label="dont Sucres" value={d.sugar} onChange={(v) => update({ sugar: v })} unit="g" color={COLORS.sugar} step={0.1} />
-        <NumberField label="Lipides" value={d.fat} onChange={(v) => update({ fat: v })} unit="g" color={COLORS.fat} step={0.1} />
-        <NumberField label="Fibres" value={d.fiber} onChange={(v) => update({ fiber: v })} unit="g" color={COLORS.fiber} step={0.1} />
+        <NumberField label={t('Calories')} value={d.calories} onChange={(v) => update({ calories: v })} unit="kcal" color={COLORS.kcal} />
+        <NumberField label={t('Protéines')} value={d.protein} onChange={(v) => update({ protein: v })} unit="g" color={COLORS.protein} step={0.1} />
+        <NumberField label={t('Glucides')} value={d.carbs} onChange={(v) => update({ carbs: v })} unit="g" color={COLORS.carbs} step={0.1} />
+        <NumberField label={t('dont Sucres')} value={d.sugar} onChange={(v) => update({ sugar: v })} unit="g" color={COLORS.sugar} step={0.1} />
+        <NumberField label={t('Lipides')} value={d.fat} onChange={(v) => update({ fat: v })} unit="g" color={COLORS.fat} step={0.1} />
+        <NumberField label={t('Fibres')} value={d.fiber} onChange={(v) => update({ fiber: v })} unit="g" color={COLORS.fiber} step={0.1} />
       </div>
 
       {split && (
@@ -210,9 +211,9 @@ export function MealReviewForm({ initial, onChange }: { initial: Draft; onChange
             <div style={{ width: `${split.f}%`, background: COLORS.fat }} />
           </div>
           <div className="mt-1 flex justify-between text-[10px] text-slate-400">
-            <span style={{ color: COLORS.protein }}>P {round(split.p)}%</span>
-            <span style={{ color: COLORS.carbs }}>G {round(split.c)}%</span>
-            <span style={{ color: COLORS.fat }}>L {round(split.f)}%</span>
+            <span style={{ color: COLORS.protein }}>{t('P')} {round(split.p)}%</span>
+            <span style={{ color: COLORS.carbs }}>{t('G')} {round(split.c)}%</span>
+            <span style={{ color: COLORS.fat }}>{t('L')} {round(split.f)}%</span>
           </div>
         </div>
       )}
@@ -220,16 +221,16 @@ export function MealReviewForm({ initial, onChange }: { initial: Draft; onChange
       {mismatch && (
         <button type="button" onClick={() => update({ calories: macroKcal })} className="flex w-full items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-2 text-left text-xs text-amber-200">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          Les macros correspondent à ≈ {macroKcal} kcal. Toucher pour utiliser cette valeur.
+          {t('Les macros correspondent à ≈ {n} kcal. Toucher pour utiliser cette valeur.', { n: macroKcal })}
         </button>
       )}
 
       {(d.items.length > 0 || d.source !== 'barcode') && (
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <Label className="mb-0">Détail des aliments ({d.items.length})</Label>
+            <Label className="mb-0">{t('Détail des aliments ({n})', { n: d.items.length })}</Label>
             <button type="button" onClick={addItem} className="flex items-center gap-1 text-xs text-emerald-400">
-              <Plus className="h-3.5 w-3.5" /> Ajouter
+              <Plus className="h-3.5 w-3.5" /> {t('Ajouter')}
             </button>
           </div>
           <div className="space-y-1.5">
@@ -245,14 +246,14 @@ export function MealReviewForm({ initial, onChange }: { initial: Draft; onChange
                     />
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500">g</span>
                   </div>
-                  <button type="button" onClick={() => removeItem(i)} className="p-1 text-slate-500 hover:text-rose-400" aria-label="Retirer">
+                  <button type="button" onClick={() => removeItem(i)} className="p-1 text-slate-500 hover:text-rose-400" aria-label={t('Retirer')}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
                 <div className="mt-1 grid grid-cols-5 gap-1 text-[10px]">
                   {(['calories', 'protein', 'carbs', 'fat', 'sugar'] as const).map((k) => (
                     <label key={k} className="flex flex-col">
-                      <span className="text-slate-500">{{ calories: 'kcal', protein: 'P', carbs: 'G', fat: 'L', sugar: 'Sucres' }[k]}</span>
+                      <span className="text-slate-500">{{ calories: 'kcal', protein: t('P'), carbs: t('G'), fat: t('L'), sugar: t('Sucres') }[k]}</span>
                       <DecimalInput
                         value={it[k]}
                         onValueChange={(v) => updateItem(i, { [k]: v })}

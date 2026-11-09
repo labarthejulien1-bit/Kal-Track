@@ -2,6 +2,7 @@ import { Droplets, Minus, Plus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useWater } from '@/hooks/useWater';
 import { haptic } from '@/lib/utils';
+import { t } from '@/i18n';
 
 export function WaterTracker({ date, goal }: { date: string; goal: number }) {
   const { ml, add } = useWater(date);
@@ -15,17 +16,17 @@ export function WaterTracker({ date, goal }: { date: string; goal: number }) {
             <Droplets className="h-4 w-4" />
           </span>
           <div className="leading-tight">
-            <div className="text-sm font-semibold text-slate-100">Hydratation</div>
+            <div className="text-sm font-semibold text-slate-100">{t('Hydratation')}</div>
             <div className="text-xs text-slate-400">
               <span className="tabular-nums text-sky-300">{(ml / 1000).toFixed(2)} L</span> / {(goal / 1000).toFixed(1)} L
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="rounded-full bg-slate-700/60 p-2 text-slate-300" onClick={() => { haptic(); add(-250); }} aria-label="Retirer un verre">
+          <button className="rounded-full bg-slate-700/60 p-2 text-slate-300" onClick={() => { haptic(); add(-250); }} aria-label={t('Retirer un verre')}>
             <Minus className="h-4 w-4" />
           </button>
-          <button className="rounded-full bg-sky-500 p-2 text-slate-950" onClick={() => { haptic(); add(250); }} aria-label="Ajouter un verre">
+          <button className="rounded-full bg-sky-500 p-2 text-slate-950" onClick={() => { haptic(); add(250); }} aria-label={t('Ajouter un verre')}>
             <Plus className="h-4 w-4" />
           </button>
         </div>

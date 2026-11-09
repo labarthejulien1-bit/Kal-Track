@@ -12,6 +12,7 @@ import { SectionTitle } from '@/components/common';
 import { addDays, haptic, MEAL_TYPES, round, slideIn, todayISO } from '@/lib/utils';
 import { db } from '@/db/database';
 import { useToast } from '@/components/ui/toast';
+import { t } from '@/i18n';
 
 export function Dashboard() {
   const { selectedDate, setSelectedDate } = useApp();
@@ -22,9 +23,9 @@ export function Dashboard() {
 
   const copyPreviousDay = async () => {
     const prev = await db.meals.where('date').equals(addDays(selectedDate, -1)).toArray();
-    if (!prev.length) return toast('Aucun repas la veille', 'info');
+    if (!prev.length) return toast(t('Aucun repas la veille'), 'info');
     for (const m of prev) await duplicateMeal(m, selectedDate);
-    toast(`${prev.length} repas copiés`);
+    toast(t('{n} repas copiés', { n: prev.length }));
   };
 
   // ---- Navigation par balayage horizontal (swipe) ----
@@ -103,10 +104,10 @@ export function Dashboard() {
           <img src="./logo.svg" alt="" className="h-9 w-9 rounded-xl" />
           <div className="leading-tight">
             <h1 className="text-lg font-bold text-slate-50">Kal-Track</h1>
-            <p className="text-[11px] text-slate-400">{profile.name ? `Bonjour ${profile.name} 👋` : 'Ton journal nutritionnel'}</p>
+            <p className="text-[11px] text-slate-400">{profile.name ? t('Bonjour {name} 👋', { name: profile.name }) : t('Ton journal nutritionnel')}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1 rounded-full bg-orange-500/15 px-3 py-1 text-sm font-semibold text-orange-400" title="Jours consécutifs">
+        <div className="flex items-center gap-1 rounded-full bg-orange-500/15 px-3 py-1 text-sm font-semibold text-orange-400" title={t('Jours consécutifs')}>
           <Flame className="h-4 w-4" /> {streak}
         </div>
       </header>
@@ -122,14 +123,14 @@ export function Dashboard() {
         right={
           meals.length === 0 ? (
             <button onClick={copyPreviousDay} className="flex items-center gap-1 text-xs text-emerald-400">
-              <Copy className="h-3.5 w-3.5" /> Copier la veille
+              <Copy className="h-3.5 w-3.5" /> {t('Copier la veille')}
             </button>
           ) : (
-            <span className="text-xs text-slate-500">{meals.length} élément{meals.length > 1 ? 's' : ''} · {round(totals.calories)} kcal</span>
+            <span className="text-xs text-slate-500">{t(meals.length > 1 ? '{n} éléments' : '{n} élément', { n: meals.length })} · {round(totals.calories)} kcal</span>
           )
         }
       >
-        Repas
+        {t('Repas')}
       </SectionTitle>
       <div className="space-y-2">
         {MEAL_TYPES.map((t) => (
@@ -156,15 +157,15 @@ export function Dashboard() {
 function DayInsight({ totals, goals }: { totals: ReturnType<typeof useMealsForDate>['totals']; goals: ReturnType<typeof useProfile>['goals'] }) {
   const tips: string[] = [];
   const pPct = totals.protein / Math.max(1, goals.protein);
-  if (pPct < 0.6) tips.push(`Il te manque ${round(goals.protein - totals.protein)} g de protéines : pense aux œufs, skyr, poulet ou légumineuses.`);
-  if (totals.sugar > goals.sugar) tips.push(`Sucres au-dessus de la limite (+${round(totals.sugar - goals.sugar)} g). Privilégie les fruits entiers aux produits sucrés.`);
-  if (totals.fiber < goals.fiber * 0.5) tips.push('Fibres faibles aujourd’hui : ajoute légumes, fruits ou céréales complètes.');
-  if (totals.calories > goals.calories * 1.1) tips.push('Objectif calorique dépassé de plus de 10 %. Une marche de 30 min brûle ≈ 150 kcal.');
-  if (!tips.length) tips.push('Belle journée équilibrée, continue comme ça ! 💪');
+  if (pPct < 0.6) tips.push(t('Il te manque {n} g de protéines : pense aux œufs, skyr, poulet ou légumineuses.', { n: round(goals.protein - totals.protein) }));
+  if (totals.sugar > goals.sugar) tips.push(t('Sucres au-dessus de la limite (+{n} g). Privilégie les fruits entiers aux produits sucrés.', { n: round(totals.sugar - goals.sugar) }));
+  if (totals.fiber < goals.fiber * 0.5) tips.push(t('Fibres faibles aujourd’hui : ajoute légumes, fruits ou céréales complètes.'));
+  if (totals.calories > goals.calories * 1.1) tips.push(t('Objectif calorique dépassé de plus de 10 %. Une marche de 30 min brûle ≈ 150 kcal.'));
+  if (!tips.length) tips.push(t('Belle journée équilibrée, continue comme ça ! 💪'));
   return (
     <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-indigo-500/10 p-3">
       <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
-        <Sparkles className="h-3.5 w-3.5" /> Bilan du jour
+        <Sparkles className="h-3.5 w-3.5" /> {t('Bilan du jour')}
       </div>
       <ul className="space-y-1 text-xs text-slate-300">
         {tips.map((t, i) => (

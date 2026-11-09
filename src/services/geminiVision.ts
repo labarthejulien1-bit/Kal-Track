@@ -1,5 +1,6 @@
 import type { MealAnalysis, MealItem, Nutrients } from '@/types';
 import { round } from '@/lib/utils';
+import { AI_LANG_NAMES, getLang, t } from '@/i18n';
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -96,7 +97,7 @@ MÉTHODE OBLIGATOIRE (raisonne étape par étape avant de répondre) :
 6. Les totaux doivent être EXACTEMENT la somme des éléments.
 
 RÈGLES :
-- Réponds UNIQUEMENT en JSON valide, sans texte autour, en français.
+- Réponds UNIQUEMENT en JSON valide, sans texte autour, dans la langue de réponse demandée.
 - "title" : nom court et appétissant du plat (ex : "Poulet rôti, riz basmati et haricots verts").
 - Nombres : calories en kcal (entier), macros/sucres/fibres en grammes (1 décimale max).
 - "confidence" entre 0 et 1 selon la visibilité et l'ambiguïté des portions.
@@ -109,7 +110,7 @@ FORMAT :
 const TEXT_SYSTEM_PROMPT = `Tu es un nutritionniste diététicien expert (bases CIQUAL/ANSES et USDA).
 L'utilisateur décrit ce qu'il a mangé en texte libre. Décompose en aliments, estime les quantités en grammes lorsqu'elles ne sont pas précisées (portions standards françaises), prends en compte la cuisson et les matières grasses usuelles, puis calcule les apports.
 Les totaux doivent être EXACTEMENT la somme des éléments. Vérifie : calories ≈ 4P + 4G + 9L (± 10 %).
-Réponds UNIQUEMENT en JSON valide en français au format :
+Réponds UNIQUEMENT en JSON valide, dans la langue de réponse demandée, au format :
 {"title":"…","calories":0,"protein":0,"carbs":0,"fat":0,"sugar":0,"fiber":0,"confidence":0.8,"confidence_note":"…","items":[{"name":"…","quantity_g":0,"calories":0,"protein":0,"carbs":0,"fat":0,"sugar":0,"fiber":0}]}`;
 
 const LABEL_SYSTEM_PROMPT = `Tu es un expert en lecture d'emballages alimentaires.
@@ -120,7 +121,7 @@ L'image montre un emballage : tableau des valeurs nutritionnelles, liste d'ingr�
 4. Recopie les valeurs POUR 100 g (ou 100 ml) du tableau nutritionnel → "per100g" (énergie en kcal, pas en kJ ; si seul le kJ est lisible, divise par 4,184).
 5. Si une portion est indiquée (ex. "par biscuit 12 g", "1 portion = 30 g"), mets son poids en g → "servingSize_g", sinon le poids net le plus probable d'une portion.
 6. Si le tableau n'est pas lisible, estime d'après les ingrédients et le type de produit, et baisse "confidence".
-Réponds UNIQUEMENT en JSON valide en français :
+Réponds UNIQUEMENT en JSON valide, dans la langue de réponse demandée :
 {"title":"…","barcode":"","nutriScore":"","servingSize_g":30,"per100g":{"calories":0,"protein":0,"carbs":0,"fat":0,"sugar":0,"fiber":0},"confidence":0.9,"confidence_note":"…"}`;
 
 // ---------- Appel HTTP ----------
@@ -145,7 +146,7 @@ async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, sche
 
   const buildBody = (withSchema: boolean) =>
     JSON.stringify({
-      system_instruction: { parts: [{ text: systemPrompt }] },
+      system_instruction: { parts: [{ text: `${systemPrompt}\n\nLANGUE DE RÉPONSE : écris tous les textes du JSON (title, name des éléments, confidence_note) en ${AI_LANG_NAMES[getLang()]}.` }] },
       contents: [{ role: 'user', parts }],
       generationConfig: {
         response_mime_type: 'application/json',
@@ -168,7 +169,7 @@ async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, sche
       });
     } catch (e) {
       if ((e as Error).name === 'AbortError') throw e;
-      throw new GeminiError('Connexion impossible. Vérifie ta connexion Internet.');
+      throw new GeminiError(t('Connexion impossible. Vérifie ta connexion Internet.'));
     }
 
     if (res.ok) {
@@ -176,7 +177,7 @@ async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, sche
       const candidate = json?.candidates?.[0];
       if (!candidate) {
         const block = json?.promptFeedback?.blockReason;
-        throw new GeminiError(block ? `Requête bloquée par Gemini (${block}).` : 'Réponse vide de Gemini.');
+        throw new GeminiError(block ? t('Requête bloquée par l’IA ({r}).', { r: block }) : t('Réponse vide de l’IA.'));
       }
       const text: string = (candidate.content?.parts ?? [])
         .filter((p: { text?: string; thought?: boolean }) => typeof p.text === 'string' && !p.thought)
@@ -185,12 +186,16 @@ async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, sche
       return parseJsonLoose(text);
     }
 
-    let message = `Erreur IA (${res.status})`;
+    let message = t('Erreur IA ({n})', { n: res.status });
     let errCode = '';
+    let errReason = '';
+    let errLimit = 0;
     try {
       const err = await res.json();
       if (err?.error?.message) message = err.error.message;
       if (typeof err?.error?.code === 'string') errCode = err.error.code;
+      if (typeof err?.error?.reason === 'string') errReason = err.error.reason;
+      if (typeof err?.error?.limit === 'number') errLimit = err.error.limit;
     } catch {
       /* noop */
     }
@@ -203,7 +208,7 @@ async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, sche
       attempt--;
       continue;
     }
-    if (viaProxy && ['bad_code', 'quota', 'too_big', 'server', 'update_app'].includes(errCode)) throw new GeminiError(message, res.status);
+    if (viaProxy && ['bad_code', 'quota', 'too_big', 'server', 'update_app'].includes(errCode)) throw new GeminiError(serverMessage(errCode, errReason, errLimit, message), res.status);
     lastError = new GeminiError(humanizeError(res.status, message), res.status);
 
     if (res.status === 400 && withSchema && /schema|response_schema|responseSchema/i.test(message)) {
@@ -216,15 +221,37 @@ async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, sche
     }
     throw lastError;
   }
-  throw lastError ?? new GeminiError('Erreur inconnue.');
+  throw lastError ?? new GeminiError(t('Erreur inconnue.'));
+}
+
+/** Message traduit pour les erreurs renvoyées par le serveur Kal-Track. */
+function serverMessage(code: string, reason: string, limit: number, fallback: string) {
+  switch (code) {
+    case 'bad_code':
+      return t("Code d'accès invalide.");
+    case 'too_big':
+      return t('Image trop volumineuse.');
+    case 'server':
+      return t('Service IA momentanément indisponible.');
+    case 'update_app':
+      return t("Mets à jour Kal-Track (ferme puis rouvre l'appli) pour utiliser ce code.");
+    case 'quota':
+      if (reason === 'global') return t('Le service IA a atteint sa limite du jour. Réessaie demain.');
+      if (reason === 'device') return t('Tu as utilisé tes {n} analyses IA du jour sur ce téléphone. Réessaie demain.', { n: limit });
+      if (reason === 'group') return t('Le quota du jour de ce code est épuisé. Réessaie demain.');
+      if (reason === 'user') return t('Tu as utilisé tes {n} analyses IA du jour. Réessaie demain.', { n: limit });
+      return fallback;
+    default:
+      return fallback;
+  }
 }
 
 function humanizeError(status: number, msg: string) {
-  if (status === 400 && /API key/i.test(msg)) return 'Clé API invalide.';
-  if (status === 403) return 'Accès refusé : clé API invalide ou API non activée.';
+  if (status === 400 && /API key/i.test(msg)) return t('Clé API invalide.');
+  if (status === 403) return t('Accès refusé : clé API invalide ou API non activée.');
   if (status === 404) return `Modèle introuvable : ${msg}`;
-  if (status === 429) return 'Quota dépassé, réessaie dans un instant.';
-  if (status >= 500) return 'Service Gemini indisponible, réessaie plus tard.';
+  if (status === 429) return t('Quota dépassé, réessaie dans un instant.');
+  if (status >= 500) return t('Service IA indisponible, réessaie plus tard.');
   return msg;
 }
 
@@ -242,7 +269,7 @@ function parseJsonLoose(text: string): unknown {
         /* noop */
       }
     }
-    throw new GeminiError("Réponse de l'IA illisible. Réessaie.");
+    throw new GeminiError(t("Réponse de l'IA illisible. Réessaie."));
   }
 }
 
@@ -270,7 +297,7 @@ function normalizeMeal(raw: unknown): MealAnalysis {
   const r = (raw ?? {}) as Record<string, unknown>;
   const items: MealItem[] = Array.isArray(r.items)
     ? (r.items as Record<string, unknown>[]).map((it) => ({
-        name: String(it.name ?? 'Aliment'),
+        name: String(it.name ?? t('Aliment')),
         quantity_g: num(it.quantity_g, 0),
         ...normNutrients(it),
       }))
@@ -301,7 +328,7 @@ function normalizeMeal(raw: unknown): MealAnalysis {
     }
   }
   return {
-    title: String(r.title ?? 'Repas'),
+    title: String(r.title ?? t('Repas')),
     ...totals,
     confidence: r.confidence !== undefined ? Math.min(1, num(r.confidence, 2)) : undefined,
     confidence_note: String(r.confidence_note ?? ''),
@@ -365,7 +392,7 @@ export async function analyzeNutritionLabel(base64Jpeg: string, cfg: AiConfig): 
   const per100g = normNutrients(raw.per100g as Record<string, unknown>);
   const serving = num(raw.servingSize_g, 0) || 100;
   const totals = scaleNutrients(per100g, serving);
-  const title = String(raw.title ?? 'Produit');
+  const title = String(raw.title ?? t('Produit'));
   return {
     title,
     ...totals,
@@ -409,11 +436,11 @@ export async function checkAccessCode(code = ''): Promise<{ ok: boolean; message
         name: data.name,
         remaining: data.remaining,
         limit: data.limit,
-        message: `IA activée ✔ · ${data.remaining}/${data.limit} analyses disponibles aujourd'hui${data.perDevice ? ' sur ce téléphone' : ''}`,
+        message: t(data.perDevice ? "IA activée ✔ · {a}/{b} analyses disponibles aujourd'hui sur ce téléphone" : "IA activée ✔ · {a}/{b} analyses disponibles aujourd'hui", { a: data.remaining, b: data.limit }),
       };
-    return { ok: false, message: data?.error?.message || `Erreur serveur (${res.status})` };
+    return { ok: false, message: data?.error?.code ? serverMessage(data.error.code, data.error.reason, data.error.limit, data.error.message) : t('Erreur serveur ({n})', { n: res.status }) };
   } catch {
-    return { ok: false, message: 'Serveur IA injoignable. Vérifie ta connexion Internet.' };
+    return { ok: false, message: t('Serveur IA injoignable. Vérifie ta connexion Internet.') };
   }
 }
 

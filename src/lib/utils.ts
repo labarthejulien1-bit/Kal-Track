@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { MealType, Nutrients } from '@/types';
+import { locale, t } from '@/i18n';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -65,20 +66,20 @@ export function addMonths(iso: string, n: number) {
 
 const fmtCache = new Map<string, Intl.DateTimeFormat>();
 export function formatDate(iso: string, opts: Intl.DateTimeFormatOptions) {
-  const key = JSON.stringify(opts);
+  const key = locale() + JSON.stringify(opts);
   let f = fmtCache.get(key);
   if (!f) {
-    f = new Intl.DateTimeFormat('fr-FR', opts);
+    f = new Intl.DateTimeFormat(locale(), opts);
     fmtCache.set(key, f);
   }
   return f.format(fromISODate(iso));
 }
 
 export function relativeDayLabel(iso: string) {
-  const t = todayISO();
-  if (iso === t) return "Aujourd'hui";
-  if (iso === addDays(t, -1)) return 'Hier';
-  if (iso === addDays(t, 1)) return 'Demain';
+  const today = todayISO();
+  if (iso === today) return t("Aujourd'hui");
+  if (iso === addDays(today, -1)) return t('Hier');
+  if (iso === addDays(today, 1)) return t('Demain');
   return capitalize(formatDate(iso, { weekday: 'long', day: 'numeric', month: 'long' }));
 }
 
@@ -114,10 +115,34 @@ export function sumNutrients(list: Partial<Nutrients>[]): Nutrients {
 export const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 export const MEAL_LABELS: Record<MealType, string> = {
-  breakfast: 'Petit-déjeuner',
-  lunch: 'Déjeuner',
-  dinner: 'Dîner',
-  snack: 'En-cas',
+  get breakfast() {
+    return t('Petit-déjeuner');
+  },
+  get lunch() {
+    return t('Déjeuner');
+  },
+  get dinner() {
+    return t('Dîner');
+  },
+  get snack() {
+    return t('En-cas');
+  },
+};
+
+/** Libellé court (cases étroites). */
+export const MEAL_SHORT: Record<MealType, string> = {
+  get breakfast() {
+    return t('P.-déj');
+  },
+  get lunch() {
+    return t('Déjeuner|court');
+  },
+  get dinner() {
+    return t('Dîner|court');
+  },
+  get snack() {
+    return t('En-cas|court');
+  },
 };
 
 export const MEAL_EMOJI: Record<MealType, string> = {

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { t } from '@/i18n';
 
 /** Bottom-sheet modal adapté au mobile (style shadcn Drawer). */
 export function Sheet({
@@ -49,7 +50,7 @@ export function Sheet({
         <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-slate-700 sm:hidden" />
         <div className="flex items-center justify-between gap-2 px-5 pb-2 pt-3">
           <h2 className="text-base font-semibold text-slate-100">{title}</h2>
-          <button onClick={onClose} className="rounded-full p-2 text-slate-400 hover:bg-slate-800" aria-label="Fermer">
+          <button onClick={onClose} className="rounded-full p-2 text-slate-400 hover:bg-slate-800" aria-label={t('Fermer')}>
             <X className="h-5 w-5" />
           </button>
         </div>

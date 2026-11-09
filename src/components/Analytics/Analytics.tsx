@@ -6,6 +6,7 @@ import { MonthView } from './MonthView';
 import { useApp } from '@/components/AppContext';
 import { SwipeArea } from '@/components/SwipeArea';
 import { addDays, addMonths, startOfMonth, startOfWeek, todayISO } from '@/lib/utils';
+import { t } from '@/i18n';
 
 type View = 'day' | 'week' | 'month';
 
@@ -26,14 +27,14 @@ export function Analytics() {
 
   return (
     <div className="space-y-3">
-      <h1 className="pt-1 text-lg font-bold text-slate-50">Analyses</h1>
+      <h1 className="pt-1 text-lg font-bold text-slate-50">{t('Analyses')}</h1>
       <SegmentedTabs
         value={view}
         onChange={setView}
         options={[
-          { value: 'day', label: 'Jour' },
-          { value: 'week', label: 'Semaine' },
-          { value: 'month', label: 'Mois' },
+          { value: 'day', label: t('Jour') },
+          { value: 'week', label: t('Semaine') },
+          { value: 'month', label: t('Mois') },
         ]}
       />
       <SwipeArea animKey={`${view}-${date}`} canNext={canNext} onNext={() => canNext && setDate(next)} onPrev={() => setDate(step(-1))}>

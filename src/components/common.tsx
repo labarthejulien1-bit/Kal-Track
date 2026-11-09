@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn, MEAL_EMOJI, round } from '@/lib/utils';
 import type { MealType } from '@/types';
+import { decimalSep } from '@/i18n';
 
 /** Anneau de progression circulaire SVG avec gestion du dépassement. */
 export function Ring({
@@ -104,7 +105,7 @@ export function MacroPill({ label, value, color, unit = 'g' }: { label: string; 
 function fmtDecimal(v: number, allowEmpty?: boolean) {
   if (!Number.isFinite(v)) return '';
   if (v === 0 && allowEmpty) return '';
-  return String(v).replace('.', ',');
+  return String(v).replace('.', decimalSep());
 }
 
 /**
@@ -146,10 +147,10 @@ export function DecimalInput({
         if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
       }}
       onChange={(e) => {
-        const t = e.target.value.replace(/[^0-9.,]/g, '');
-        setText(t);
-        if (t === '') return onValueChange(0);
-        const n = parseFloat(t.replace(',', '.'));
+        const txt = e.target.value.replace(/[^0-9.,]/g, '');
+        setText(txt);
+        if (txt === '') return onValueChange(0);
+        const n = parseFloat(txt.replace(',', '.'));
         if (Number.isFinite(n)) onValueChange(n);
       }}
     />

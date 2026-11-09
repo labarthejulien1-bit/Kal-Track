@@ -1,6 +1,7 @@
 import { BookOpen, BarChart3, Scale, Settings as SettingsIcon, ScanLine } from 'lucide-react';
 import { cn, haptic } from '@/lib/utils';
 import { useApp, type Tab } from './AppContext';
+import { t } from '@/i18n';
 
 const ITEMS: { tab: Tab; label: string; icon: React.ElementType }[] = [
   { tab: 'journal', label: 'Journal', icon: BookOpen },
@@ -28,7 +29,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         aria-current={active ? 'page' : undefined}
       >
         <Icon className={cn('h-5 w-5 transition-transform', active && 'scale-110')} />
-        {item.label}
+        {t(item.label)}
       </button>
     );
   };
@@ -49,7 +50,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   openAdd({ date: tab === 'journal' ? selectedDate : undefined, mode: 'choose' });
                 }}
                 className="-mt-7 mb-1 flex h-16 w-16 flex-col items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-slate-950 shadow-xl shadow-emerald-500/30 ring-4 ring-slate-900 transition-transform active:scale-95"
-                aria-label="Scanner un repas"
+                aria-label={t('Scanner un repas')}
               >
                 <ScanLine className="h-7 w-7" />
               </button>

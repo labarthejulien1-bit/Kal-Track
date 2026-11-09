@@ -5,6 +5,7 @@ import { MEAL_COLORS, MEAL_EMOJI, MEAL_LABELS, round } from '@/lib/utils';
 import type { Meal, MealType, Nutrients } from '@/types';
 import { MealCard, MealSectionHeaderChevron } from './MealCard';
 import { useApp } from '@/components/AppContext';
+import { t } from '@/i18n';
 
 export function MealSection({ type, meals, totals, target, date }: { type: MealType; meals: Meal[]; totals: Nutrients; target: number; date: string }) {
   const { openAdd } = useApp();
@@ -25,7 +26,7 @@ export function MealSection({ type, meals, totals, target, date }: { type: MealT
               <span className="font-semibold tabular-nums" style={{ color: MEAL_COLORS[type] }}>{round(totals.calories)}</span> / {round(target)} kcal
               {totals.calories > 0 && (
                 <span className="ml-1 text-slate-500">
-                  · P{round(totals.protein)} G{round(totals.carbs)} L{round(totals.fat)} · S{round(totals.sugar)}
+                  · {t('P')}{round(totals.protein)} {t('G')}{round(totals.carbs)} {t('L')}{round(totals.fat)} · {t('S')}{round(totals.sugar)}
                 </span>
               )}
             </div>
@@ -34,7 +35,7 @@ export function MealSection({ type, meals, totals, target, date }: { type: MealT
         <button
           onClick={() => openAdd({ date, mealType: type, mode: 'choose' })}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
-          aria-label={`Ajouter au ${MEAL_LABELS[type]}`}
+          aria-label={t('Ajouter au {meal}', { meal: MEAL_LABELS[type] })}
         >
           <Plus className="h-5 w-5" />
         </button>

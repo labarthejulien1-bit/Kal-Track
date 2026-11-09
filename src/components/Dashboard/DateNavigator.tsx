@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { addDays, cn, formatDate, relativeDayLabel, startOfWeek, todayISO, haptic } from '@/lib/utils';
 import { useLoggedDates } from '@/hooks/useMeals';
+import { t } from '@/i18n';
 
 export function DateNavigator({ date, onChange }: { date: string; onChange: (d: string) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -18,7 +19,7 @@ export function DateNavigator({ date, onChange }: { date: string; onChange: (d: 
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-800/40 p-3">
       <div className="flex items-center justify-between">
-        <button className="rounded-full p-2 text-slate-300 hover:bg-slate-700" onClick={() => go(addDays(date, -1))} aria-label="Jour précédent">
+        <button className="rounded-full p-2 text-slate-300 hover:bg-slate-700" onClick={() => go(addDays(date, -1))} aria-label={t('Jour précédent')}>
           <ChevronLeft className="h-5 w-5" />
         </button>
         <button
@@ -41,13 +42,13 @@ export function DateNavigator({ date, onChange }: { date: string; onChange: (d: 
           className="rounded-full p-2 text-slate-300 hover:bg-slate-700 disabled:opacity-30"
           onClick={() => go(addDays(date, 1))}
           disabled={date >= today}
-          aria-label="Jour suivant"
+          aria-label={t('Jour suivant')}
         >
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
       <div className="mt-2 flex items-center gap-1">
-        <button className="p-1 text-slate-500" onClick={() => go(addDays(date, -7))} aria-label="Semaine précédente">
+        <button className="p-1 text-slate-500" onClick={() => go(addDays(date, -7))} aria-label={t('Semaine précédente')}>
           <ChevronLeft className="h-4 w-4" />
         </button>
         <div className="grid flex-1 grid-cols-7 gap-1">
@@ -77,14 +78,14 @@ export function DateNavigator({ date, onChange }: { date: string; onChange: (d: 
           className="p-1 text-slate-500 disabled:opacity-30"
           onClick={() => go(addDays(date, 7))}
           disabled={addDays(weekStart, 7) > today}
-          aria-label="Semaine suivante"
+          aria-label={t('Semaine suivante')}
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
       {date !== today && (
         <button onClick={() => go(today)} className="mt-2 w-full rounded-lg bg-slate-700/50 py-1.5 text-xs font-medium text-emerald-300">
-          Revenir à aujourd'hui
+          {t("Revenir à aujourd'hui")}
         </button>
       )}
     </div>

@@ -3,6 +3,7 @@ import { Loader2, ScanBarcode, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { haptic } from '@/lib/utils';
+import { t } from '@/i18n';
 
 interface DetectorLike {
   detect: (src: CanvasImageSource) => Promise<{ rawValue: string }[]>;
@@ -79,7 +80,7 @@ export function BarcodeScanner({ onDetected }: { onDetected: (code: string) => v
       } catch (e) {
         if (cancelled) return;
         setStatus('error');
-        setError((e as Error).name === 'NotAllowedError' ? "Accès à la caméra refusé. Autorise-le dans les paramètres du navigateur." : "Caméra indisponible. Saisis le code manuellement.");
+        setError((e as Error).name === 'NotAllowedError' ? t('Accès à la caméra refusé. Autorise-le dans les paramètres du navigateur.') : t('Caméra indisponible. Saisis le code manuellement.'));
       }
     })();
 
@@ -87,7 +88,7 @@ export function BarcodeScanner({ onDetected }: { onDetected: (code: string) => v
       cancelled = true;
       cancelAnimationFrame(raf);
       stopZxing?.();
-      stream?.getTracks().forEach((t) => t.stop());
+      stream?.getTracks().forEach((tr) => tr.stop());
     };
   }, [onDetected]);
 
@@ -114,7 +115,7 @@ export function BarcodeScanner({ onDetected }: { onDetected: (code: string) => v
           </div>
         )}
       </div>
-      <p className="text-center text-xs text-slate-400">Place le code-barres dans le cadre. La détection est automatique.</p>
+      <p className="text-center text-xs text-slate-400">{t('Place le code-barres dans le cadre. La détection est automatique.')}</p>
       <form
         className="flex gap-2"
         onSubmit={(e) => {
@@ -125,8 +126,8 @@ export function BarcodeScanner({ onDetected }: { onDetected: (code: string) => v
           }
         }}
       >
-        <Input inputMode="numeric" placeholder="Ou saisis le code (ex. 3017620422003)" value={manual} onChange={(e) => setManual(e.target.value)} />
-        <Button type="submit" size="icon" variant="secondary" aria-label="Rechercher">
+        <Input inputMode="numeric" placeholder={t('Ou saisis le code (ex. 3017620422003)')} value={manual} onChange={(e) => setManual(e.target.value)} />
+        <Button type="submit" size="icon" variant="secondary" aria-label={t('Rechercher')}>
           <Search />
         </Button>
       </form>

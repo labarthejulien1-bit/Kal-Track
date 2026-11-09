@@ -10,6 +10,7 @@ import { Onboarding } from '@/components/Onboarding';
 import { ToastProvider } from '@/components/ui/toast';
 import { useProfile } from '@/hooks/useProfile';
 import { todayISO } from '@/lib/utils';
+import { getLang, resolveLang, setLang } from '@/i18n';
 
 const TABS: Tab[] = ['journal', 'analytics', 'weight', 'settings'];
 
@@ -20,7 +21,11 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [addRequest, setAddRequest] = useState<AddRequest | null>(params.get('action') === 'scan' ? { mode: 'choose' } : null);
   const [onboarded, setOnboarded] = useState(false);
-  const { loading, hasProfile } = useProfile();
+  const { loading, hasProfile, profile } = useProfile();
+
+  // Langue : choix du profil, sinon langue du téléphone. Appliquée avant le rendu des écrans.
+  const lang = resolveLang(profile.language);
+  if (getLang() !== lang) setLang(lang);
 
   const openAdd = useCallback((req: AddRequest = {}) => setAddRequest({ ...req }), []);
 
@@ -44,13 +49,13 @@ export default function App() {
   return (
     <ToastProvider>
       <AppContext.Provider value={ctx}>
-        <Layout>
+        <Layout key={lang}>
           {tab === 'journal' && <Dashboard />}
           {tab === 'analytics' && <Analytics />}
           {tab === 'weight' && <WeightTab />}
           {tab === 'settings' && <Settings />}
         </Layout>
-        <CameraModal request={addRequest} onClose={() => setAddRequest(null)} />
+        <CameraModal key={`cam-${lang}`} request={addRequest} onClose={() => setAddRequest(null)} />
         <Onboarding open={!loading && !hasProfile && !onboarded} onDone={() => setOnboarded(true)} />
       </AppContext.Provider>
     </ToastProvider>

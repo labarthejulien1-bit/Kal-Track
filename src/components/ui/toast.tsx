@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { t } from '@/i18n';
 
 type Kind = 'success' | 'error' | 'info';
 interface Toast { id: number; text: string; kind: Kind; action?: { label: string; onClick: () => void } }
@@ -11,14 +12,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const push = useCallback((text: string, kind: Kind = 'success', action?: Toast['action']) => {
     const id = Date.now() + Math.random();
-    setToasts((t) => [...t, { id, text, kind, action }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), action ? 5000 : 2800);
+    setToasts((list) => [...list, { id, text, kind, action }]);
+    setTimeout(() => setToasts((list) => list.filter((x) => x.id !== id)), action ? 5000 : 2800);
   }, []);
   // Toute erreur inattendue est affichée au lieu d'échouer silencieusement.
   useEffect(() => {
     const onRejection = (e: PromiseRejectionEvent) => {
       if ((e.reason as Error)?.name === 'AbortError') return;
-      push(`Erreur : ${(e.reason as Error)?.message ?? String(e.reason)}`, 'error');
+      push(`${t('Erreur')} : ${(e.reason as Error)?.message ?? String(e.reason)}`, 'error');
     };
     window.addEventListener('unhandledrejection', onRejection);
     return () => window.removeEventListener('unhandledrejection', onRejection);

@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import type { Meal, Profile, WeightLog, WaterLog, BackupFile } from '@/types';
+import { t } from '@/i18n';
 
 export class CalorieTrackerDB extends Dexie {
   userProfile!: Table<Profile, number>;
@@ -62,7 +63,7 @@ export async function exportBackup(): Promise<BackupFile> {
 
 export async function importBackup(data: BackupFile, opts: { includeApiKey: boolean }) {
   if (!data || data.app !== 'kal-track' || !Array.isArray(data.meals)) {
-    throw new Error('Fichier de sauvegarde invalide.');
+    throw new Error(t('Fichier de sauvegarde invalide.'));
   }
   await db.transaction('rw', [db.userProfile, db.meals, db.weightLogs, db.waterLogs], async () => {
     const current = await db.userProfile.get(1);

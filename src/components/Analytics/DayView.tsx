@@ -3,18 +3,19 @@ import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMealsForDate } from '@/hooks/useMeals';
 import { useProfile } from '@/hooks/useProfile';
-import { COLORS, MEAL_LABELS, MEAL_TYPES, addDays, relativeDayLabel, round, todayISO } from '@/lib/utils';
+import { COLORS, MEAL_SHORT, MEAL_TYPES, addDays, relativeDayLabel, round, todayISO } from '@/lib/utils';
 import { ChartTooltip, GraduatedGauge, axisProps, gridProps } from './chartKit';
+import { t } from '@/i18n';
 
 export function DayView({ date, setDate }: { date: string; setDate: (d: string) => void }) {
   const { goals } = useProfile();
   const { totals, byType, meals } = useMealsForDate(date);
 
   // Détail par repas : chaque barre empile les kcal issues des protéines / glucides / lipides.
-  const perMeal = MEAL_TYPES.map((t) => {
-    const n = byType[t].totals;
+  const perMeal = MEAL_TYPES.map((mt) => {
+    const n = byType[mt].totals;
     return {
-      name: MEAL_LABELS[t].replace('Petit-déjeuner', 'P.-déj'),
+      name: MEAL_SHORT[mt],
       Protéines: round(n.protein * 4),
       Glucides: round(n.carbs * 4),
       Lipides: round(n.fat * 9),
@@ -24,68 +25,68 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
   });
 
   const macroPie = [
-    { name: 'Protéines', value: round(totals.protein * 4), grams: totals.protein, color: COLORS.protein },
-    { name: 'Glucides', value: round(totals.carbs * 4), grams: totals.carbs, color: COLORS.carbs },
-    { name: 'Lipides', value: round(totals.fat * 9), grams: totals.fat, color: COLORS.fat },
+    { name: t('Protéines'), value: round(totals.protein * 4), grams: totals.protein, color: COLORS.protein },
+    { name: t('Glucides'), value: round(totals.carbs * 4), grams: totals.carbs, color: COLORS.carbs },
+    { name: t('Lipides'), value: round(totals.fat * 9), grams: totals.fat, color: COLORS.fat },
   ];
   const pieTotal = macroPie.reduce((s, x) => s + x.value, 0);
 
   // Comparaison en % de l'objectif pour chaque élément (couleurs distinctes).
   const vsGoal = [
-    { name: 'Calories', pct: round((totals.calories / goals.calories) * 100), color: COLORS.kcal },
-    { name: 'Protéines', pct: round((totals.protein / goals.protein) * 100), color: COLORS.protein },
-    { name: 'Glucides', pct: round((totals.carbs / goals.carbs) * 100), color: COLORS.carbs },
-    { name: 'Lipides', pct: round((totals.fat / goals.fat) * 100), color: COLORS.fat },
-    { name: 'Sucres', pct: round((totals.sugar / goals.sugar) * 100), color: COLORS.sugar },
-    { name: 'Fibres', pct: round((totals.fiber / goals.fiber) * 100), color: COLORS.fiber },
+    { name: t('Calories'), pct: round((totals.calories / goals.calories) * 100), color: COLORS.kcal },
+    { name: t('Protéines'), pct: round((totals.protein / goals.protein) * 100), color: COLORS.protein },
+    { name: t('Glucides'), pct: round((totals.carbs / goals.carbs) * 100), color: COLORS.carbs },
+    { name: t('Lipides'), pct: round((totals.fat / goals.fat) * 100), color: COLORS.fat },
+    { name: t('Sucres'), pct: round((totals.sugar / goals.sugar) * 100), color: COLORS.sugar },
+    { name: t('Fibres'), pct: round((totals.fiber / goals.fiber) * 100), color: COLORS.fiber },
   ];
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800/40 p-2">
-        <button className="rounded-full p-2 text-slate-300" onClick={() => setDate(addDays(date, -1))} aria-label="Jour précédent">
+        <button className="rounded-full p-2 text-slate-300" onClick={() => setDate(addDays(date, -1))} aria-label={t('Jour précédent')}>
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div className="text-center">
           <p className="text-sm font-semibold text-slate-100">{relativeDayLabel(date)}</p>
-          <p className="text-[11px] text-slate-500">{meals.length} élément(s) · {round(totals.calories)} kcal</p>
+          <p className="text-[11px] text-slate-500">{t('{n} élément(s)', { n: meals.length })} · {round(totals.calories)} kcal</p>
         </div>
-        <button className="rounded-full p-2 text-slate-300 disabled:opacity-30" disabled={date >= todayISO()} onClick={() => setDate(addDays(date, 1))} aria-label="Jour suivant">
+        <button className="rounded-full p-2 text-slate-300 disabled:opacity-30" disabled={date >= todayISO()} onClick={() => setDate(addDays(date, 1))} aria-label={t('Jour suivant')}>
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Bilan détaillé vs objectifs</CardTitle>
+          <CardTitle>{t('Bilan détaillé vs objectifs')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <GraduatedGauge
-            label="Calories"
+            label={t('Calories')}
             value={totals.calories}
             goal={goals.calories}
             unit="kcal"
             color={COLORS.kcal}
             markers={[
-              { value: goals.loseTarget, color: COLORS.lose, label: 'Limite perte' },
-              { value: goals.maintenance, color: COLORS.maintain, label: 'Maintien' },
-              { value: goals.gainTarget, color: COLORS.gain, label: 'Limite prise' },
+              { value: goals.loseTarget, color: COLORS.lose, label: t('Limite perte') },
+              { value: goals.maintenance, color: COLORS.maintain, label: t('Maintien') },
+              { value: goals.gainTarget, color: COLORS.gain, label: t('Limite prise') },
             ]}
           />
-          <GraduatedGauge label="Protéines" value={totals.protein} goal={goals.protein} unit="g" color={COLORS.protein} />
-          <GraduatedGauge label="Glucides" value={totals.carbs} goal={goals.carbs} unit="g" color={COLORS.carbs} />
-          <GraduatedGauge label="Lipides" value={totals.fat} goal={goals.fat} unit="g" color={COLORS.fat} />
-          <GraduatedGauge label="Sucres" value={totals.sugar} goal={goals.sugar} unit="g" color={COLORS.sugar} isLimit />
-          <GraduatedGauge label="Fibres" value={totals.fiber} goal={goals.fiber} unit="g" color={COLORS.fiber} />
+          <GraduatedGauge label={t('Protéines')} value={totals.protein} goal={goals.protein} unit="g" color={COLORS.protein} />
+          <GraduatedGauge label={t('Glucides')} value={totals.carbs} goal={goals.carbs} unit="g" color={COLORS.carbs} />
+          <GraduatedGauge label={t('Lipides')} value={totals.fat} goal={goals.fat} unit="g" color={COLORS.fat} />
+          <GraduatedGauge label={t('Sucres')} value={totals.sugar} goal={goals.sugar} unit="g" color={COLORS.sugar} isLimit />
+          <GraduatedGauge label={t('Fibres')} value={totals.fiber} goal={goals.fiber} unit="g" color={COLORS.fiber} />
           <p className="text-[10px] text-slate-500">
-            Trait rouge = objectif · pointillés : <span style={{ color: COLORS.lose }}>perte</span>, <span style={{ color: COLORS.maintain }}>maintien</span>, <span style={{ color: COLORS.gain }}>prise</span>
+            {t('Trait rouge = objectif · pointillés :')} <span style={{ color: COLORS.lose }}>{t('perte')}</span>, <span style={{ color: COLORS.maintain }}>{t('maintien')}</span>, <span style={{ color: COLORS.gain }}>{t('prise')}</span>
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Atteinte des objectifs (%)</CardTitle>
+          <CardTitle>{t('Atteinte des objectifs (%)')}</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={210}>
@@ -94,7 +95,7 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
               <XAxis dataKey="name" {...axisProps} interval={0} tick={{ fill: '#94a3b8', fontSize: 9 }} />
               <YAxis {...axisProps} ticks={[0, 25, 50, 75, 100, 125, 150]} domain={[0, (max: number) => Math.max(150, max)]} unit="%" />
               <Tooltip content={<ChartTooltip unit="%" />} cursor={{ fill: '#ffffff08' }} />
-              <Bar dataKey="pct" name="Objectif atteint" radius={[6, 6, 0, 0]}>
+              <Bar dataKey="pct" name={t('Objectif atteint')} radius={[6, 6, 0, 0]}>
                 {vsGoal.map((d) => (
                   <Cell key={d.name} fill={d.color} />
                 ))}
@@ -107,7 +108,7 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
 
       <Card>
         <CardHeader>
-          <CardTitle>Détail par repas (kcal par macro)</CardTitle>
+          <CardTitle>{t('Détail par repas (kcal par macro)')}</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={230}>
@@ -117,9 +118,9 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
               <YAxis {...axisProps} tickCount={6} unit="" />
               <Tooltip content={<ChartTooltip unit=" kcal" />} cursor={{ fill: '#ffffff08' }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="Protéines" stackId="a" fill={COLORS.protein} />
-              <Bar dataKey="Glucides" stackId="a" fill={COLORS.carbs} />
-              <Bar dataKey="Lipides" stackId="a" fill={COLORS.fat} radius={[6, 6, 0, 0]}>
+              <Bar dataKey="Protéines" name={t('Protéines')} stackId="a" fill={COLORS.protein} />
+              <Bar dataKey="Glucides" name={t('Glucides')} stackId="a" fill={COLORS.carbs} />
+              <Bar dataKey="Lipides" name={t('Lipides')} stackId="a" fill={COLORS.fat} radius={[6, 6, 0, 0]}>
                 <LabelList dataKey="kcal" position="top" fill={COLORS.kcal} fontSize={10} formatter={(v: number) => (v ? `${v}` : '')} />
               </Bar>
             </BarChart>
@@ -129,7 +130,7 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
               <div key={m.name} className="rounded-lg bg-slate-900/60 p-1">
                 <div className="text-slate-400">{m.name}</div>
                 <div className="font-semibold text-emerald-400">{m.kcal}</div>
-                <div style={{ color: COLORS.sugar }}>sucres {m.sugar} g</div>
+                <div style={{ color: COLORS.sugar }}>{t('sucres')} {m.sugar} g</div>
               </div>
             ))}
           </div>
@@ -138,7 +139,7 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
 
       <Card>
         <CardHeader>
-          <CardTitle>Répartition énergétique des macros</CardTitle>
+          <CardTitle>{t('Répartition énergétique des macros')}</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center gap-4">
           <div className="h-36 w-36 shrink-0">

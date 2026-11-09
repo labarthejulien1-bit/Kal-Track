@@ -1,32 +1,39 @@
 import type { ActivityLevel, Goal, GoalPace, Goals, MacroPreset, Profile } from '@/types';
 import { round } from '@/lib/utils';
+import { t } from '@/i18n';
 
 export const ACTIVITY_FACTORS: Record<ActivityLevel, { factor: number; label: string; hint: string }> = {
-  sedentary: { factor: 1.2, label: 'Sédentaire', hint: 'Travail de bureau, peu de marche (< 5 000 pas)' },
-  light: { factor: 1.375, label: 'Légèrement actif', hint: 'Marche régulière (5 000 – 8 000 pas)' },
-  moderate: { factor: 1.55, label: 'Modérément actif', hint: 'Souvent debout (8 000 – 12 000 pas)' },
-  very: { factor: 1.725, label: 'Très actif', hint: 'Métier physique (> 12 000 pas)' },
-  extreme: { factor: 1.9, label: 'Extrêmement actif', hint: 'Travail très physique + sport intense' },
+  sedentary: { factor: 1.2, get label() { return t('Sédentaire'); }, get hint() { return t('Travail de bureau, peu de marche (< 5 000 pas)'); } },
+  light: { factor: 1.375, get label() { return t('Légèrement actif'); }, get hint() { return t('Marche régulière (5 000 – 8 000 pas)'); } },
+  moderate: { factor: 1.55, get label() { return t('Modérément actif'); }, get hint() { return t('Souvent debout (8 000 – 12 000 pas)'); } },
+  very: { factor: 1.725, get label() { return t('Très actif'); }, get hint() { return t('Métier physique (> 12 000 pas)'); } },
+  extreme: { factor: 1.9, get label() { return t('Extrêmement actif'); }, get hint() { return t('Travail très physique + sport intense'); } },
 };
 
 /** Ajustements quotidiens (kcal) selon objectif et rythme. « standard » = règle de base (-500 / +300). */
 export const PACE_DELTAS: Record<GoalPace, { lose: number; gain: number; label: string }> = {
-  slow: { lose: -250, gain: 150, label: 'Doux' },
-  standard: { lose: -500, gain: 300, label: 'Standard' },
-  fast: { lose: -750, gain: 500, label: 'Rapide' },
+  slow: { lose: -250, gain: 150, get label() { return t('Doux'); } },
+  standard: { lose: -500, gain: 300, get label() { return t('Standard'); } },
+  fast: { lose: -750, gain: 500, get label() { return t('Rapide'); } },
 };
 
 export const GOAL_LABELS: Record<Goal, string> = {
-  lose: 'Perte de poids',
-  maintain: 'Maintien',
-  gain: 'Prise de poids',
+  get lose() {
+    return t('Perte de poids');
+  },
+  get maintain() {
+    return t('Maintien');
+  },
+  get gain() {
+    return t('Prise de poids');
+  },
 };
 
 export const MACRO_PRESETS: Record<Exclude<MacroPreset, 'custom'>, { label: string; protein: number; carbs: number; fat: number }> = {
-  balanced: { label: 'Équilibré (30/40/30)', protein: 30, carbs: 40, fat: 30 },
-  high_protein: { label: 'Riche en protéines (40/30/30)', protein: 40, carbs: 30, fat: 30 },
-  low_carb: { label: 'Low-carb (30/20/50)', protein: 30, carbs: 20, fat: 50 },
-  endurance: { label: 'Endurance (20/55/25)', protein: 20, carbs: 55, fat: 25 },
+  balanced: { get label() { return t('Équilibré (30/40/30)'); }, protein: 30, carbs: 40, fat: 30 },
+  high_protein: { get label() { return t('Riche en protéines (40/30/30)'); }, protein: 40, carbs: 30, fat: 30 },
+  low_carb: { get label() { return t('Low-carb (30/20/50)'); }, protein: 30, carbs: 20, fat: 50 },
+  endurance: { get label() { return t('Endurance (20/55/25)'); }, protein: 20, carbs: 55, fat: 25 },
 };
 
 /** Énergie : 1 kg de masse grasse ≈ 7 700 kcal. */
@@ -122,10 +129,10 @@ export function computeGoals(p: Profile): Goals {
 }
 
 export function bmiCategory(bmi: number) {
-  if (bmi < 18.5) return { label: 'Insuffisance pondérale', color: '#38bdf8' };
-  if (bmi < 25) return { label: 'Corpulence normale', color: '#10b981' };
-  if (bmi < 30) return { label: 'Surpoids', color: '#f59e0b' };
-  return { label: 'Obésité', color: '#f43f5e' };
+  if (bmi < 18.5) return { label: t('Insuffisance pondérale'), color: '#38bdf8' };
+  if (bmi < 25) return { label: t('Corpulence normale'), color: '#10b981' };
+  if (bmi < 30) return { label: t('Surpoids'), color: '#f59e0b' };
+  return { label: t('Obésité'), color: '#f43f5e' };
 }
 
 /**
@@ -167,6 +174,7 @@ export const DEFAULT_PROFILE: Profile = {
   waterGoalMl: undefined,
   apiKey: '',
   accessCode: '',
+  language: 'auto',
   model: 'gemini-3.5-flash-lite',
   aiDetailLevel: 'detailed',
   createdAt: Date.now(),

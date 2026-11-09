@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+
 /**
  * Compression d'image 100% côté client via Canvas HTML5.
  * - Côté le plus long ≤ 1024 px
@@ -35,7 +37,7 @@ async function loadBitmap(file: Blob): Promise<ImageBitmap | HTMLImageElement> {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("Impossible de lire l'image."));
+      reject(new Error(t("Impossible de lire l'image.")));
     };
     img.src = url;
   });
@@ -62,7 +64,7 @@ export async function compressImage(file: Blob, maxDim = MAX_DIMENSION): Promise
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas non supporté.');
+    if (!ctx) throw new Error(t('Canvas non supporté.'));
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, w, h);
     ctx.imageSmoothingQuality = 'high';
@@ -78,7 +80,7 @@ export async function compressImage(file: Blob, maxDim = MAX_DIMENSION): Promise
     if (quality > 0.5) quality = Math.max(0.5, quality - 0.08);
     else dim = Math.round(dim * 0.85);
   }
-  throw new Error("Impossible de compresser l'image sous 200 Ko.");
+  throw new Error(t("Impossible de compresser l'image sous 200 Ko."));
 }
 
 export function dataUrlToBase64(dataUrl: string) {

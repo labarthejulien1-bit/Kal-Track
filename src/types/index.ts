@@ -59,6 +59,7 @@ export interface Profile {
   apiKey: string;
   model: string;
   accessCode: string; // code d'accès au serveur IA Kal-Track
+  language?: 'auto' | 'fr' | 'en' | 'es' | 'pt' | 'de' | 'it';
   aiDetailLevel: 'standard' | 'detailed';
   createdAt: number;
   updatedAt: number;
