@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Sheet } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { SegmentedTabs } from '@/components/ui/tabs';
-import { Select, Label } from '@/components/ui/input';
+import { Label } from '@/components/ui/input';
+import { Picker } from '@/components/ui/picker';
 import { HeightField, NumberField, WeightField } from '@/components/common';
 import { ACTIVITY_FACTORS, DEFAULT_PROFILE, computeGoals } from '@/services/bmrCalculator';
 import { db } from '@/db/database';
@@ -48,13 +49,12 @@ export function Onboarding({ open, onDone }: { open: boolean; onDone: () => void
         <WeightField label={t('Poids cible')} kg={p.targetWeight} onChange={(v) => set({ targetWeight: v })} />
         <div>
           <Label>{t('Activité quotidienne')}</Label>
-          <Select value={p.activityLevel} onChange={(e) => set({ activityLevel: e.target.value as ActivityLevel })}>
-            {Object.entries(ACTIVITY_FACTORS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v.label} — {v.hint}
-              </option>
-            ))}
-          </Select>
+          <Picker<ActivityLevel>
+            title={t('Activité quotidienne')}
+            value={p.activityLevel}
+            onChange={(v) => set({ activityLevel: v })}
+            options={(Object.keys(ACTIVITY_FACTORS) as ActivityLevel[]).map((k) => ({ value: k, label: ACTIVITY_FACTORS[k].label, hint: ACTIVITY_FACTORS[k].hint }))}
+          />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <NumberField label={t('Séances sport / sem.')} value={p.workoutsPerWeek} onChange={(v) => set({ workoutsPerWeek: v })} />

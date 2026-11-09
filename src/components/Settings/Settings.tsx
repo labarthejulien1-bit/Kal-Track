@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Languages, Moon, Palette, Ruler, Sun, SunMoon, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input, Label, Select } from '@/components/ui/input';
+import { Input, Label } from '@/components/ui/input';
+import { Picker } from '@/components/ui/picker';
 import { Switch } from '@/components/ui/switch';
 import { SegmentedTabs } from '@/components/ui/tabs';
 import { HeightField, NumberField, WeightField } from '@/components/common';
@@ -306,25 +307,20 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Select
+          <Picker<LangSetting>
+            title={t('Langue')}
             value={profile.language ?? 'auto'}
-            onChange={async (e) => {
-              const language = e.target.value as LangSetting;
+            onChange={async (language) => {
               await updateProfile({ language });
               dirty.current = true;
               await flush();
               await db.userProfile.update(1, { language });
             }}
-          >
-            <option value="auto">
-              {t('Automatique (langue du téléphone)')} · {LANGS.find((l) => l.code === detectLang())?.label}
-            </option>
-            {LANGS.map((l) => (
-              <option key={l.code} value={l.code}>
-                {l.flag} {l.label}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: 'auto', label: t('Automatique (langue du téléphone)'), hint: LANGS.find((l) => l.code === detectLang())?.label },
+              ...LANGS.map((l) => ({ value: l.code as LangSetting, label: `${l.flag} ${l.label}` })),
+            ]}
+          />
         </CardContent>
       </Card>
 
@@ -345,22 +341,19 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           ).map(([key, label, opts]) => (
             <div key={key}>
               <Label>{label}</Label>
-              <Select
+              <Picker<string>
+                compact
+                title={label}
                 value={getUnits()[key]}
-                onChange={async (e) => {
-                  const units = { ...getUnits(), [key]: e.target.value } as Units;
+                onChange={async (v) => {
+                  const units = { ...getUnits(), [key]: v } as Units;
                   await updateProfile({ units });
                   dirty.current = true;
                   await flush();
                   await db.userProfile.update(1, { units });
                 }}
-              >
-                {opts.map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </Select>
+                options={opts.map(([v, l]) => ({ value: v, label: l }))}
+              />
             </div>
           ))}
         </CardContent>
@@ -400,13 +393,12 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           </div>
           <div>
             <Label>{t('Activité quotidienne (hors sport)')}</Label>
-            <Select value={profile.activityLevel} onChange={(e) => updateProfile({ activityLevel: e.target.value as ActivityLevel })}>
-              {Object.entries(ACTIVITY_FACTORS).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v.label} (×{v.factor}) — {v.hint}
-                </option>
-              ))}
-            </Select>
+            <Picker<ActivityLevel>
+              title={t('Activité quotidienne (hors sport)')}
+              value={profile.activityLevel}
+              onChange={(v) => updateProfile({ activityLevel: v })}
+              options={(Object.keys(ACTIVITY_FACTORS) as ActivityLevel[]).map((k) => ({ value: k, label: ACTIVITY_FACTORS[k].label, hint: ACTIVITY_FACTORS[k].hint, badge: `×${ACTIVITY_FACTORS[k].factor}` }))}
+            />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <NumberField label={t('Séances de sport / semaine')} value={profile.workoutsPerWeek} onChange={(v) => updateProfile({ workoutsPerWeek: v })} unit="×" />
@@ -440,14 +432,19 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           )}
           <div>
             <Label>{t('Répartition des macronutriments')}</Label>
-            <Select value={profile.macroPreset} onChange={(e) => updateProfile({ macroPreset: e.target.value as MacroPreset })}>
-              {Object.entries(MACRO_PRESETS).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v.label}
-                </option>
-              ))}
-              <option value="custom">{t('Personnalisée')}</option>
-            </Select>
+            <Picker<MacroPreset>
+              title={t('Répartition des macronutriments')}
+              value={profile.macroPreset}
+              onChange={(v) => updateProfile({ macroPreset: v })}
+              options={[
+                ...(Object.keys(MACRO_PRESETS) as Exclude<MacroPreset, 'custom'>[]).map((k) => ({
+                  value: k as MacroPreset,
+                  label: MACRO_PRESETS[k].label,
+                  hint: `${t('Protéines')} ${MACRO_PRESETS[k].protein} % · ${t('Glucides')} ${MACRO_PRESETS[k].carbs} % · ${t('Lipides')} ${MACRO_PRESETS[k].fat} %`,
+                })),
+                { value: 'custom' as MacroPreset, label: t('Personnalisée') },
+              ]}
+            />
             {profile.macroPreset === 'custom' && (
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <NumberField label={t('Protéines')} value={profile.macroSplit.protein} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, protein: v } })} unit="%" color={COLORS.protein} />
