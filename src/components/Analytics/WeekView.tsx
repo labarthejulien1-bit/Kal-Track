@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Bar, CartesianGrid, Cell, ComposedChart, Legend, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Section } from '@/components/ui/collapsible';
 import { useMealsRange } from '@/hooks/useMeals';
 import { useProfile } from '@/hooks/useProfile';
 import { COLORS, addDays, capitalize, formatDate, round, startOfWeek, todayISO } from '@/lib/utils';
@@ -36,7 +37,7 @@ export function WeekView({ anchor, setAnchor }: { anchor: string; setAnchor: (d:
   const yMax = Math.max(goals.gainTarget, ...days.map((d) => d.calories)) * 1.1;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800/40 p-2">
         <button className="rounded-full p-2 text-slate-300" onClick={() => setAnchor(addDays(start, -7))} aria-label={t('Semaine précédente')}>
           <ChevronLeft className="h-5 w-5" />
@@ -58,10 +59,11 @@ export function WeekView({ anchor, setAnchor }: { anchor: string; setAnchor: (d:
         ]}
       />
 
+      <Section
+        id={`a.week.1`}
+        title={t('Calories consommées vs objectif')}
+      >
       <Card>
-        <CardHeader>
-          <CardTitle>{t('Calories consommées vs objectif')}</CardTitle>
-        </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={260}>
             <ComposedChart data={data} margin={{ top: 10, right: 6, left: -10, bottom: 0 }}>
@@ -80,11 +82,13 @@ export function WeekView({ anchor, setAnchor }: { anchor: string; setAnchor: (d:
           <ZoneLegend />
         </CardContent>
       </Card>
+      </Section>
 
+      <Section
+        id={`a.week.2`}
+        title={t('Détail quotidien : calories, protéines, glucides, lipides')}
+      >
       <Card>
-        <CardHeader>
-          <CardTitle>{t('Détail quotidien : calories, protéines, glucides, lipides')}</CardTitle>
-        </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={260}>
             <ComposedChart data={data} margin={{ top: 10, right: 6, left: -10, bottom: 0 }}>
@@ -103,6 +107,7 @@ export function WeekView({ anchor, setAnchor }: { anchor: string; setAnchor: (d:
           <p className="mt-1 text-center text-[10px] text-slate-500">{t('Barres empilées = énergie issue de chaque macro · ligne verte = calories totales')}</p>
         </CardContent>
       </Card>
+      </Section>
 
       <div className="grid gap-3">
         <MacroWeekChart data={data} dataKey="Protéines" color={COLORS.protein} goal={goals.protein} avg={avg('protein')} />
@@ -116,15 +121,20 @@ export function WeekView({ anchor, setAnchor }: { anchor: string; setAnchor: (d:
 
 export function MacroWeekChart({ data, dataKey, color, goal, avg, limit, height = 150 }: { data: object[]; dataKey: string; color: string; goal: number; avg: number; limit?: boolean; height?: number }) {
   return (
-    <Card>
-      <CardHeader className="pb-0">
-        <CardTitle style={{ color }}>{t(dataKey)}</CardTitle>
+    <Section
+      id={`a.macro.${dataKey}`}
+      title={<span style={{ color }}>{t(dataKey)}</span>}
+      summary={
+        <>
         <span className="text-[11px] text-slate-400">
-          {t('moy.')} <b className="text-slate-200">{round(avg, 1)} g</b> · {limit ? t('limite') : t('objectif')} {goal} g ·{' '}
-          <b style={{ color: limit ? (avg > goal ? '#f43f5e' : '#10b981') : Math.abs(avg - goal) <= goal * 0.1 ? '#10b981' : '#f59e0b' }}>{goal ? round((avg / goal) * 100) : 0}%</b>
+        {t('moy.')} <b className="text-slate-200">{round(avg, 1)} g</b> · {limit ? t('limite') : t('objectif')} {goal} g ·{' '}
+        <b style={{ color: limit ? (avg > goal ? '#f43f5e' : '#10b981') : Math.abs(avg - goal) <= goal * 0.1 ? '#10b981' : '#f59e0b' }}>{goal ? round((avg / goal) * 100) : 0}%</b>
         </span>
-      </CardHeader>
-      <CardContent className="pt-2">
+        </>
+      }
+    >
+    <Card>
+      <CardContent>
         <ResponsiveContainer width="100%" height={height}>
           <ComposedChart data={data} margin={{ top: 8, right: 6, left: -18, bottom: 0 }}>
             <CartesianGrid {...gridProps} vertical={false} />
@@ -137,5 +147,6 @@ export function MacroWeekChart({ data, dataKey, color, goal, avg, limit, height 
         </ResponsiveContainer>
       </CardContent>
     </Card>
+    </Section>
   );
 }

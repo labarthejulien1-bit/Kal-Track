@@ -415,6 +415,8 @@ const d: Record<string, string> = {
   "Trajectoire vers {w}": "Plan bis {w}",
   "Trajectoire": "Plan",
   "vs trajectoire": "vs. Plan",
+  "Résumé": "Übersicht",
+  "Dernière": "Zuletzt",
 };
 
 export default d;

@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Section } from '@/components/ui/collapsible';
 import { useMealsRange } from '@/hooks/useMeals';
 import { useProfile } from '@/hooks/useProfile';
 import { useWeights, trendSeries } from '@/hooks/useWeights';
@@ -42,7 +43,7 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
   const firstDow = (fromISODate(start).getDay() + 6) % 7;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800/40 p-2">
         <button className="rounded-full p-2 text-slate-300" onClick={() => setAnchor(addMonths(start, -1))} aria-label={t('Mois précédent')}>
           <ChevronLeft className="h-5 w-5" />
@@ -67,10 +68,11 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
         ]}
       />
 
+      <Section
+        id={`a.month.1`}
+        title={t('Calendrier de conformité')}
+      >
       <Card>
-        <CardHeader>
-          <CardTitle>{t('Calendrier de conformité')}</CardTitle>
-        </CardHeader>
         <CardContent>
           <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-slate-500">
             {Array.from({ length: 7 }, (_, i) => formatDate(addDays('2024-01-01', i), { weekday: 'narrow' })).map((d, i) => (
@@ -103,11 +105,13 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
           </div>
         </CardContent>
       </Card>
+      </Section>
 
+      <Section
+        id={`a.month.2`}
+        title={t('Évolution calorique')}
+      >
       <Card>
-        <CardHeader>
-          <CardTitle>{t('Évolution calorique')}</CardTitle>
-        </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={240}>
             <ComposedChart data={data} margin={{ top: 10, right: 6, left: -10, bottom: 0 }}>
@@ -128,12 +132,18 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
           <ZoneLegend />
         </CardContent>
       </Card>
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('Suivi du poids')}</CardTitle>
+      <Section
+        id={`a.month.3`}
+        title={t('Suivi du poids')}
+        summary={
+          <>
           <span className="text-[11px] text-slate-400">{t('cible')} {fmtW(profile.targetWeight)}</span>
-        </CardHeader>
+          </>
+        }
+      >
+      <Card>
         <CardContent>
           {monthWeights.length ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -152,6 +162,7 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
           )}
         </CardContent>
       </Card>
+      </Section>
 
       <MacroWeekChart data={data} dataKey="Protéines" color={COLORS.protein} goal={goals.protein} avg={avg('protein')} height={130} />
       <MacroWeekChart data={data} dataKey="Glucides" color={COLORS.carbs} goal={goals.carbs} avg={avg('carbs')} height={130} />

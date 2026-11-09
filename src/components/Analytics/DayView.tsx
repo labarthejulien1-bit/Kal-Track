@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, LabelList } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Section } from '@/components/ui/collapsible';
 import { useMealsForDate } from '@/hooks/useMeals';
 import { useProfile } from '@/hooks/useProfile';
 import { COLORS, MEAL_SHORT, MEAL_TYPES, addDays, relativeDayLabel, round, todayISO } from '@/lib/utils';
@@ -42,7 +43,7 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800/40 p-2">
         <button className="rounded-full p-2 text-slate-300" onClick={() => setDate(addDays(date, -1))} aria-label={t('Jour précédent')}>
           <ChevronLeft className="h-5 w-5" />
@@ -56,10 +57,11 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
         </button>
       </div>
 
+      <Section
+        id={`a.day.1`}
+        title={t('Bilan détaillé vs objectifs')}
+      >
       <Card>
-        <CardHeader>
-          <CardTitle>{t('Bilan détaillé vs objectifs')}</CardTitle>
-        </CardHeader>
         <CardContent className="space-y-4">
           <GraduatedGauge
             label={t('Calories')}
@@ -83,11 +85,13 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
           </p>
         </CardContent>
       </Card>
+      </Section>
 
+      <Section
+        id={`a.day.2`}
+        title={t('Atteinte des objectifs (%)')}
+      >
       <Card>
-        <CardHeader>
-          <CardTitle>{t('Atteinte des objectifs (%)')}</CardTitle>
-        </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={210}>
             <BarChart data={vsGoal} margin={{ top: 16, right: 8, left: -18, bottom: 0 }}>
@@ -105,11 +109,13 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
           </ResponsiveContainer>
         </CardContent>
       </Card>
+      </Section>
 
+      <Section
+        id={`a.day.3`}
+        title={t('Détail par repas (kcal par macro)')}
+      >
       <Card>
-        <CardHeader>
-          <CardTitle>{t('Détail par repas (kcal par macro)')}</CardTitle>
-        </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={230}>
             <BarChart data={perMeal} margin={{ top: 16, right: 8, left: -14, bottom: 0 }}>
@@ -136,11 +142,13 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
           </div>
         </CardContent>
       </Card>
+      </Section>
 
+      <Section
+        id={`a.day.4`}
+        title={t('Répartition énergétique des macros')}
+      >
       <Card>
-        <CardHeader>
-          <CardTitle>{t('Répartition énergétique des macros')}</CardTitle>
-        </CardHeader>
         <CardContent className="flex items-center gap-4">
           <div className="h-36 w-36 shrink-0">
             {pieTotal > 0 ? (
@@ -172,6 +180,7 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
           </div>
         </CardContent>
       </Card>
+      </Section>
     </div>
   );
 }

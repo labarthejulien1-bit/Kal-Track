@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Scale, Trash2, Pencil, TrendingDown, TrendingUp, Minus, Plus, Target, Brain } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Section } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { SegmentedTabs } from '@/components/ui/tabs';
@@ -93,13 +94,11 @@ export function WeightTab() {
   const reversed = [...logs].reverse();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <h1 className="pt-1 text-lg font-bold text-slate-50">{t('Poids')}</h1>
 
+      <Section id="w.entry" title={t('Nouvelle pesée')} summary={last ? `${t('Dernière')} : ${fmtW(last.weight)}` : undefined}>
       <Card className="p-4">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-200">
-          <Scale className="h-4 w-4 text-sky-400" /> {t('Nouvelle pesée')}
-        </div>
         <div className="flex items-center justify-center gap-3">
           <button className="rounded-full bg-slate-700/70 p-3" onClick={() => bump(-wStep())} aria-label={`-${wStep()} ${wUnit()}`}>
             <Minus className="h-5 w-5" />
@@ -134,7 +133,9 @@ export function WeightTab() {
           {t('Enregistrer')} {logs.some((l) => l.date === date) && t('(remplacer)')}
         </Button>
       </Card>
+      </Section>
 
+      <Section id="w.stats" title={t('Résumé')} summary={last ? `${fmtW(last.weight)} · ${t('IMC')} ${round(bmi, 1)}` : undefined}>
       <div className="grid grid-cols-2 gap-2">
         <MiniStat label={t('Actuel')} value={last ? fmtW(last.weight) : '—'} sub={latestTrend ? t('tendance {n} {u}', { n: wOut(latestTrend), u: wUnit() }) : undefined} color={COLORS.water} />
         <MiniStat
@@ -147,8 +148,10 @@ export function WeightTab() {
         <MiniStat label={t('IMC')} value={round(bmi, 1)} sub={cat.label} color={cat.color} />
         <MiniStat label={t('Objectif')} value={fmtW(profile.targetWeight)} sub={last ? t('{n} {u} restants', { n: `${toGo > 0 ? '+' : ''}${wOut(toGo)}`, u: wUnit() }) : undefined} color={COLORS.kcal} icon={<Target className="h-4 w-4" />} />
       </div>
+      </Section>
 
       {first && last && Math.abs(first.weight - profile.targetWeight) > 0.1 && (
+        <Section id="w.progress" title={t('Progression')} summary={t('{n}% du chemin', { n: round(progressPct) })}>
         <Card className="p-4">
           <div className="mb-1 flex justify-between text-xs text-slate-400">
             <span>{fmtW(first.weight)}</span>
@@ -169,12 +172,14 @@ export function WeightTab() {
             </p>
           )}
         </Card>
+        </Section>
       )}
 
+      <Section
+        id={`w.1`}
+        title={t('Courbe de poids')}
+      >
       <Card>
-        <CardHeader>
-          <CardTitle>{t('Courbe de poids')}</CardTitle>
-        </CardHeader>
         <CardContent className="space-y-3">
           <SegmentedTabs value={range} onChange={setRange} options={WEIGHT_RANGES.map((r) => ({ value: r, label: t(r) }))} />
           {logs.length ? (
@@ -184,14 +189,15 @@ export function WeightTab() {
           )}
         </CardContent>
       </Card>
+      </Section>
 
+      <Section id="w.adaptive" title={t('Dépense adaptative')} summary={adaptive ? `${adaptive} ${t('kcal/j')}` : undefined}>
       <Card className="p-4">
         <div className="flex items-start gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300">
             <Brain className="h-5 w-5" />
           </span>
           <div className="text-xs text-slate-300">
-            <p className="text-sm font-semibold text-slate-100">{t('Dépense adaptative')}</p>
             {adaptive ? (
               <>
                 <p className="mt-1">
@@ -209,11 +215,14 @@ export function WeightTab() {
           </div>
         </div>
       </Card>
+      </Section>
 
+      <Section
+        id={`w.2`}
+        title={t('Historique ({n})', { n: logs.length })}
+        defaultOpen={false}
+      >
       <Card>
-        <CardHeader>
-          <CardTitle>{t('Historique ({n})', { n: logs.length })}</CardTitle>
-        </CardHeader>
         <CardContent className="space-y-1.5">
           {reversed.length === 0 && <p className="py-4 text-center text-xs text-slate-500">{t('Aucune pesée enregistrée.')}</p>}
           {reversed.map((l, i) => {
@@ -262,6 +271,7 @@ export function WeightTab() {
           })}
         </CardContent>
       </Card>
+      </Section>
     </div>
   );
 }

@@ -79,8 +79,8 @@ export function Section({
         >
           <Chevron open={open} />
           {icon}
-          <h2 className="shrink-0 text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</h2>
-          {summary != null && <span className="ml-auto truncate pl-2 text-xs tabular-nums text-slate-400">{summary}</span>}
+          <h2 className="min-w-0 truncate text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</h2>
+          {summary != null && <span className="ml-auto max-w-[65%] shrink-0 truncate pl-2 text-right text-xs tabular-nums text-slate-400">{summary}</span>}
         </button>
         {right}
       </div>

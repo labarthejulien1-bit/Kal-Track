@@ -415,6 +415,8 @@ const d: Record<string, string> = {
   "Trajectoire vers {w}": "Trayectoria hacia {w}",
   "Trajectoire": "Trayectoria",
   "vs trajectoire": "vs trayectoria",
+  "Résumé": "Resumen",
+  "Dernière": "Última",
 };
 
 export default d;
