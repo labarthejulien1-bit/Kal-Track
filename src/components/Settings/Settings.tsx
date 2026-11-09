@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Languages, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
+import { Languages, Ruler, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { SegmentedTabs } from '@/components/ui/tabs';
-import { NumberField } from '@/components/common';
+import { HeightField, NumberField, WeightField } from '@/components/common';
+import { getUnits, waterIn, waterOut, waterUnitLabel, wOut, wUnit, type Units } from '@/lib/units';
 import { Sheet } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { ensureProfile, useProfile } from '@/hooks/useProfile';
@@ -294,6 +295,44 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
         </CardContent>
       </Card>
 
+      {/* ---------- Unités ---------- */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Ruler className="h-4 w-4 text-amber-400" /> {t('Unités')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-3 gap-2">
+          {(
+            [
+              ['weight', t('Poids'), [['kg', 'kg'], ['lb', 'lb']]],
+              ['height', t('Taille'), [['cm', 'cm'], ['ftin', 'ft / in']]],
+              ['water', t('Eau'), [['ml', 'ml / L'], ['floz', 'fl oz']]],
+            ] as [keyof Units, string, [string, string][]][]
+          ).map(([key, label, opts]) => (
+            <div key={key}>
+              <Label>{label}</Label>
+              <Select
+                value={getUnits()[key]}
+                onChange={async (e) => {
+                  const units = { ...getUnits(), [key]: e.target.value } as Units;
+                  await updateProfile({ units });
+                  dirty.current = true;
+                  await flush();
+                  await db.userProfile.update(1, { units });
+                }}
+              >
+                {opts.map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
       {/* ---------- Profil ---------- */}
       <Card>
         <CardHeader>
@@ -319,11 +358,11 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           </div>
           <div className="grid grid-cols-3 gap-2">
             <NumberField label={t('Âge')} value={profile.age} onChange={(v) => updateProfile({ age: v })} unit={t('ans')} />
-            <NumberField label={t('Taille')} value={profile.height} onChange={(v) => updateProfile({ height: v })} unit="cm" />
-            <NumberField label={t('Poids')} value={profile.weight} onChange={(v) => updateProfile({ weight: v })} unit="kg" step={0.1} />
+            <HeightField label={t('Taille')} cm={profile.height} onChange={(v) => updateProfile({ height: v })} />
+            <WeightField label={t('Poids')} kg={profile.weight} onChange={(v) => updateProfile({ weight: v })} />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <NumberField label={t('Poids cible')} value={profile.targetWeight} onChange={(v) => updateProfile({ targetWeight: v })} unit="kg" step={0.1} />
+            <WeightField label={t('Poids cible')} kg={profile.targetWeight} onChange={(v) => updateProfile({ targetWeight: v })} />
             <NumberField label={t('Masse grasse (optionnel)')} value={profile.bodyFat ?? 0} onChange={(v) => updateProfile({ bodyFat: v || undefined })} unit="%" allowEmpty placeholder="—" />
           </div>
           <div>
@@ -359,7 +398,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
                     >
                       <div className="font-semibold">{PACE_DELTAS[p].label}</div>
                       <div>{d > 0 ? '+' : ''}{d} {t('kcal/j')}</div>
-                      <div className="text-[10px] opacity-70">≈ {d > 0 ? '+' : ''}{round((d * 7) / 7700, 2)} {t('kg/sem')}</div>
+                      <div className="text-[10px] opacity-70">≈ {d > 0 ? '+' : ''}{wOut((d * 7) / 7700, 2)} {t('{u}/sem', { u: wUnit() })}</div>
                     </button>
                   );
                 })}
@@ -394,7 +433,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
             </div>
             {mealSum !== 100 && <p className="mt-1 text-[11px] text-amber-400">{t('Le total fait {n}% (devrait faire 100 %).', { n: mealSum })}</p>}
           </div>
-          <NumberField label={t("Objectif d'hydratation (0 = automatique)")} value={profile.waterGoalMl ?? 0} onChange={(v) => updateProfile({ waterGoalMl: v || undefined })} unit="ml" allowEmpty placeholder={t('Auto')} />
+          <NumberField label={t("Objectif d'hydratation (0 = automatique)")} value={waterOut(profile.waterGoalMl ?? 0)} onChange={(v) => updateProfile({ waterGoalMl: v ? Math.round(waterIn(v)) : undefined })} unit={waterUnitLabel()} allowEmpty placeholder={t('Auto')} />
           <Button className="w-full" onClick={saveNow}>
             <CheckCircle2 /> {t('Enregistrer le profil')}
           </Button>
@@ -418,10 +457,10 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           </div>
           <Row label={t('Objectif quotidien')} value={<b className="text-emerald-400">{goals.calories} kcal</b>} />
           <Row label={t('Protéines / Glucides / Lipides')} value={`${goals.protein} g · ${goals.carbs} g · ${goals.fat} g`} />
-          <Row label={t('Protéines par kg de poids')} value={`${round(goals.protein / Math.max(1, profile.weight), 1)} g/kg`} />
+          <Row label={t('Protéines par {u} de poids', { u: wUnit() })} value={`${round(goals.protein / Math.max(1, wOut(profile.weight)), 1)} g/${wUnit()}`} />
           <Row label={t('Limite de sucres (OMS < 10 %)')} value={`${goals.sugar} g`} />
           <Row label={t('Fibres recommandées')} value={`${goals.fiber} g`} />
-          <Row label={t('Variation attendue')} value={`${goals.weeklyChangeKg > 0 ? '+' : ''}${goals.weeklyChangeKg} ${t('kg / semaine')}`} />
+          <Row label={t('Variation attendue')} value={`${goals.weeklyChangeKg > 0 ? '+' : ''}${wOut(goals.weeklyChangeKg, 2)} ${t('{u} / semaine', { u: wUnit() })}`} />
           {goals.weeksToTarget !== null && <Row label={t("Temps estimé jusqu'au poids cible")} value={t('≈ {n} semaines', { n: Math.ceil(goals.weeksToTarget) })} />}
           <Row label={t('IMC')} value={goals.bmi} />
           {goals.clamped && (

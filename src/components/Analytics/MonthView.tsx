@@ -8,6 +8,7 @@ import { COLORS, addDays, addMonths, capitalize, cn, endOfMonth, formatDate, rou
 import { ChartTooltip, StatGrid, ZoneLegend, axisProps, calorieReferenceLines, gridProps, seriesStats } from './chartKit';
 import { MacroWeekChart } from './WeekView';
 import { t } from '@/i18n';
+import { fmtW, wOut, wUnit } from '@/lib/units';
 
 export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; setAnchor: (d: string) => void; onPickDay: (d: string) => void }) {
   const { goals, profile } = useProfile();
@@ -33,7 +34,7 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
   }));
 
   const trend = trendSeries(logs);
-  const monthWeights = trend.filter((w) => w.date >= start && w.date <= end).map((w) => ({ label: formatDate(w.date, { day: 'numeric', month: 'short' }), Poids: w.weight, Tendance: w.trend }));
+  const monthWeights = trend.filter((w) => w.date >= start && w.date <= end).map((w) => ({ label: formatDate(w.date, { day: 'numeric', month: 'short' }), Poids: wOut(w.weight), Tendance: wOut(w.trend) }));
   const wFirst = monthWeights[0]?.Tendance;
   const wLast = monthWeights[monthWeights.length - 1]?.Tendance;
 
@@ -59,8 +60,8 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
           { label: t('Jours suivis'), value: `${kcal.logged}`, sub: t('sur {n}', { n: days.filter((d) => d.date <= today).length }) },
           {
             label: t('Poids (tendance)'),
-            value: wLast !== undefined ? `${wLast} kg` : '—',
-            sub: wFirst !== undefined && wLast !== undefined ? t('{n} kg ce mois', { n: `${wLast - wFirst > 0 ? '+' : ''}${round(wLast - wFirst, 1)}` }) : t('Aucune pesée'),
+            value: wLast !== undefined ? `${wLast} ${wUnit()}` : '—',
+            sub: wFirst !== undefined && wLast !== undefined ? t('{n} {u} ce mois', { n: `${wLast - wFirst > 0 ? '+' : ''}${round(wLast - wFirst, 1)}`, u: wUnit() }) : t('Aucune pesée'),
             color: COLORS.water,
           },
         ]}
@@ -131,7 +132,7 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
       <Card>
         <CardHeader>
           <CardTitle>{t('Suivi du poids')}</CardTitle>
-          <span className="text-[11px] text-slate-400">{t('cible')} {profile.targetWeight} kg</span>
+          <span className="text-[11px] text-slate-400">{t('cible')} {fmtW(profile.targetWeight)}</span>
         </CardHeader>
         <CardContent>
           {monthWeights.length ? (
@@ -139,11 +140,11 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
               <ComposedChart data={monthWeights} margin={{ top: 10, right: 6, left: -14, bottom: 0 }}>
                 <CartesianGrid {...gridProps} />
                 <XAxis dataKey="label" {...axisProps} />
-                <YAxis {...axisProps} domain={[(min: number) => Math.floor(Math.min(min, profile.targetWeight) - 1), (max: number) => Math.ceil(max + 1)]} unit="kg" tickCount={6} />
-                <Tooltip content={<ChartTooltip unit=" kg" />} />
+                <YAxis {...axisProps} domain={[(min: number) => Math.floor(Math.min(min, wOut(profile.targetWeight)) - 1), (max: number) => Math.ceil(max + 1)]} unit={wUnit()} tickCount={6} />
+                <Tooltip content={<ChartTooltip unit={` ${wUnit()}`} />} />
                 <Line dataKey="Poids" name={t('Poids')} stroke="#64748b" strokeWidth={0} dot={{ r: 3, fill: '#94a3b8' }} />
                 <Line dataKey="Tendance" name={t('Tendance')} stroke={COLORS.water} strokeWidth={2.5} dot={false} type="monotone" />
-                <ReferenceLine y={profile.targetWeight} stroke={COLORS.kcal} strokeDasharray="5 4" label={{ value: t('Cible'), fill: COLORS.kcal, fontSize: 9, position: 'insideBottomRight' }} />
+                <ReferenceLine y={wOut(profile.targetWeight)} stroke={COLORS.kcal} strokeDasharray="5 4" label={{ value: t('Cible'), fill: COLORS.kcal, fontSize: 9, position: 'insideBottomRight' }} />
               </ComposedChart>
             </ResponsiveContainer>
           ) : (

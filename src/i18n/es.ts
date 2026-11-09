@@ -1,5 +1,13 @@
 // Généré automatiquement depuis le texte français (clé) – ne pas modifier la clé.
 const d: Record<string, string> = {
+  "{u}/sem": "{u}/sem",
+  "{u} / semaine": "{u} / semana",
+  "Protéines par {u} de poids": "Proteínas por {u} de peso",
+  "Unités": "Unidades",
+  "Eau": "Agua",
+  "tendance {n} {u}": "tendencia {n} {u}",
+  "{n} {u} restants": "faltan {n} {u}",
+  "{n} {u} ce mois": "{n} {u} este mes",
   "Déjeuner|court": "Almuerzo",
   "Dîner|court": "Cena",
   "En-cas|court": "Tentem.",

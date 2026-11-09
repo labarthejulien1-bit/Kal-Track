@@ -11,6 +11,7 @@ import { ToastProvider } from '@/components/ui/toast';
 import { useProfile } from '@/hooks/useProfile';
 import { todayISO } from '@/lib/utils';
 import { getLang, resolveLang, setLang } from '@/i18n';
+import { resolveUnits, setUnits } from '@/lib/units';
 
 const TABS: Tab[] = ['journal', 'analytics', 'weight', 'settings'];
 
@@ -26,6 +27,9 @@ export default function App() {
   // Langue : choix du profil, sinon langue du téléphone. Appliquée avant le rendu des écrans.
   const lang = resolveLang(profile.language);
   if (getLang() !== lang) setLang(lang);
+  const units = resolveUnits(profile.units);
+  setUnits(units);
+  const unitsKey = `${units.weight}-${units.height}-${units.water}`;
 
   const openAdd = useCallback((req: AddRequest = {}) => setAddRequest({ ...req }), []);
 
@@ -49,7 +53,7 @@ export default function App() {
   return (
     <ToastProvider>
       <AppContext.Provider value={ctx}>
-        <Layout key={lang}>
+        <Layout key={`${lang}-${unitsKey}`}>
           {tab === 'journal' && <Dashboard />}
           {tab === 'analytics' && <Analytics />}
           {tab === 'weight' && <WeightTab />}

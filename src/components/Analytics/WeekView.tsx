@@ -6,6 +6,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { COLORS, addDays, capitalize, formatDate, round, startOfWeek, todayISO } from '@/lib/utils';
 import { ChartTooltip, StatGrid, ZoneLegend, axisProps, calorieReferenceLines, gridProps, seriesStats } from './chartKit';
 import { t } from '@/i18n';
+import { wOut, wUnit } from '@/lib/units';
 
 export function WeekView({ anchor, setAnchor }: { anchor: string; setAnchor: (d: string) => void }) {
   const { goals } = useProfile();
@@ -53,7 +54,7 @@ export function WeekView({ anchor, setAnchor }: { anchor: string; setAnchor: (d:
           { label: t('Moyenne / jour'), value: `${round(kcal.avg)}`, sub: t('kcal · {n}% objectif', { n: round(kcal.pctGoal) }), color: COLORS.kcal },
           { label: t('Jours dans la cible'), value: `${kcal.onTarget}/${kcal.logged}`, sub: t('± 10 % de l’objectif') },
           { label: t('Min / Max'), value: `${round(kcal.min)} – ${round(kcal.max)}`, sub: 'kcal' },
-          { label: t('Bilan vs maintien'), value: `${weekBalance > 0 ? '+' : ''}${round(weekBalance)}`, sub: `≈ ${weekBalance > 0 ? '+' : ''}${round(weekBalance / 7700, 2)} kg`, color: weekBalance > 0 ? COLORS.gain : COLORS.lose },
+          { label: t('Bilan vs maintien'), value: `${weekBalance > 0 ? '+' : ''}${round(weekBalance)}`, sub: `≈ ${weekBalance > 0 ? '+' : ''}${wOut(weekBalance / 7700, 2)} ${wUnit()}`, color: weekBalance > 0 ? COLORS.gain : COLORS.lose },
         ]}
       />
 

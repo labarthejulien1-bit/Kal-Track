@@ -3,7 +3,7 @@ import { Sheet } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { SegmentedTabs } from '@/components/ui/tabs';
 import { Select, Label } from '@/components/ui/input';
-import { NumberField } from '@/components/common';
+import { HeightField, NumberField, WeightField } from '@/components/common';
 import { ACTIVITY_FACTORS, DEFAULT_PROFILE, computeGoals } from '@/services/bmrCalculator';
 import { db } from '@/db/database';
 import { upsertWeight } from '@/hooks/useWeights';
@@ -42,10 +42,10 @@ export function Onboarding({ open, onDone }: { open: boolean; onDone: () => void
         <SegmentedTabs<Sex> value={p.sex} onChange={(v) => set({ sex: v })} options={[{ value: 'male', label: t('Homme') }, { value: 'female', label: t('Femme') }]} />
         <div className="grid grid-cols-3 gap-2">
           <NumberField label={t('Âge')} value={p.age} onChange={(v) => set({ age: v })} unit={t('ans')} />
-          <NumberField label={t('Taille')} value={p.height} onChange={(v) => set({ height: v })} unit="cm" />
-          <NumberField label={t('Poids')} value={p.weight} onChange={(v) => set({ weight: v })} unit="kg" step={0.1} />
+          <HeightField label={t('Taille')} cm={p.height} onChange={(v) => set({ height: v })} />
+          <WeightField label={t('Poids')} kg={p.weight} onChange={(v) => set({ weight: v })} />
         </div>
-        <NumberField label={t('Poids cible')} value={p.targetWeight} onChange={(v) => set({ targetWeight: v })} unit="kg" step={0.1} />
+        <WeightField label={t('Poids cible')} kg={p.targetWeight} onChange={(v) => set({ targetWeight: v })} />
         <div>
           <Label>{t('Activité quotidienne')}</Label>
           <Select value={p.activityLevel} onChange={(e) => set({ activityLevel: e.target.value as ActivityLevel })}>

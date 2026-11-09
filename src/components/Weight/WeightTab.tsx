@@ -15,6 +15,7 @@ import { COLORS, addDays, daysBetween, formatDate, fromISODate, haptic, round, t
 import { ChartTooltip, axisProps, gridProps } from '@/components/Analytics/chartKit';
 import { db } from '@/db/database';
 import { decimalSep, locale, t } from '@/i18n';
+import { fmtW, wIn, wOut, wStep, wUnit } from '@/lib/units';
 
 type Range = '1M' | '3M' | '6M' | '1A' | 'Tout';
 const RANGE_DAYS: Record<Range, number> = { '1M': 30, '3M': 91, '6M': 182, '1A': 365, Tout: 100000 };
@@ -32,10 +33,11 @@ export function WeightTab() {
   const [range, setRange] = useState<Range>('3M');
 
   const parsed = parseFloat(weight.trim().replace(',', '.'));
-  const currentValue = weight === '' ? (last?.weight ?? profile.weight) : Number.isFinite(parsed) ? parsed : 0;
+  // Valeur saisie dans l'unité d'affichage (kg ou lb) ; stockage en kg.
+  const currentValue = weight === '' ? wOut(last?.weight ?? profile.weight) : Number.isFinite(parsed) ? parsed : 0;
 
   const save = async () => {
-    const w = currentValue;
+    const w = wIn(currentValue);
     if (!w || w < 20 || w > 400) return toast(t('Poids invalide'), 'error');
     await upsertWeight(date, round(w, 1), note || undefined);
     haptic(25);
@@ -44,7 +46,7 @@ export function WeightTab() {
     setNote('');
   };
 
-  const bump = (d: number) => setWeight(String(round(currentValue + d, 1)));
+  const bump = (d: number) => setWeight(String(round(currentValue + d, 1)).replace('.', decimalSep()));
 
   const trend = useMemo(() => trendSeries(logs), [logs]);
   // Plage de temps réelle : l'axe X couvre toute la période choisie (1M, 3M…), pas seulement les pesées.
@@ -54,7 +56,7 @@ export function WeightTab() {
   const toTs = fromISODate(today).getTime();
   const chartData = trend
     .filter((p) => p.date >= from)
-    .map((p) => ({ x: fromISODate(p.date).getTime(), label: capitalize(formatDate(p.date, { weekday: 'short', day: 'numeric', month: 'short' })), Poids: p.weight, Tendance: p.trend }));
+    .map((p) => ({ x: fromISODate(p.date).getTime(), label: capitalize(formatDate(p.date, { weekday: 'short', day: 'numeric', month: 'short' })), Poids: wOut(p.weight), Tendance: wOut(p.trend) }));
   const xTicks = Array.from({ length: 5 }, (_, i) => Math.round(fromTs + ((toTs - fromTs) * i) / 4));
   const spanDays = (toTs - fromTs) / 86400000;
   const fmtTick = (v: number) => {
@@ -119,7 +121,7 @@ export function WeightTab() {
           <Scale className="h-4 w-4 text-sky-400" /> {t('Nouvelle pesée')}
         </div>
         <div className="flex items-center justify-center gap-3">
-          <button className="rounded-full bg-slate-700/70 p-3" onClick={() => bump(-0.1)} aria-label="-0,1 kg">
+          <button className="rounded-full bg-slate-700/70 p-3" onClick={() => bump(-wStep())} aria-label={`-${wStep()} ${wUnit()}`}>
             <Minus className="h-5 w-5" />
           </button>
           <div className="relative">
@@ -132,9 +134,9 @@ export function WeightTab() {
               onFocus={(e) => e.target.select()}
               className="w-36 bg-transparent text-center text-4xl font-bold tabular-nums text-slate-50 focus:outline-none"
             />
-            <span className="absolute -right-4 bottom-2 text-sm text-slate-400">kg</span>
+            <span className="absolute -right-4 bottom-2 text-sm text-slate-400">{wUnit()}</span>
           </div>
-          <button className="rounded-full bg-slate-700/70 p-3" onClick={() => bump(0.1)} aria-label="+0,1 kg">
+          <button className="rounded-full bg-slate-700/70 p-3" onClick={() => bump(wStep())} aria-label={`+${wStep()} ${wUnit()}`}>
             <Plus className="h-5 w-5" />
           </button>
         </div>
@@ -154,31 +156,31 @@ export function WeightTab() {
       </Card>
 
       <div className="grid grid-cols-2 gap-2">
-        <MiniStat label={t('Actuel')} value={last ? `${last.weight} kg` : '—'} sub={latestTrend ? t('tendance {n} kg', { n: latestTrend }) : undefined} color={COLORS.water} />
+        <MiniStat label={t('Actuel')} value={last ? fmtW(last.weight) : '—'} sub={latestTrend ? t('tendance {n} {u}', { n: wOut(latestTrend), u: wUnit() }) : undefined} color={COLORS.water} />
         <MiniStat
           label={t('Évolution totale')}
-          value={`${totalChange > 0 ? '+' : ''}${round(totalChange, 1)} kg`}
+          value={`${totalChange > 0 ? '+' : ''}${wOut(totalChange)} ${wUnit()}`}
           sub={first ? t('depuis le {d}', { d: formatDate(first.date, { day: 'numeric', month: 'short', year: '2-digit' }) }) : undefined}
           color={totalChange <= 0 ? COLORS.kcal : COLORS.gain}
           icon={totalChange <= 0 ? <TrendingDown className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
         />
         <MiniStat label={t('IMC')} value={round(bmi, 1)} sub={cat.label} color={cat.color} />
-        <MiniStat label={t('Objectif')} value={`${profile.targetWeight} kg`} sub={last ? t('{n} kg restants', { n: `${toGo > 0 ? '+' : ''}${round(toGo, 1)}` }) : undefined} color={COLORS.kcal} icon={<Target className="h-4 w-4" />} />
+        <MiniStat label={t('Objectif')} value={fmtW(profile.targetWeight)} sub={last ? t('{n} {u} restants', { n: `${toGo > 0 ? '+' : ''}${wOut(toGo)}`, u: wUnit() }) : undefined} color={COLORS.kcal} icon={<Target className="h-4 w-4" />} />
       </div>
 
       {first && last && Math.abs(first.weight - profile.targetWeight) > 0.1 && (
         <Card className="p-4">
           <div className="mb-1 flex justify-between text-xs text-slate-400">
-            <span>{first.weight} kg</span>
+            <span>{fmtW(first.weight)}</span>
             <span className="font-semibold text-emerald-400">{t('{n}% du chemin', { n: round(progressPct) })}</span>
-            <span>{profile.targetWeight} kg</span>
+            <span>{fmtW(profile.targetWeight)}</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-slate-700">
             <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-emerald-400" style={{ width: `${progressPct}%` }} />
           </div>
           {projection && (
             <p className="mt-2 text-xs text-slate-400">
-              {t('Rythme actuel :')} <b className="text-slate-200">{projection.perWeek > 0 ? '+' : ''}{round(projection.perWeek, 2)} {t('kg/sem')}</b>
+              {t('Rythme actuel :')} <b className="text-slate-200">{projection.perWeek > 0 ? '+' : ''}{wOut(projection.perWeek, 2)} {t('{u}/sem', { u: wUnit() })}</b>
               {projection.eta && (
                 <>
                   {' '}· {t('objectif estimé le')} <b className="text-emerald-300">{formatDate(projection.eta, { day: 'numeric', month: 'long', year: 'numeric' })}</b>
@@ -208,14 +210,14 @@ export function WeightTab() {
                 <XAxis dataKey="x" type="number" scale="time" domain={[fromTs, toTs]} ticks={xTicks} tickFormatter={fmtTick} {...axisProps} allowDataOverflow />
                 <YAxis
                   {...axisProps}
-                  unit="kg"
+                  unit={wUnit()}
                   tickCount={7}
-                  domain={[(min: number) => Math.floor(Math.min(min, profile.targetWeight) - 1), (max: number) => Math.ceil(Math.max(max, profile.targetWeight) + 1)]}
+                  domain={[(min: number) => Math.floor(Math.min(min, wOut(profile.targetWeight)) - 1), (max: number) => Math.ceil(Math.max(max, wOut(profile.targetWeight)) + 1)]}
                 />
-                <Tooltip content={(p) => <ChartTooltip active={p.active} payload={p.payload as never} label={(p.payload?.[0]?.payload as { label?: string } | undefined)?.label} unit=" kg" />} />
+                <Tooltip content={(p) => <ChartTooltip active={p.active} payload={p.payload as never} label={(p.payload?.[0]?.payload as { label?: string } | undefined)?.label} unit={` ${wUnit()}`} />} />
                 <Area dataKey="Poids" name={t('Poids')} stroke={COLORS.water} strokeWidth={2.5} fill="url(#wFill)" type="linear" baseValue="dataMin" dot={{ r: 3.5, fill: '#e2e8f0', stroke: COLORS.water, strokeWidth: 2 }} activeDot={{ r: 6 }} isAnimationActive={false} />
                 <Line dataKey="Tendance" name={t('Tendance')} stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 4" type="monotone" dot={false} isAnimationActive={false} />
-                <ReferenceLine y={profile.targetWeight} stroke={COLORS.kcal} strokeDasharray="6 4" label={{ value: `${t('Objectif')} ${profile.targetWeight} kg`, fill: COLORS.kcal, fontSize: 10, position: 'insideBottomRight' }} />
+                <ReferenceLine y={wOut(profile.targetWeight)} stroke={COLORS.kcal} strokeDasharray="6 4" label={{ value: `${t('Objectif')} ${fmtW(profile.targetWeight)}`, fill: COLORS.kcal, fontSize: 10, position: 'insideBottomRight' }} />
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
@@ -262,7 +264,7 @@ export function WeightTab() {
             return (
               <div key={l.id} className="flex items-center gap-3 rounded-xl bg-slate-900/60 px-3 py-2">
                 <div className="flex-1">
-                  <p className="text-sm font-semibold tabular-nums text-slate-100">{l.weight} kg</p>
+                  <p className="text-sm font-semibold tabular-nums text-slate-100">{fmtW(l.weight)}</p>
                   <p className="text-[11px] text-slate-500">
                     {capitalize(formatDate(l.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }))}
                     {l.note && ` · ${l.note}`}
@@ -271,14 +273,14 @@ export function WeightTab() {
                 {prev && (
                   <span className={`text-xs font-medium tabular-nums ${diff > 0 ? 'text-orange-400' : diff < 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
                     {diff > 0 ? '+' : ''}
-                    {round(diff, 1)}
+                    {wOut(diff)}
                   </span>
                 )}
                 <button
                   className="p-1.5 text-slate-400"
                   onClick={() => {
                     setDate(l.date);
-                    setWeight(String(l.weight));
+                    setWeight(String(wOut(l.weight)).replace('.', decimalSep()));
                     setNote(l.note ?? '');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}

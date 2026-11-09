@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cn, MEAL_EMOJI, round } from '@/lib/utils';
 import type { MealType } from '@/types';
 import { decimalSep } from '@/i18n';
+import { cmToFtIn, ftInToCm, hUnit, wIn, wOut, wUnit } from '@/lib/units';
 
 /** Anneau de progression circulaire SVG avec gestion du dépassement. */
 export function Ring({
@@ -225,5 +226,32 @@ export function EmptyState({ icon, title, text, action }: { icon: React.ReactNod
       {text && <p className="text-xs text-slate-500">{text}</p>}
       {action}
     </div>
+  );
+}
+
+/** Champ poids : saisie dans l'unité choisie (kg ou lb), stockage en kg. */
+export function WeightField({ label, kg, onChange, allowEmpty }: { label: string; kg: number; onChange: (kg: number) => void; allowEmpty?: boolean }) {
+  return <NumberField label={label} value={wOut(kg)} onChange={(v) => onChange(v ? wIn(v) : 0)} unit={wUnit()} allowEmpty={allowEmpty} />;
+}
+
+/** Champ taille : cm, ou pieds + pouces. Stockage en cm. */
+export function HeightField({ label, cm, onChange }: { label: string; cm: number; onChange: (cm: number) => void }) {
+  if (hUnit() === 'cm') return <NumberField label={label} value={Math.round(cm)} onChange={onChange} unit="cm" />;
+  const { ft, inch } = cmToFtIn(cm);
+  const cls = 'h-11 w-full rounded-xl border border-slate-700 bg-slate-900/60 pl-2 pr-6 text-base text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/60';
+  return (
+    <label className="block">
+      <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-slate-400">{label}</span>
+      <div className="flex gap-1">
+        <div className="relative flex-1">
+          <DecimalInput value={ft} onValueChange={(v) => onChange(ftInToCm(v, inch))} className={cls} />
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">ft</span>
+        </div>
+        <div className="relative flex-1">
+          <DecimalInput value={inch} onValueChange={(v) => onChange(ftInToCm(ft, v))} className={cls} />
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">in</span>
+        </div>
+      </div>
+    </label>
   );
 }

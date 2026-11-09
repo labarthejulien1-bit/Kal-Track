@@ -1,5 +1,6 @@
 import { Droplets, Minus, Plus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { fmtWater } from '@/lib/units';
 import { useWater } from '@/hooks/useWater';
 import { haptic } from '@/lib/utils';
 import { t } from '@/i18n';
@@ -18,7 +19,7 @@ export function WaterTracker({ date, goal }: { date: string; goal: number }) {
           <div className="leading-tight">
             <div className="text-sm font-semibold text-slate-100">{t('Hydratation')}</div>
             <div className="text-xs text-slate-400">
-              <span className="tabular-nums text-sky-300">{(ml / 1000).toFixed(2)} L</span> / {(goal / 1000).toFixed(1)} L
+              <span className="tabular-nums text-sky-300">{fmtWater(ml)}</span> / {fmtWater(goal)}
             </div>
           </div>
         </div>

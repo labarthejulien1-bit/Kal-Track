@@ -33,12 +33,16 @@ export const Label = ({ className, ...p }: React.LabelHTMLAttributes<HTMLLabelEl
   <label className={cn('mb-1.5 block text-xs font-medium text-slate-400', className)} {...p} />
 );
 
+const SELECT_ARROW =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E\")";
+
 export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
-  ({ className, children, ...props }, ref) => (
+  ({ className, children, style, ...props }, ref) => (
     <select
       ref={ref}
+      style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)', backgroundImage: SELECT_ARROW, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', ...style }}
       className={cn(
-        'flex h-11 w-full appearance-none rounded-xl border border-slate-700 bg-slate-900/60 bg-[url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 fill=%27none%27 stroke=%27%2394a3b8%27 stroke-width=%272%27%3E%3Cpath d=%27m4 6 4 4 4-4%27/%3E%3C/svg%3E")] bg-[right_0.75rem_center] bg-no-repeat pl-3 pr-9 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 [color-scheme:dark]',
+        'flex h-11 w-full appearance-none rounded-xl border border-slate-700 pl-3 pr-9 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 [color-scheme:dark]',
         className,
       )}
       {...props}
