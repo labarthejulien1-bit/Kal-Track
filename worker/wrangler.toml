@@ -15,7 +15,7 @@ PUBLIC_PER_DEVICE = "20"
 # Plafond global d'analyses par jour (protection de la facture)
 GLOBAL_DAILY_LIMIT = "1000"
 # Sites autorisés à appeler le relais
-ALLOWED_ORIGINS = "https://labarthejulien1-bit.github.io,http://localhost:5173,http://localhost:4173"
+ALLOWED_ORIGINS = "https://labarthejulien1-bit.github.io,https://localhost,http://localhost:5173,http://localhost:4173"
 # Codes d'accès : empreinte SHA-256 du code -> nom, quota quotidien total (daily)
 # et, optionnellement, quota quotidien par téléphone (perDevice).
 # Les codes eux-mêmes ne sont jamais écrits dans le dépôt.

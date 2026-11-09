@@ -4,3 +4,8 @@ dev-dist
 *.local
 .DS_Store
 *.tsbuildinfo
+
+# Clés de signature Android (uniquement dans les secrets GitHub)
+*.jks
+release*.keystore
+upload*.keystore

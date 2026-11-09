@@ -1,3 +1,4 @@
+import { applySystemBars } from './native';
 /** Thème clair / sombre / automatique (système). Clair par défaut à la première ouverture. */
 export type ThemeSetting = 'light' | 'dark' | 'auto';
 const KEY = 'kal-theme';
@@ -14,6 +15,7 @@ export function applyTheme(setting: ThemeSetting = 'light') {
   root.classList.toggle('light', mode === 'light');
   root.classList.toggle('dark', mode === 'dark');
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', mode === 'light' ? '#f4f6fa' : '#0f172a');
+  applySystemBars(mode);
   try {
     localStorage.setItem(KEY, setting);
   } catch {

@@ -13,6 +13,7 @@ import { todayISO } from '@/lib/utils';
 import { getLang, resolveLang, setLang } from '@/i18n';
 import { resolveUnits, setUnits } from '@/lib/units';
 import { applyTheme } from '@/lib/theme';
+import { setBackFallback } from '@/lib/native';
 
 const TABS: Tab[] = ['journal', 'analytics', 'weight', 'settings'];
 
@@ -54,6 +55,16 @@ export default function App() {
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
+
+  // Bouton retour Android sans fenêtre ouverte : revient au Journal, puis quitte l'appli.
+  useEffect(() => {
+    setBackFallback(() => {
+      if (tab === 'journal') return false;
+      setTab('journal');
+      return true;
+    });
+    return () => setBackFallback(null);
+  }, [tab]);
 
   const ctx = useMemo(() => ({ tab, setTab, selectedDate, setSelectedDate, openAdd }), [tab, selectedDate, openAdd]);
 

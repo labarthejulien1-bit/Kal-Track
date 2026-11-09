@@ -13,7 +13,8 @@ import { ensureProfile, useProfile } from '@/hooks/useProfile';
 import { checkAccessCode, normalizeCode } from '@/services/geminiVision';
 import { ACTIVITY_FACTORS, MACRO_PRESETS, PACE_DELTAS, computeGoals, macroSplitFor } from '@/services/bmrCalculator';
 import { db, exportBackup, getStorageInfo, importBackup, requestPersistentStorage } from '@/db/database';
-import { COLORS, MEAL_SHORT, MEAL_TYPES, downloadFile, round, todayISO } from '@/lib/utils';
+import { saveFile } from '@/lib/native';
+import { COLORS, MEAL_SHORT, MEAL_TYPES, round, todayISO } from '@/lib/utils';
 import type { ActivityLevel, BackupFile, Goal, GoalPace, MacroPreset, Profile, Sex } from '@/types';
 import { LANGS, detectLang, t, type LangSetting } from '@/i18n';
 import { applyTheme, type ThemeSetting } from '@/lib/theme';
@@ -149,7 +150,12 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
   const doExport = async () => {
     const data = await exportBackup();
     if (!includeKey && data.profile) data.profile = { ...data.profile, apiKey: '', accessCode: '' };
-    downloadFile(`kal-track-sauvegarde-${todayISO()}.json`, JSON.stringify(data));
+    try {
+      await saveFile(`kal-track-sauvegarde-${todayISO()}.json`, JSON.stringify(data), 'application/json', t('Sauvegarde Kal-Track'));
+    } catch {
+      toast(t('Export impossible'), 'error');
+      return;
+    }
     toast(t('Sauvegarde exportée ({a} repas, {b} pesées)', { a: data.meals.length, b: data.weightLogs.length }));
   };
 

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { t } from '@/i18n';
+import { pushBack } from '@/lib/native';
 
 /** Bottom-sheet modal adapté au mobile (style shadcn Drawer). */
 export function Sheet({
@@ -28,7 +29,9 @@ export function Sheet({
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    const popBack = pushBack(onClose); // bouton retour Android : ferme la fenêtre
     return () => {
+      popBack();
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };

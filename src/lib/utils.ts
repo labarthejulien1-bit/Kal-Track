@@ -190,18 +190,6 @@ export function haptic(ms = 12) {
   }
 }
 
-export function downloadFile(filename: string, content: string, type = 'application/json') {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 /** Petite animation d'arrivée horizontale sans démonter le contenu (évite tout clignotement). */
 export function slideIn(el: HTMLElement | null, dir: 'next' | 'prev') {
   if (!el || typeof el.animate !== 'function') return;

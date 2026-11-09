@@ -377,6 +377,8 @@ const d: Record<string, string> = {
   "Évolution totale": "Cambio total",
   "à jeun, après sport…": "en ayunas, después del deporte…",
   "≈ {n} semaines": "≈ {n} semanas",
+  "Sauvegarde Kal-Track": "Copia de seguridad de Kal-Track",
+  "Export impossible": "No se pudo exportar",
 };
 
 export default d;

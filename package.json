@@ -11,6 +11,11 @@
     "i18n:check": "node scripts/i18n-check.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/share": "8.0.3",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
     "class-variance-authority": "^0.7.1",
@@ -24,6 +29,7 @@
     "tailwind-merge": "^2.6.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.3",
     "@types/node": "^22.20.5",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
