@@ -406,6 +406,15 @@ const d: Record<string, string> = {
   "En soirée, pour le bilan": "In serata, per il bilancio",
   "Notification d’essai dans 5 secondes": "Notifica di prova tra 5 secondi",
   "Essayer": "Prova",
+  "1S": "1S",
+  "Aucune pesée sur cette période.": "Nessuna pesata in questo periodo.",
+  "sur la période": "nel periodo",
+  "Dans la trajectoire": "In linea con la traiettoria",
+  "{n} au-dessus de la trajectoire": "{n} sopra la traiettoria",
+  "Tes pesées": "Le tue pesate",
+  "Trajectoire vers {w}": "Traiettoria verso {w}",
+  "Trajectoire": "Traiettoria",
+  "vs trajectoire": "vs traiettoria",
 };
 
 export default d;

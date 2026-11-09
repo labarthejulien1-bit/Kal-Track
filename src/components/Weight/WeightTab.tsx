@@ -1,24 +1,21 @@
 import { useMemo, useState } from 'react';
 import { Scale, Trash2, Pencil, TrendingDown, TrendingUp, Minus, Plus, Target, Brain } from 'lucide-react';
-import { CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, Area } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { SegmentedTabs } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/common';
+import { WEIGHT_RANGES, WeightChart, type WeightRange } from './WeightChart';
 import { useToast } from '@/components/ui/toast';
 import { useProfile } from '@/hooks/useProfile';
 import { deleteWeight, trendSeries, upsertWeight, useWeights } from '@/hooks/useWeights';
 import { useMealsRange } from '@/hooks/useMeals';
 import { adaptiveTdee, bmiCategory } from '@/services/bmrCalculator';
-import { COLORS, addDays, daysBetween, formatDate, fromISODate, haptic, round, todayISO, capitalize } from '@/lib/utils';
-import { ChartTooltip, axisProps, gridProps } from '@/components/Analytics/chartKit';
+import { COLORS, addDays, daysBetween, formatDate, haptic, round, todayISO, capitalize } from '@/lib/utils';
 import { db } from '@/db/database';
-import { decimalSep, locale, t } from '@/i18n';
+import { decimalSep, t } from '@/i18n';
 import { fmtW, wIn, wOut, wStep, wUnit } from '@/lib/units';
 
-type Range = '1M' | '3M' | '6M' | '1A' | 'Tout';
-const RANGE_DAYS: Record<Range, number> = { '1M': 30, '3M': 91, '6M': 182, '1A': 365, Tout: 100000 };
 
 export function WeightTab() {
   const { profile, goals } = useProfile();
@@ -30,7 +27,7 @@ export function WeightTab() {
   const [date, setDate] = useState(today);
   const [weight, setWeight] = useState<string>('');
   const [note, setNote] = useState('');
-  const [range, setRange] = useState<Range>('3M');
+  const [range, setRange] = useState<WeightRange>('1M');
 
   const parsed = parseFloat(weight.trim().replace(',', '.'));
   // Valeur saisie dans l'unité d'affichage (kg ou lb) ; stockage en kg.
@@ -49,23 +46,6 @@ export function WeightTab() {
   const bump = (d: number) => setWeight(String(round(currentValue + d, 1)).replace('.', decimalSep()));
 
   const trend = useMemo(() => trendSeries(logs), [logs]);
-  // Plage de temps réelle : l'axe X couvre toute la période choisie (1M, 3M…), pas seulement les pesées.
-  const firstDate = logs[0]?.date ?? today;
-  const from = range === 'Tout' ? (firstDate < today ? firstDate : addDays(today, -7)) : addDays(today, -RANGE_DAYS[range]);
-  const fromTs = fromISODate(from).getTime();
-  const toTs = fromISODate(today).getTime();
-  const chartData = trend
-    .filter((p) => p.date >= from)
-    .map((p) => ({ x: fromISODate(p.date).getTime(), label: capitalize(formatDate(p.date, { weekday: 'short', day: 'numeric', month: 'short' })), Poids: wOut(p.weight), Tendance: wOut(p.trend) }));
-  const xTicks = Array.from({ length: 5 }, (_, i) => Math.round(fromTs + ((toTs - fromTs) * i) / 4));
-  const spanDays = (toTs - fromTs) / 86400000;
-  const fmtTick = (v: number) => {
-    const d = new Date(v);
-    return spanDays > 400
-      ? d.toLocaleDateString(locale(), { month: 'short', year: '2-digit' })
-      : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
-  };
-
   // Projection par régression linéaire sur la tendance des 30 derniers jours.
   const projection = useMemo(() => {
     const recent = trend.filter((p) => p.date >= addDays(today, -30));
@@ -196,34 +176,12 @@ export function WeightTab() {
           <CardTitle>{t('Courbe de poids')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <SegmentedTabs value={range} onChange={setRange} options={(['1M', '3M', '6M', '1A', 'Tout'] as Range[]).map((r) => ({ value: r, label: t(r) }))} />
-          {chartData.length ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <ComposedChart data={chartData} margin={{ top: 10, right: 6, left: -14, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="wFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={COLORS.water} stopOpacity={0.35} />
-                    <stop offset="100%" stopColor={COLORS.water} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid {...gridProps} />
-                <XAxis dataKey="x" type="number" scale="time" domain={[fromTs, toTs]} ticks={xTicks} tickFormatter={fmtTick} {...axisProps} allowDataOverflow />
-                <YAxis
-                  {...axisProps}
-                  unit={wUnit()}
-                  tickCount={7}
-                  domain={[(min: number) => Math.floor(Math.min(min, wOut(profile.targetWeight)) - 1), (max: number) => Math.ceil(Math.max(max, wOut(profile.targetWeight)) + 1)]}
-                />
-                <Tooltip content={(p) => <ChartTooltip active={p.active} payload={p.payload as never} label={(p.payload?.[0]?.payload as { label?: string } | undefined)?.label} unit={` ${wUnit()}`} />} />
-                <Area dataKey="Poids" name={t('Poids')} stroke={COLORS.water} strokeWidth={2.5} fill="url(#wFill)" type="linear" baseValue="dataMin" dot={{ r: 3.5, fill: 'var(--c-dot)', stroke: COLORS.water, strokeWidth: 2 }} activeDot={{ r: 6 }} isAnimationActive={false} />
-                <Line dataKey="Tendance" name={t('Tendance')} stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 4" type="monotone" dot={false} isAnimationActive={false} />
-                <ReferenceLine y={wOut(profile.targetWeight)} stroke={COLORS.kcal} strokeDasharray="6 4" label={{ value: `${t('Objectif')} ${fmtW(profile.targetWeight)}`, fill: COLORS.kcal, fontSize: 10, position: 'insideBottomRight' }} />
-              </ComposedChart>
-            </ResponsiveContainer>
+          <SegmentedTabs value={range} onChange={setRange} options={WEIGHT_RANGES.map((r) => ({ value: r, label: t(r) }))} />
+          {logs.length ? (
+            <WeightChart logs={logs} range={range} today={today} targetWeight={profile.targetWeight} weeklyChangeKg={goals.weeklyChangeKg} />
           ) : (
             <EmptyState icon={<Scale className="h-8 w-8" />} title={t('Pas encore de pesée')} text={t('Ajoute ton poids pour voir la courbe.')} />
           )}
-          <p className="text-center text-[10px] text-slate-500">{t('Courbe bleue = tes pesées · pointillés gris = tendance lissée')}</p>
         </CardContent>
       </Card>
 
