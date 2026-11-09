@@ -9,14 +9,18 @@ export const notificationsSupported = isNative;
 const DAYS_AHEAD = 7; // programmé sur une semaine, reprogrammé à chaque ouverture de l'appli
 const BASE_ID = 7100;
 
-async function plugin() {
-  return (await import('@capacitor/local-notifications')).LocalNotifications;
+/**
+ * Charge le module. ⚠️ Ne jamais renvoyer directement l'objet plugin depuis une fonction async :
+ * Capacitor le prendrait pour une promesse (appel de « then() ») → erreur sur Android.
+ */
+function plugin() {
+  return import('@capacitor/local-notifications');
 }
 
 /** Demande l'autorisation d'afficher des notifications (Android 13+). */
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!isNative) return false;
-  const LN = await plugin();
+  const { LocalNotifications: LN } = await plugin();
   let p = await LN.checkPermissions();
   if (p.display === 'prompt' || p.display === 'prompt-with-rationale') p = await LN.requestPermissions();
   return p.display === 'granted';
@@ -24,7 +28,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
 
 export async function cancelDailyReminders() {
   if (!isNative) return;
-  const LN = await plugin();
+  const { LocalNotifications: LN } = await plugin();
   await LN.cancel({ notifications: Array.from({ length: DAYS_AHEAD }, (_, i) => ({ id: BASE_ID + i })) });
 }
 
@@ -56,7 +60,7 @@ function todayMessage(day: { calories: number; meals: number; goal: number }) {
  */
 export async function scheduleDailyReminders(opts: { time: string; today: { calories: number; meals: number; goal: number } }) {
   if (!isNative) return;
-  const LN = await plugin();
+  const { LocalNotifications: LN } = await plugin();
   const perm = await LN.checkPermissions();
   if (perm.display !== 'granted') return;
   await cancelDailyReminders();
@@ -85,7 +89,7 @@ export async function scheduleDailyReminders(opts: { time: string; today: { calo
 /** Notification d'essai dans 5 secondes (pour vérifier que tout fonctionne). */
 export async function sendTestReminder() {
   if (!(await requestNotificationPermission())) return false;
-  const LN = await plugin();
+  const { LocalNotifications: LN } = await plugin();
   await LN.schedule({
     notifications: [
       {
