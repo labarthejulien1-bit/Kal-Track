@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   appName: 'Kal-Track',
   webDir: 'dist',
   android: {
-    backgroundColor: '#f4f6fa',
+    backgroundColor: '#ffffff',
   },
   plugins: {
     SystemBars: { insetsHandling: 'css', initialViewportFitValueHint: 'cover' },
