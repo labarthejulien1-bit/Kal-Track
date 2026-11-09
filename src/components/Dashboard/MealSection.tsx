@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useSectionOpen } from '@/lib/uiState';
 import { Plus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { MEAL_COLORS, MEAL_EMOJI, MEAL_LABELS, round } from '@/lib/utils';
@@ -9,12 +9,12 @@ import { t } from '@/i18n';
 
 export function MealSection({ type, meals, totals, target, date }: { type: MealType; meals: Meal[]; totals: Nutrients; target: number; date: string }) {
   const { openAdd } = useApp();
-  const [open, setOpen] = useState(true);
+  const [open, toggleOpen] = useSectionOpen(`j.meal.${type}`, true);
   const pct = target > 0 ? Math.min(100, (totals.calories / target) * 100) : 0;
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center gap-3 p-3">
-        <button className="flex flex-1 items-center gap-3 text-left" onClick={() => setOpen((o) => !o)}>
+        <button className="flex flex-1 items-center gap-3 text-left" onClick={toggleOpen}>
           <span className="flex h-10 w-10 items-center justify-center rounded-xl text-xl" style={{ background: `${MEAL_COLORS[type]}22` }}>
             {MEAL_EMOJI[type]}
           </span>

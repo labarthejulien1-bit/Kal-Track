@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Flame, Copy, Sparkles } from 'lucide-react';
+import { Flame, Copy } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { duplicateMeal, useMealsForDate, useStreak } from '@/hooks/useMeals';
 import { useApp } from '@/components/AppContext';
@@ -8,7 +8,9 @@ import { CalorieSummary, MacroCircles } from './CalorieSummary';
 import { MealDistribution } from './MealDistribution';
 import { MealSection } from './MealSection';
 import { WaterTracker } from './WaterTracker';
-import { SectionTitle } from '@/components/common';
+import { Section } from '@/components/ui/collapsible';
+import { useWater } from '@/hooks/useWater';
+import { fmtWater } from '@/lib/units';
 import { addDays, haptic, MEAL_TYPES, round, slideIn, todayISO } from '@/lib/utils';
 import { db } from '@/db/database';
 import { useToast } from '@/components/ui/toast';
@@ -19,6 +21,7 @@ export function Dashboard() {
   const { profile, goals } = useProfile();
   const { meals, totals, byType } = useMealsForDate(selectedDate);
   const streak = useStreak();
+  const water = useWater(selectedDate);
   const toast = useToast();
 
   const copyPreviousDay = async () => {
@@ -114,40 +117,56 @@ export function Dashboard() {
 
 
       <DateNavigator date={selectedDate} onChange={changeDate} />
-      <div ref={contentRef} className="space-y-3">
-      <CalorieSummary totals={totals} goals={goals} goal={profile.goal} />
-      <MealDistribution byType={byType} total={totals.calories} goal={goals.calories} split={profile.mealSplit} />
-      <MacroCircles totals={totals} goals={goals} />
+      <div ref={contentRef} className="space-y-1">
+      <Section id="j.calories" title={t('Calories')} summary={`${round(totals.calories)} / ${goals.calories} kcal`}>
+        <CalorieSummary totals={totals} goals={goals} goal={profile.goal} />
+      </Section>
+      <Section id="j.distribution" title={t('Répartition de la journée')} summary={`${round(totals.calories)} kcal`}>
+        <MealDistribution byType={byType} total={totals.calories} goal={goals.calories} split={profile.mealSplit} />
+      </Section>
+      <Section
+        id="j.macros"
+        title={t('Macronutriments')}
+        summary={`${t('P')} ${round(totals.protein)} · ${t('G')} ${round(totals.carbs)} · ${t('L')} ${round(totals.fat)} g`}
+      >
+        <MacroCircles totals={totals} goals={goals} />
+      </Section>
 
-      <SectionTitle
+      <Section
+        id="j.meals"
+        title={t('Repas')}
+        summary={meals.length > 0 ? `${t(meals.length > 1 ? '{n} éléments' : '{n} élément', { n: meals.length })} · ${round(totals.calories)} kcal` : undefined}
         right={
           meals.length === 0 ? (
             <button onClick={copyPreviousDay} className="flex items-center gap-1 text-xs text-emerald-400">
               <Copy className="h-3.5 w-3.5" /> {t('Copier la veille')}
             </button>
-          ) : (
-            <span className="text-xs text-slate-500">{t(meals.length > 1 ? '{n} éléments' : '{n} élément', { n: meals.length })} · {round(totals.calories)} kcal</span>
-          )
+          ) : undefined
         }
       >
-        {t('Repas')}
-      </SectionTitle>
-      <div className="space-y-2">
-        {MEAL_TYPES.map((t) => (
-          <MealSection
-            key={t}
-            type={t}
-            date={selectedDate}
-            meals={byType[t].meals}
-            totals={byType[t].totals}
-            target={(goals.calories * profile.mealSplit[t]) / 100}
-          />
-        ))}
-      </div>
+        <div className="space-y-2">
+          {MEAL_TYPES.map((t) => (
+            <MealSection
+              key={t}
+              type={t}
+              date={selectedDate}
+              meals={byType[t].meals}
+              totals={byType[t].totals}
+              target={(goals.calories * profile.mealSplit[t]) / 100}
+            />
+          ))}
+        </div>
+      </Section>
 
-      <WaterTracker date={selectedDate} goal={goals.water} />
+      <Section id="j.water" title={t('Hydratation')} summary={`${fmtWater(water.ml)} / ${fmtWater(goals.water)}`}>
+        <WaterTracker date={selectedDate} goal={goals.water} />
+      </Section>
 
-      {totals.calories > 0 && <DayInsight totals={totals} goals={goals} />}
+      {totals.calories > 0 && (
+        <Section id="j.insight" title={t('Bilan du jour')}>
+          <DayInsight totals={totals} goals={goals} />
+        </Section>
+      )}
       <div className="h-2" />
       </div>
     </div>
@@ -164,9 +183,6 @@ function DayInsight({ totals, goals }: { totals: ReturnType<typeof useMealsForDa
   if (!tips.length) tips.push(t('Belle journée équilibrée, continue comme ça ! 💪'));
   return (
     <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-indigo-500/10 p-3">
-      <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
-        <Sparkles className="h-3.5 w-3.5" /> {t('Bilan du jour')}
-      </div>
       <ul className="space-y-1 text-xs text-slate-300">
         {tips.map((t, i) => (
           <li key={i}>• {t}</li>

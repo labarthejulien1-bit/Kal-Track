@@ -7,6 +7,7 @@ export class CalorieTrackerDB extends Dexie {
   meals!: Table<Meal, number>;
   weightLogs!: Table<WeightLog, number>;
   waterLogs!: Table<WaterLog, string>;
+  uiState!: Table<{ key: string; open: boolean }, string>;
 
   constructor() {
     super('CalorieTrackerDB');
@@ -17,6 +18,10 @@ export class CalorieTrackerDB extends Dexie {
     });
     this.version(2).stores({
       waterLogs: 'date',
+    });
+    // Sections repliées / ouvertes (préférences d'affichage).
+    this.version(3).stores({
+      uiState: 'key',
     });
   }
 }

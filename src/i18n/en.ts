@@ -380,6 +380,8 @@ const d: Record<string, string> = {
   "Sauvegarde Kal-Track": "Kal-Track backup",
   "Export impossible": "Export failed",
   "Politique de confidentialité": "Privacy policy",
+  "Macronutriments": "Macronutrients",
+  "Désactivée": "Off",
 };
 
 export default d;

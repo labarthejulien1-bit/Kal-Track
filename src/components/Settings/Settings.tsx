@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Languages, Moon, Palette, Ruler, Sun, SunMoon, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CollapsibleCard } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { Picker } from '@/components/ui/picker';
 import { Switch } from '@/components/ui/switch';
 import { SegmentedTabs } from '@/components/ui/tabs';
 import { HeightField, NumberField, WeightField } from '@/components/common';
-import { getUnits, waterIn, waterOut, waterUnitLabel, wOut, wUnit, type Units } from '@/lib/units';
+import { fmtH, fmtW, getUnits, waterIn, waterOut, waterUnitLabel, wOut, wUnit, type Units } from '@/lib/units';
 import { Sheet } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { ensureProfile, useProfile } from '@/hooks/useProfile';
@@ -207,11 +207,12 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
       </div>
 
       {/* ---------- IA ---------- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-indigo-400" /> {t('Analyse IA des repas')}
-          </CardTitle>
+      <CollapsibleCard
+        id="s.ai"
+        icon={<Sparkles className="h-4 w-4 text-indigo-400" />}
+        title={t('Analyse IA des repas')}
+        summary={access?.message ?? t("Vérification de l'IA…")}
+        actions={
           <button
             onClick={() => setShowHelp(true)}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-400/40 active:scale-95"
@@ -219,8 +220,9 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           >
             <HelpCircle className="h-5 w-5" />
           </button>
-        </CardHeader>
-        <CardContent className="space-y-3">
+        }
+      >
+        <div className="space-y-3">
           {access ? (
             <p className={`flex items-start gap-2 rounded-xl p-2 text-xs ${access.ok ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/10 text-rose-300'}`}>
               {access.ok ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
@@ -260,8 +262,8 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
             </div>
           )}
           <p className="text-[11px] text-slate-500">{t("Tes repas restent sur ton téléphone. Seules les photos et descriptions à analyser sont envoyées à l'IA, de façon sécurisée.")}</p>
-        </CardContent>
-      </Card>
+        </div>
+      </CollapsibleCard>
 
       <Sheet open={showHelp} onClose={() => setShowHelp(false)} title={t("L'analyse IA")}>
         <div className="space-y-3 pb-4 text-sm text-slate-300">
@@ -274,13 +276,13 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
       </Sheet>
 
       {/* ---------- Apparence ---------- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-4 w-4 text-fuchsia-400" /> {t('Apparence')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <CollapsibleCard
+        id="s.theme"
+        icon={<Palette className="h-4 w-4 text-fuchsia-400" />}
+        title={t('Apparence')}
+        summary={{ light: t('Clair'), dark: t('Sombre'), auto: t('Auto') }[profile.theme ?? 'light']}
+      >
+
           <SegmentedTabs<ThemeSetting>
             value={profile.theme ?? 'light'}
             onChange={async (theme) => {
@@ -296,17 +298,17 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
               { value: 'auto', label: <span className="flex items-center justify-center gap-1.5"><SunMoon className="h-4 w-4" /> {t('Auto')}</span> },
             ]}
           />
-        </CardContent>
-      </Card>
+
+      </CollapsibleCard>
 
       {/* ---------- Langue ---------- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Languages className="h-4 w-4 text-sky-400" /> {t('Langue')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <CollapsibleCard
+        id="s.lang"
+        icon={<Languages className="h-4 w-4 text-sky-400" />}
+        title={t('Langue')}
+        summary={(profile.language ?? 'auto') === 'auto' ? `${t('Automatique (langue du téléphone)')} · ${LANGS.find((l) => l.code === detectLang())?.label ?? ''}` : LANGS.find((l) => l.code === profile.language)?.label}
+      >
+
           <Picker<LangSetting>
             title={t('Langue')}
             value={profile.language ?? 'auto'}
@@ -321,17 +323,17 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
               ...LANGS.map((l) => ({ value: l.code as LangSetting, label: `${l.flag} ${l.label}` })),
             ]}
           />
-        </CardContent>
-      </Card>
+
+      </CollapsibleCard>
 
       {/* ---------- Unités ---------- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Ruler className="h-4 w-4 text-amber-400" /> {t('Unités')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-3 gap-2">
+      <CollapsibleCard
+        id="s.units"
+        icon={<Ruler className="h-4 w-4 text-amber-400" />}
+        title={t('Unités')}
+        summary={`${getUnits().weight} · ${getUnits().height === 'ftin' ? 'ft / in' : 'cm'} · ${getUnits().water === 'floz' ? 'fl oz' : 'ml / L'}`}
+      >
+        <div className="grid grid-cols-3 gap-2">
           {(
             [
               ['weight', t('Poids'), [['kg', 'kg'], ['lb', 'lb']]],
@@ -356,17 +358,17 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
               />
             </div>
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </CollapsibleCard>
 
       {/* ---------- Profil ---------- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-4 w-4 text-emerald-400" /> {t('Profil')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <CollapsibleCard
+        id="s.profile"
+        icon={<User className="h-4 w-4 text-emerald-400" />}
+        title={t('Profil')}
+        summary={[profile.name, profile.sex === 'male' ? t('Homme') : t('Femme'), `${profile.age} ${t('ans')}`, fmtH(profile.height), fmtW(profile.weight)].filter(Boolean).join(' · ')}
+      >
+        <div className="space-y-3">
           <div>
             <Label>{t('Prénom')}</Label>
             <Input value={profile.name} onChange={(e) => updateProfile({ name: e.target.value })} placeholder={t('Optionnel')} autoComplete="given-name" autoCapitalize="words" className="text-base" />
@@ -467,17 +469,17 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           <Button className="w-full" onClick={saveNow}>
             <CheckCircle2 /> {t('Enregistrer le profil')}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </CollapsibleCard>
 
       {/* ---------- Calcul ---------- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calculator className="h-4 w-4 text-amber-400" /> {t('Calcul de tes besoins')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-xs">
+      <CollapsibleCard
+        id="s.calc"
+        icon={<Calculator className="h-4 w-4 text-amber-400" />}
+        title={t('Calcul de tes besoins')}
+        summary={`${goals.calories} kcal · ${t('P')} ${goals.protein} · ${t('G')} ${goals.carbs} · ${t('L')} ${goals.fat} g`}
+      >
+        <div className="space-y-2 text-xs">
           <Row label={`${t('Métabolisme de base')} (${goals.bmrMethod})`} value={`${goals.bmr} kcal`} />
           <Row label={t('Dépense totale (TDEE, activité + sport)')} value={`${goals.tdee} kcal`} />
           <div className="grid grid-cols-3 gap-2 py-1 text-center">
@@ -498,15 +500,16 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
               <Info className="h-4 w-4 shrink-0" /> {t('Objectif relevé au minimum de sécurité ({n} kcal). Un déficit plus important est déconseillé.', { n: goals.minSafe })}
             </p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </CollapsibleCard>
 
       {/* ---------- Surcharge ---------- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-rose-400" /> {t('Surcharge manuelle')}
-          </CardTitle>
+      <CollapsibleCard
+        id="s.override"
+        icon={<SlidersHorizontal className="h-4 w-4 text-rose-400" />}
+        title={t('Surcharge manuelle')}
+        summary={profile.manualOverride ? `${profile.overrides.calories} kcal` : t('Désactivée')}
+        actions={
           <Switch
             checked={profile.manualOverride}
             onCheckedChange={(v) =>
@@ -516,8 +519,9 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
               })
             }
           />
-        </CardHeader>
-        <CardContent>
+        }
+      >
+
           {profile.manualOverride ? (
             <div className="grid grid-cols-2 gap-2">
               <NumberField label={t('Calories')} value={profile.overrides.calories} onChange={(v) => updateProfile({ overrides: { ...profile.overrides, calories: v } })} unit="kcal" color={COLORS.kcal} />
@@ -532,17 +536,17 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           ) : (
             <p className="text-xs text-slate-500">{t("Active pour fixer toi-même tes objectifs de calories et de macros en grammes (ex. plan d'un diététicien).")}</p>
           )}
-        </CardContent>
-      </Card>
+
+      </CollapsibleCard>
 
       {/* ---------- Données ---------- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-sky-400" /> {t('Données & sauvegarde')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <CollapsibleCard
+        id="s.data"
+        icon={<Database className="h-4 w-4 text-sky-400" />}
+        title={t('Données & sauvegarde')}
+        summary={storage ? `${storage.persisted ? t('Stockage persistant activé') : t('Stockage non persistant')} · ${t('{n} Mo utilisés', { n: (storage.usage / 1024 / 1024).toFixed(1) })}` : undefined}
+      >
+        <div className="space-y-3">
           <div className="flex items-center justify-between rounded-xl bg-slate-900/60 p-3 text-xs">
             <div className="flex items-center gap-2">
               <ShieldCheck className={`h-5 w-5 ${storage?.persisted ? 'text-emerald-400' : 'text-amber-400'}`} />
@@ -576,8 +580,8 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           <Button variant="ghost" className="w-full text-rose-400" onClick={resetAll}>
             <Trash2 /> {t('Effacer toutes les données')}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </CollapsibleCard>
 
       <div className="flex flex-col items-center gap-1 py-4 text-center text-[11px] text-slate-500">
         <img src="./logo.svg" alt="" className="h-12 w-12 rounded-2xl" />

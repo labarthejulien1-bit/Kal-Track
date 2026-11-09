@@ -7,6 +7,7 @@ import './theme.css';
 import { applyTheme, storedTheme } from './lib/theme';
 import { detectLang, setLang } from './i18n';
 import { initNative, isNative } from './lib/native';
+import { loadUiState } from './lib/uiState';
 
 // Langue du téléphone par défaut (remplacée par le choix du profil s'il existe).
 setLang(detectLang());
@@ -20,8 +21,11 @@ requestPersistentStorage();
 if (isNative) initNative();
 else import('virtual:pwa-register').then(({ registerSW }) => registerSW({ immediate: true }));
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+// Sections repliées : relues avant l'affichage pour éviter tout saut à l'ouverture.
+loadUiState().finally(() =>
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  ),
 );

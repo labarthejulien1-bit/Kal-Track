@@ -1,5 +1,4 @@
-import { PieChart } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { MEAL_COLORS, MEAL_EMOJI, MEAL_LABELS, MEAL_TYPES, round } from '@/lib/utils';
 import type { MealType, Nutrients, Profile } from '@/types';
 import { t } from '@/i18n';
@@ -18,12 +17,6 @@ export function MealDistribution({
 }) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <PieChart className="h-4 w-4 text-emerald-400" /> {t('Répartition de la journée')}
-        </CardTitle>
-        <span className="text-xs text-slate-400">{round(total)} kcal</span>
-      </CardHeader>
       <CardContent>
         <div className="flex h-4 w-full overflow-hidden rounded-full bg-slate-700/60">
           {MEAL_TYPES.map((mt) => {
