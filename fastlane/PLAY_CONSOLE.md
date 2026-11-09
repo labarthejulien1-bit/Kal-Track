@@ -1,0 +1,58 @@
+# Kal-Track — réponses pour la Play Console
+
+Textes de la fiche du store : `fastlane/metadata/android/<langue>/`
+(`title.txt` ≤ 30 caractères, `short_description.txt` ≤ 80, `full_description.txt` ≤ 4000).
+Langue par défaut : **fr-FR**. Traductions : en-US, es-ES, pt-PT, pt-BR, de-DE, it-IT.
+
+Politique de confidentialité : https://labarthejulien1-bit.github.io/Kal-Track/privacy.html
+
+---
+
+## Configuration de l'application (« Contenu de l'application »)
+
+| Question | Réponse |
+|---|---|
+| Règles de confidentialité | L'URL ci-dessus |
+| Accès à l'application | **Toutes les fonctionnalités sont disponibles sans restrictions d'accès** (pas de compte) |
+| Annonces | **Non**, l'application ne contient pas d'annonces |
+| Public cible | **18 ans et plus** uniquement (exigé par les conditions de l'API Gemini) |
+| Contenu attrayant pour les enfants | Non |
+| Application d'actualités | Non |
+| Applis de santé | Cocher **« Nutrition et gestion du poids »** (ou « Suivi de l'activité et de la condition physique » si demandé). Pas d'appareil médical, pas de diagnostic |
+| Applications gouvernementales | Non |
+| Fonctionnalités financières | Aucune |
+| ID publicitaire | **Non**, l'application n'utilise pas l'identifiant publicitaire |
+
+## Classification du contenu (questionnaire IARC)
+
+- Catégorie : **Toutes les autres catégories d'applications** (ni jeu, ni réseau social)
+- Violence, sexualité, langage grossier, drogues, jeux d'argent : **Non** partout
+- Les utilisateurs peuvent-ils interagir ou échanger du contenu entre eux ? **Non**
+- L'application partage-t-elle la position de l'utilisateur ? **Non**
+- Achats numériques : **Non** (pour l'instant, à mettre à jour avec l'abonnement)
+- Contenu généré par IA : **Oui** — estimations nutritionnelles textuelles générées à la demande de l'utilisateur (pas d'images ni de contenu libre)
+
+## Sécurité des données (« Data safety »)
+
+**L'application collecte-t-elle ou partage-t-elle des données ?** → **Oui**
+**Toutes les données sont-elles chiffrées en transit ?** → **Oui** (HTTPS)
+**Les utilisateurs peuvent-ils demander la suppression ?** → **Oui** (Réglages → Données → Effacer, ou désinstallation ; aucune donnée conservée sur nos serveurs)
+
+Données stockées uniquement sur le téléphone : **à ne pas déclarer** (Google ne compte comme « collectées » que les données qui quittent l'appareil).
+
+| Type de données (Google) | Collectée | Partagée | Pourquoi | Facultative ? | Traitement éphémère |
+|---|---|---|---|---|---|
+| **Photos et vidéos → Photos** | Oui | Non* | Fonctionnalité de l'application | Oui (l'utilisateur choisit d'analyser) | **Oui** |
+| **Santé et remise en forme → Informations nutritionnelles** *(ou « Autres infos de santé »)* : descriptions de repas en texte | Oui | Non* | Fonctionnalité de l'application | Oui | **Oui** |
+| **Identifiants de l'appareil ou autres → ID de l'appareil** (numéro aléatoire anonyme) | Oui | Non | Fonctionnalité de l'application (limite d'analyses), prévention de la fraude/des abus | Non (envoyé avec chaque analyse IA) | Non (compteurs gardés quelques jours) |
+
+\* Google (Gemini), Cloudflare et Open Food Facts agissent comme **prestataires de services** traitant les données pour notre compte : selon les règles Google Play, ce n'est **pas** un « partage ».
+
+Non collectées : position, contacts, e-mail, nom, informations financières, historique de navigation, messages, fichiers, audio, statistiques d'usage, plantages, identifiant publicitaire.
+
+Code-barres : le numéro EAN d'un produit n'est pas une donnée personnelle → rien à déclarer.
+
+## ⚠️ Prérequis avant publication
+
+- **Activer la facturation sur le projet Google AI Studio / Gemini (offre payante)** : les conditions de l'API Gemini n'autorisent que l'offre payante pour une application utilisée dans l'Union européenne, en Suisse ou au Royaume-Uni. La politique de confidentialité indique les conditions payantes (pas d'entraînement sur les données).
+- Remplacer `CONTACT_EMAIL` dans `public/privacy.html` par l'adresse de contact du compte développeur.

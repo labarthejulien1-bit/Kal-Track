@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kal-Track – Privacy</title>
+<link rel="icon" href="favicon.svg" />
+<style>
+  :root { --bg:#f4f6fa; --card:#ffffff; --text:#1e293b; --muted:#64748b; --line:#e2e8f0; --accent:#059669; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --muted:#94a3b8; --line:#334155; --accent:#34d399; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 64px; }
+  header { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  header img { width:56px; height:56px; border-radius:14px; }
+  h1 { font-size:1.5rem; margin:0; line-height:1.2; }
+  h2 { font-size:1.1rem; margin:28px 0 6px; color:var(--accent); }
+  .date { color:var(--muted); font-size:.9rem; margin:0 0 16px; }
+  nav { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 20px; }
+  nav button { border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:999px; padding:6px 12px; font:inherit; font-size:.9rem; cursor:pointer; }
+  nav button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:4px 20px 20px; }
+  ul { padding-left:20px; margin:6px 0; }
+  li { margin:4px 0; }
+  a { color:var(--accent); }
+  .summary { font-weight:500; }
+</style>
+</head>
+<body>
+<main>
+  <header><img src="pwa-192x192.png" alt="" /><h1 id="title"></h1></header>
+  <p class="date" id="date"></p>
+  <nav id="langs" aria-label="Language"></nav>
+  <div class="card" id="content"></div>
+</main>
+<script>
+// Adresse de contact affichée dans la politique.
+const CONTACT = 'CONTACT_EMAIL';
+
+const L = {
+fr: { name: 'Français', title: 'Politique de confidentialité', date: 'Dernière mise à jour : 9 novembre 2026', s: [
+ ['En bref', '<p class="summary">Kal-Track fonctionne sans compte. Votre profil, vos repas, vos photos et vos pesées restent enregistrés uniquement sur votre téléphone : nous ne les recevons pas, ne les vendons pas et n’affichons aucune publicité. Seules les analyses IA que vous demandez et la recherche par code-barres utilisent internet.</p>'],
+ ['Qui sommes-nous', '<p>Kal-Track est éditée par Kal-Apps, développeur indépendant. Contact : <a href="mailto:{c}">{c}</a></p>'],
+ ['Données enregistrées sur votre téléphone', '<ul><li>Profil : prénom (facultatif), sexe, âge, taille, poids, niveau d’activité et objectifs.</li><li>Journal : repas, quantités, valeurs nutritionnelles, miniatures des photos, eau, pesées.</li><li>Réglages : langue, unités, thème.</li></ul><p>Ces données sont stockées dans l’espace privé de l’application (ou du navigateur pour la version web). Elles ne sont jamais envoyées à nos serveurs. Vous pouvez les exporter, les importer ou toutes les supprimer dans Réglages → Données. Désinstaller l’application les efface.</p>'],
+ ['Analyse par intelligence artificielle', '<p>Uniquement lorsque vous demandez une analyse (photo d’un repas, étiquette ou description) :</p><ul><li>la photo réduite ou le texte est envoyé à notre relais sécurisé (hébergé par Cloudflare), qui le transmet à l’API Google Gemini pour obtenir l’estimation nutritionnelle ;</li><li>notre relais ne conserve ni les photos ni les textes : il compte seulement le nombre d’analyses par jour pour appliquer les limites d’utilisation ;</li><li>Google traite ces contenus selon les conditions payantes de l’API Gemini : ils ne servent pas à entraîner ses modèles et sont conservés brièvement, uniquement pour détecter les abus ;</li><li>votre profil (âge, poids…) n’est jamais envoyé.</li></ul><p>Conseil : photographiez uniquement votre assiette ou l’emballage, sans visage ni document personnel.</p>'],
+ ['Identifiant anonyme de l’appareil', '<p>Pour répartir équitablement les analyses gratuites, l’application crée un numéro aléatoire, sans lien avec votre identité, votre compte Google ou votre téléphone. Il est envoyé avec chaque analyse pour compter les analyses du jour. Ces compteurs sont effacés au bout de quelques jours. Le numéro change si vous effacez les données de l’application.</p>'],
+ ['Code-barres', '<p>Le numéro du code-barres scanné est envoyé à Open Food Facts (base de données alimentaire ouverte, <a href="https://openfoodfacts.org" target="_blank" rel="noopener">openfoodfacts.org</a>) pour retrouver le produit. Aucune autre donnée n’est transmise.</p>'],
+ ['Appareil photo', '<p>L’appareil photo est utilisé uniquement quand vous prenez une photo ou scannez un code-barres ou une étiquette. Seule une miniature du repas est conservée, sur votre téléphone.</p>'],
+ ['Ce que nous ne faisons pas', '<ul><li>Pas de compte ni d’inscription.</li><li>Pas de publicité.</li><li>Pas de statistiques d’usage, de traceurs ou de cookies publicitaires.</li><li>Pas de localisation.</li><li>Aucune vente ni partage de vos données à des fins commerciales.</li></ul>'],
+ ['Prestataires', '<ul><li>Cloudflare, Inc. – relais des analyses IA.</li><li>Google LLC – API Gemini (intelligence artificielle).</li><li>Open Food Facts – informations sur les produits.</li></ul><p>Ces prestataires peuvent traiter les données hors de l’Union européenne (notamment aux États-Unis), avec les garanties prévues par le RGPD (clauses contractuelles types ou Data Privacy Framework).</p>'],
+ ['Âge', '<p>Kal-Track est destinée aux personnes de 18 ans et plus.</p>'],
+ ['Santé', '<p>Les estimations de calories et de nutriments sont indicatives et peuvent comporter des erreurs. Elles ne remplacent pas l’avis d’un médecin ou d’un diététicien.</p>'],
+ ['Vos droits', '<p>Vos données étant sur votre téléphone, vous les contrôlez entièrement : consultation, export, modification et suppression depuis l’application. Pour toute question sur vos données ou pour exercer vos droits (RGPD), écrivez-nous à <a href="mailto:{c}">{c}</a>. Vous pouvez aussi saisir l’autorité de protection des données de votre pays (en France : la CNIL, <a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>).</p>'],
+ ['Modifications', '<p>Cette politique peut évoluer avec l’application. La date de dernière mise à jour figure en haut de la page.</p>'],
+]},
+en: { name: 'English', title: 'Privacy Policy', date: 'Last updated: November 9, 2026', s: [
+ ['In short', '<p class="summary">Kal-Track works without an account. Your profile, meals, photos and weigh-ins are stored only on your phone: we do not receive them, do not sell them and show no ads. Only the AI analyses you request and barcode lookups use the internet.</p>'],
+ ['Who we are', '<p>Kal-Track is published by Kal-Apps, an independent developer. Contact: <a href="mailto:{c}">{c}</a></p>'],
+ ['Data stored on your phone', '<ul><li>Profile: first name (optional), sex, age, height, weight, activity level and goals.</li><li>Diary: meals, quantities, nutrition values, photo thumbnails, water, weigh-ins.</li><li>Settings: language, units, theme.</li></ul><p>This data is stored in the app’s private storage (or the browser’s for the web version). It is never sent to our servers. You can export, import or delete all of it in Settings → Data. Uninstalling the app erases it.</p>'],
+ ['Artificial intelligence analysis', '<p>Only when you request an analysis (meal photo, nutrition label or description):</p><ul><li>the downsized photo or the text is sent to our secure relay (hosted by Cloudflare), which forwards it to the Google Gemini API to get the nutrition estimate;</li><li>our relay does not keep photos or texts: it only counts the number of analyses per day to apply usage limits;</li><li>Google processes this content under the paid Gemini API terms: it is not used to train its models and is kept briefly, only to detect abuse;</li><li>your profile (age, weight…) is never sent.</li></ul><p>Tip: only photograph your plate or the packaging, without faces or personal documents.</p>'],
+ ['Anonymous device identifier', '<p>To share the free analyses fairly, the app creates a random number that is not linked to your identity, your Google account or your phone. It is sent with each analysis to count the day’s analyses. These counters are deleted after a few days. The number changes if you clear the app’s data.</p>'],
+ ['Barcodes', '<p>The scanned barcode number is sent to Open Food Facts (an open food database, <a href="https://openfoodfacts.org" target="_blank" rel="noopener">openfoodfacts.org</a>) to find the product. No other data is sent.</p>'],
+ ['Camera', '<p>The camera is used only when you take a photo or scan a barcode or label. Only a meal thumbnail is kept, on your phone.</p>'],
+ ['What we do not do', '<ul><li>No account or sign-up.</li><li>No ads.</li><li>No usage analytics, trackers or advertising cookies.</li><li>No location.</li><li>No selling or sharing of your data for commercial purposes.</li></ul>'],
+ ['Service providers', '<ul><li>Cloudflare, Inc. – AI analysis relay.</li><li>Google LLC – Gemini API (artificial intelligence).</li><li>Open Food Facts – product information.</li></ul><p>These providers may process data outside the European Union (notably in the United States), with the safeguards required by the GDPR (standard contractual clauses or the Data Privacy Framework).</p>'],
+ ['Age', '<p>Kal-Track is intended for people aged 18 and over.</p>'],
+ ['Health', '<p>Calorie and nutrient estimates are indicative and may contain errors. They do not replace the advice of a doctor or dietitian.</p>'],
+ ['Your rights', '<p>Since your data is on your phone, you are fully in control: view, export, edit and delete it from the app. For any question about your data or to exercise your rights (GDPR), write to us at <a href="mailto:{c}">{c}</a>. You can also contact your country’s data protection authority.</p>'],
+ ['Changes', '<p>This policy may change as the app evolves. The last update date is shown at the top of the page.</p>'],
+]},
+es: { name: 'Español', title: 'Política de privacidad', date: 'Última actualización: 9 de noviembre de 2026', s: [
+ ['En resumen', '<p class="summary">Kal-Track funciona sin cuenta. Tu perfil, tus comidas, tus fotos y tus pesajes se guardan solo en tu teléfono: no los recibimos, no los vendemos y no mostramos publicidad. Solo los análisis con IA que solicitas y la búsqueda por código de barras usan internet.</p>'],
+ ['Quiénes somos', '<p>Kal-Track es publicada por Kal-Apps, desarrollador independiente. Contacto: <a href="mailto:{c}">{c}</a></p>'],
+ ['Datos guardados en tu teléfono', '<ul><li>Perfil: nombre (opcional), sexo, edad, estatura, peso, nivel de actividad y objetivos.</li><li>Diario: comidas, cantidades, valores nutricionales, miniaturas de fotos, agua, pesajes.</li><li>Ajustes: idioma, unidades, tema.</li></ul><p>Estos datos se guardan en el almacenamiento privado de la aplicación (o del navegador en la versión web). Nunca se envían a nuestros servidores. Puedes exportarlos, importarlos o eliminarlos todos en Ajustes → Datos. Desinstalar la aplicación los borra.</p>'],
+ ['Análisis con inteligencia artificial', '<p>Solo cuando solicitas un análisis (foto de una comida, etiqueta o descripción):</p><ul><li>la foto reducida o el texto se envía a nuestro relé seguro (alojado en Cloudflare), que lo transmite a la API Google Gemini para obtener la estimación nutricional;</li><li>nuestro relé no conserva fotos ni textos: solo cuenta el número de análisis por día para aplicar los límites de uso;</li><li>Google trata este contenido según las condiciones de pago de la API Gemini: no se usa para entrenar sus modelos y se conserva brevemente, solo para detectar abusos;</li><li>tu perfil (edad, peso…) nunca se envía.</li></ul><p>Consejo: fotografía solo tu plato o el envase, sin caras ni documentos personales.</p>'],
+ ['Identificador anónimo del dispositivo', '<p>Para repartir de forma justa los análisis gratuitos, la aplicación crea un número aleatorio sin relación con tu identidad, tu cuenta de Google o tu teléfono. Se envía con cada análisis para contar los análisis del día. Estos contadores se eliminan al cabo de unos días. El número cambia si borras los datos de la aplicación.</p>'],
+ ['Código de barras', '<p>El número del código de barras escaneado se envía a Open Food Facts (base de datos alimentaria abierta, <a href="https://openfoodfacts.org" target="_blank" rel="noopener">openfoodfacts.org</a>) para encontrar el producto. No se envía ningún otro dato.</p>'],
+ ['Cámara', '<p>La cámara solo se usa cuando haces una foto o escaneas un código de barras o una etiqueta. Solo se conserva una miniatura de la comida, en tu teléfono.</p>'],
+ ['Lo que no hacemos', '<ul><li>Sin cuenta ni registro.</li><li>Sin publicidad.</li><li>Sin estadísticas de uso, rastreadores ni cookies publicitarias.</li><li>Sin ubicación.</li><li>Ninguna venta ni cesión de tus datos con fines comerciales.</li></ul>'],
+ ['Proveedores', '<ul><li>Cloudflare, Inc. – relé de los análisis con IA.</li><li>Google LLC – API Gemini (inteligencia artificial).</li><li>Open Food Facts – información de productos.</li></ul><p>Estos proveedores pueden tratar datos fuera de la Unión Europea (en particular en Estados Unidos), con las garantías previstas por el RGPD (cláusulas contractuales tipo o Data Privacy Framework).</p>'],
+ ['Edad', '<p>Kal-Track está destinada a personas de 18 años o más.</p>'],
+ ['Salud', '<p>Las estimaciones de calorías y nutrientes son orientativas y pueden contener errores. No sustituyen el consejo de un médico o dietista.</p>'],
+ ['Tus derechos', '<p>Como tus datos están en tu teléfono, tienes el control total: consultarlos, exportarlos, modificarlos y eliminarlos desde la aplicación. Para cualquier pregunta sobre tus datos o para ejercer tus derechos (RGPD), escríbenos a <a href="mailto:{c}">{c}</a>. También puedes acudir a la autoridad de protección de datos de tu país.</p>'],
+ ['Cambios', '<p>Esta política puede cambiar con la aplicación. La fecha de la última actualización aparece en la parte superior de la página.</p>'],
+]},
+pt: { name: 'Português', title: 'Política de privacidade', date: 'Última atualização: 9 de novembro de 2026', s: [
+ ['Em resumo', '<p class="summary">O Kal-Track funciona sem conta. O seu perfil, refeições, fotos e pesagens ficam guardados apenas no seu telemóvel: não os recebemos, não os vendemos e não mostramos publicidade. Apenas as análises com IA que pede e a pesquisa por código de barras usam a internet.</p>'],
+ ['Quem somos', '<p>O Kal-Track é publicado pela Kal-Apps, programador independente. Contacto: <a href="mailto:{c}">{c}</a></p>'],
+ ['Dados guardados no seu telemóvel', '<ul><li>Perfil: nome (opcional), sexo, idade, altura, peso, nível de atividade e objetivos.</li><li>Diário: refeições, quantidades, valores nutricionais, miniaturas das fotos, água, pesagens.</li><li>Definições: idioma, unidades, tema.</li></ul><p>Estes dados são guardados no armazenamento privado da aplicação (ou do navegador na versão web). Nunca são enviados para os nossos servidores. Pode exportá-los, importá-los ou apagá-los todos em Definições → Dados. Desinstalar a aplicação apaga-os.</p>'],
+ ['Análise por inteligência artificial', '<p>Apenas quando pede uma análise (foto de uma refeição, rótulo ou descrição):</p><ul><li>a foto reduzida ou o texto é enviado para o nosso retransmissor seguro (alojado na Cloudflare), que o transmite à API Google Gemini para obter a estimativa nutricional;</li><li>o nosso retransmissor não guarda fotos nem textos: apenas conta o número de análises por dia para aplicar os limites de utilização;</li><li>a Google trata este conteúdo segundo as condições pagas da API Gemini: não é usado para treinar os seus modelos e é guardado por pouco tempo, apenas para detetar abusos;</li><li>o seu perfil (idade, peso…) nunca é enviado.</li></ul><p>Dica: fotografe apenas o prato ou a embalagem, sem rostos nem documentos pessoais.</p>'],
+ ['Identificador anónimo do dispositivo', '<p>Para repartir de forma justa as análises gratuitas, a aplicação cria um número aleatório sem ligação à sua identidade, à sua conta Google ou ao seu telemóvel. É enviado com cada análise para contar as análises do dia. Estes contadores são apagados ao fim de alguns dias. O número muda se apagar os dados da aplicação.</p>'],
+ ['Código de barras', '<p>O número do código de barras lido é enviado para o Open Food Facts (base de dados alimentar aberta, <a href="https://openfoodfacts.org" target="_blank" rel="noopener">openfoodfacts.org</a>) para encontrar o produto. Nenhum outro dado é enviado.</p>'],
+ ['Câmara', '<p>A câmara só é usada quando tira uma foto ou lê um código de barras ou um rótulo. Apenas uma miniatura da refeição é guardada, no seu telemóvel.</p>'],
+ ['O que não fazemos', '<ul><li>Sem conta nem registo.</li><li>Sem publicidade.</li><li>Sem estatísticas de utilização, rastreadores ou cookies publicitários.</li><li>Sem localização.</li><li>Nenhuma venda ou partilha dos seus dados para fins comerciais.</li></ul>'],
+ ['Prestadores de serviços', '<ul><li>Cloudflare, Inc. – retransmissor das análises com IA.</li><li>Google LLC – API Gemini (inteligência artificial).</li><li>Open Food Facts – informações sobre produtos.</li></ul><p>Estes prestadores podem tratar dados fora da União Europeia (nomeadamente nos Estados Unidos), com as garantias previstas pelo RGPD (cláusulas contratuais-tipo ou Data Privacy Framework).</p>'],
+ ['Idade', '<p>O Kal-Track destina-se a pessoas com 18 anos ou mais.</p>'],
+ ['Saúde', '<p>As estimativas de calorias e nutrientes são indicativas e podem conter erros. Não substituem o conselho de um médico ou nutricionista.</p>'],
+ ['Os seus direitos', '<p>Como os seus dados estão no seu telemóvel, tem controlo total: consultar, exportar, modificar e apagar a partir da aplicação. Para qualquer questão sobre os seus dados ou para exercer os seus direitos (RGPD), escreva-nos para <a href="mailto:{c}">{c}</a>. Pode também contactar a autoridade de proteção de dados do seu país.</p>'],
+ ['Alterações', '<p>Esta política pode mudar com a aplicação. A data da última atualização aparece no topo da página.</p>'],
+]},
+de: { name: 'Deutsch', title: 'Datenschutzerklärung', date: 'Zuletzt aktualisiert: 9. November 2026', s: [
+ ['Kurz gesagt', '<p class="summary">Kal-Track funktioniert ohne Konto. Dein Profil, deine Mahlzeiten, Fotos und Wiegungen werden nur auf deinem Handy gespeichert: Wir erhalten sie nicht, verkaufen sie nicht und zeigen keine Werbung. Nur die von dir angeforderten KI-Analysen und die Barcode-Suche nutzen das Internet.</p>'],
+ ['Wer wir sind', '<p>Kal-Track wird von Kal-Apps, einem unabhängigen Entwickler, herausgegeben. Kontakt: <a href="mailto:{c}">{c}</a></p>'],
+ ['Auf deinem Handy gespeicherte Daten', '<ul><li>Profil: Vorname (optional), Geschlecht, Alter, Größe, Gewicht, Aktivitätsniveau und Ziele.</li><li>Tagebuch: Mahlzeiten, Mengen, Nährwerte, Foto-Miniaturen, Wasser, Wiegungen.</li><li>Einstellungen: Sprache, Einheiten, Design.</li></ul><p>Diese Daten werden im privaten Speicher der App (bzw. des Browsers bei der Web-Version) abgelegt. Sie werden nie an unsere Server gesendet. Du kannst sie unter Einstellungen → Daten exportieren, importieren oder vollständig löschen. Beim Deinstallieren der App werden sie gelöscht.</p>'],
+ ['Analyse mit künstlicher Intelligenz', '<p>Nur wenn du eine Analyse anforderst (Foto einer Mahlzeit, Nährwerttabelle oder Beschreibung):</p><ul><li>das verkleinerte Foto oder der Text wird an unser sicheres Relais (bei Cloudflare gehostet) gesendet, das ihn an die Google-Gemini-API weiterleitet, um die Nährwertschätzung zu erhalten;</li><li>unser Relais speichert weder Fotos noch Texte: Es zählt nur die Anzahl der Analysen pro Tag, um Nutzungsgrenzen anzuwenden;</li><li>Google verarbeitet diese Inhalte gemäß den kostenpflichtigen Bedingungen der Gemini-API: Sie werden nicht zum Training der Modelle verwendet und nur kurz gespeichert, ausschließlich zur Missbrauchserkennung;</li><li>dein Profil (Alter, Gewicht …) wird nie gesendet.</li></ul><p>Tipp: Fotografiere nur deinen Teller oder die Verpackung, ohne Gesichter oder persönliche Dokumente.</p>'],
+ ['Anonyme Gerätekennung', '<p>Um die kostenlosen Analysen fair zu verteilen, erzeugt die App eine Zufallszahl ohne Bezug zu deiner Identität, deinem Google-Konto oder deinem Handy. Sie wird mit jeder Analyse gesendet, um die Analysen des Tages zu zählen. Diese Zähler werden nach einigen Tagen gelöscht. Die Zahl ändert sich, wenn du die App-Daten löschst.</p>'],
+ ['Barcodes', '<p>Die Nummer des gescannten Barcodes wird an Open Food Facts (offene Lebensmitteldatenbank, <a href="https://openfoodfacts.org" target="_blank" rel="noopener">openfoodfacts.org</a>) gesendet, um das Produkt zu finden. Es werden keine weiteren Daten übertragen.</p>'],
+ ['Kamera', '<p>Die Kamera wird nur verwendet, wenn du ein Foto machst oder einen Barcode bzw. eine Nährwerttabelle scannst. Nur eine Miniatur der Mahlzeit wird auf deinem Handy gespeichert.</p>'],
+ ['Was wir nicht tun', '<ul><li>Kein Konto, keine Registrierung.</li><li>Keine Werbung.</li><li>Keine Nutzungsstatistiken, Tracker oder Werbe-Cookies.</li><li>Keine Standortdaten.</li><li>Kein Verkauf und keine Weitergabe deiner Daten zu kommerziellen Zwecken.</li></ul>'],
+ ['Dienstleister', '<ul><li>Cloudflare, Inc. – Relais für KI-Analysen.</li><li>Google LLC – Gemini-API (künstliche Intelligenz).</li><li>Open Food Facts – Produktinformationen.</li></ul><p>Diese Dienstleister können Daten außerhalb der Europäischen Union verarbeiten (insbesondere in den USA), mit den von der DSGVO vorgesehenen Garantien (Standardvertragsklauseln oder Data Privacy Framework).</p>'],
+ ['Alter', '<p>Kal-Track richtet sich an Personen ab 18 Jahren.</p>'],
+ ['Gesundheit', '<p>Die Schätzungen von Kalorien und Nährstoffen sind Richtwerte und können Fehler enthalten. Sie ersetzen nicht den Rat eines Arztes oder Ernährungsberaters.</p>'],
+ ['Deine Rechte', '<p>Da deine Daten auf deinem Handy liegen, hast du die volle Kontrolle: ansehen, exportieren, ändern und löschen direkt in der App. Bei Fragen zu deinen Daten oder zur Ausübung deiner Rechte (DSGVO) schreib uns an <a href="mailto:{c}">{c}</a>. Du kannst dich auch an die Datenschutzbehörde deines Landes wenden.</p>'],
+ ['Änderungen', '<p>Diese Erklärung kann sich mit der App weiterentwickeln. Das Datum der letzten Aktualisierung steht oben auf der Seite.</p>'],
+]},
+it: { name: 'Italiano', title: 'Informativa sulla privacy', date: 'Ultimo aggiornamento: 9 novembre 2026', s: [
+ ['In breve', '<p class="summary">Kal-Track funziona senza account. Il tuo profilo, i pasti, le foto e le pesate restano salvati solo sul tuo telefono: non li riceviamo, non li vendiamo e non mostriamo pubblicità. Solo le analisi IA che richiedi e la ricerca tramite codice a barre usano internet.</p>'],
+ ['Chi siamo', '<p>Kal-Track è pubblicata da Kal-Apps, sviluppatore indipendente. Contatto: <a href="mailto:{c}">{c}</a></p>'],
+ ['Dati salvati sul tuo telefono', '<ul><li>Profilo: nome (facoltativo), sesso, età, altezza, peso, livello di attività e obiettivi.</li><li>Diario: pasti, quantità, valori nutrizionali, miniature delle foto, acqua, pesate.</li><li>Impostazioni: lingua, unità, tema.</li></ul><p>Questi dati sono salvati nello spazio privato dell’app (o del browser per la versione web). Non vengono mai inviati ai nostri server. Puoi esportarli, importarli o eliminarli tutti in Impostazioni → Dati. Disinstallare l’app li cancella.</p>'],
+ ['Analisi con intelligenza artificiale', '<p>Solo quando richiedi un’analisi (foto di un pasto, etichetta o descrizione):</p><ul><li>la foto ridotta o il testo viene inviato al nostro relay sicuro (ospitato da Cloudflare), che lo trasmette all’API Google Gemini per ottenere la stima nutrizionale;</li><li>il nostro relay non conserva foto né testi: conta solo il numero di analisi al giorno per applicare i limiti di utilizzo;</li><li>Google tratta questi contenuti secondo le condizioni a pagamento dell’API Gemini: non vengono usati per addestrare i suoi modelli e sono conservati per breve tempo, solo per rilevare abusi;</li><li>il tuo profilo (età, peso…) non viene mai inviato.</li></ul><p>Consiglio: fotografa solo il piatto o la confezione, senza volti né documenti personali.</p>'],
+ ['Identificatore anonimo del dispositivo', '<p>Per ripartire equamente le analisi gratuite, l’app crea un numero casuale senza legame con la tua identità, il tuo account Google o il tuo telefono. Viene inviato con ogni analisi per contare le analisi del giorno. Questi contatori vengono cancellati dopo alcuni giorni. Il numero cambia se cancelli i dati dell’app.</p>'],
+ ['Codice a barre', '<p>Il numero del codice a barre scansionato viene inviato a Open Food Facts (banca dati alimentare aperta, <a href="https://openfoodfacts.org" target="_blank" rel="noopener">openfoodfacts.org</a>) per trovare il prodotto. Nessun altro dato viene trasmesso.</p>'],
+ ['Fotocamera', '<p>La fotocamera viene usata solo quando scatti una foto o scansioni un codice a barre o un’etichetta. Viene conservata solo una miniatura del pasto, sul tuo telefono.</p>'],
+ ['Cosa non facciamo', '<ul><li>Nessun account né registrazione.</li><li>Nessuna pubblicità.</li><li>Nessuna statistica d’uso, tracker o cookie pubblicitari.</li><li>Nessuna localizzazione.</li><li>Nessuna vendita o condivisione dei tuoi dati a fini commerciali.</li></ul>'],
+ ['Fornitori', '<ul><li>Cloudflare, Inc. – relay delle analisi IA.</li><li>Google LLC – API Gemini (intelligenza artificiale).</li><li>Open Food Facts – informazioni sui prodotti.</li></ul><p>Questi fornitori possono trattare dati al di fuori dell’Unione europea (in particolare negli Stati Uniti), con le garanzie previste dal GDPR (clausole contrattuali tipo o Data Privacy Framework).</p>'],
+ ['Età', '<p>Kal-Track è destinata a persone di almeno 18 anni.</p>'],
+ ['Salute', '<p>Le stime di calorie e nutrienti sono indicative e possono contenere errori. Non sostituiscono il parere di un medico o di un dietista.</p>'],
+ ['I tuoi diritti', '<p>Poiché i tuoi dati sono sul tuo telefono, ne hai il pieno controllo: consultarli, esportarli, modificarli ed eliminarli dall’app. Per qualsiasi domanda sui tuoi dati o per esercitare i tuoi diritti (GDPR), scrivici a <a href="mailto:{c}">{c}</a>. Puoi anche rivolgerti all’autorità per la protezione dei dati del tuo paese.</p>'],
+ ['Modifiche', '<p>Questa informativa può cambiare con l’evoluzione dell’app. La data dell’ultimo aggiornamento è indicata in cima alla pagina.</p>'],
+]},
+};
+
+function pick() {
+  const q = new URLSearchParams(location.search).get('lang');
+  if (q && L[q]) return q;
+  for (const l of navigator.languages || [navigator.language || 'fr']) { const k = String(l).slice(0, 2).toLowerCase(); if (L[k]) return k; }
+  return 'en';
+}
+function render(k) {
+  const d = L[k];
+  document.documentElement.lang = k;
+  document.title = 'Kal-Track – ' + d.title;
+  document.getElementById('title').textContent = 'Kal-Track – ' + d.title;
+  document.getElementById('date').textContent = d.date;
+  document.getElementById('content').innerHTML = d.s.map(([h, b]) => '<h2>' + h + '</h2>' + b.split('{c}').join(CONTACT)).join('');
+  document.querySelectorAll('#langs button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === k)));
+}
+document.getElementById('langs').innerHTML = Object.keys(L).map((k) => '<button type="button" data-k="' + k + '">' + L[k].name + '</button>').join('');
+document.getElementById('langs').addEventListener('click', (e) => { const k = e.target.dataset && e.target.dataset.k; if (k) { history.replaceState(null, '', '?lang=' + k); render(k); } });
+render(pick());
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+Kal-Track est un compteur de calories et de macros simple, rapide et respectueux de votre vie privée.
+
+PHOTOGRAPHIEZ, C'EST NOTÉ
+• Prenez votre assiette en photo : l'intelligence artificielle reconnaît les aliments, estime les portions et calcule calories, protéines, glucides, lipides et sucres.
+• Décrivez un repas en quelques mots (« pâtes bolognaise et salade ») si vous n'avez pas de photo.
+• Scannez un code-barres ou l'étiquette nutritionnelle d'un produit.
+• Retrouvez en un geste vos repas récents et favoris.
+• Vérifiez et corrigez chaque aliment avant d'enregistrer.
+
+UN JOURNAL CLAIR
+• Objectif calorique calculé selon votre profil (métabolisme de base et dépense quotidienne), pour perdre, maintenir ou prendre du poids.
+• Petit-déjeuner, déjeuner, dîner et collations, avec la répartition de la journée.
+• Anneau de calories, barres de macros, sucres et hydratation.
+• Ajout de repas sur les jours passés.
+
+ANALYSES ET POIDS
+• Graphiques par jour, semaine et mois avec vos lignes d'objectif.
+• Courbe de poids et tendance sur 1 mois, 3 mois, 6 mois, 1 an ou toute la période.
+
+VOS DONNÉES RESTENT CHEZ VOUS
+• Aucun compte, aucune publicité, aucun traceur.
+• Profil, repas, photos et pesées sont enregistrés uniquement sur votre téléphone.
+• Export et import de sauvegarde à tout moment.
+• Seules les analyses IA que vous demandez et les recherches de code-barres utilisent internet.
+
+PRATIQUE
+• Analyses IA incluses gratuitement, dans une limite quotidienne.
+• 6 langues : français, anglais, espagnol, portugais, allemand, italien.
+• Unités métriques ou impériales (kg/lb, cm/pieds, ml/fl oz).
+• Thème clair, sombre ou automatique.
+• Fonctionne hors connexion (sauf l'IA et le code-barres).
+
+Kal-Track est destinée aux adultes (18 ans et plus). Les valeurs nutritionnelles sont des estimations et ne remplacent pas l'avis d'un médecin ou d'un diététicien.

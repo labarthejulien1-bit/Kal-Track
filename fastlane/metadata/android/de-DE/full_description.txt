@@ -1,0 +1,33 @@
+Kal-Track ist ein einfacher, schneller Kalorien- und Makrozähler, der deine Privatsphäre respektiert.
+
+FOTO MACHEN, FERTIG
+• Fotografiere deinen Teller: Die künstliche Intelligenz erkennt die Lebensmittel, schätzt die Portionen und berechnet Kalorien, Eiweiß, Kohlenhydrate, Fett und Zucker.
+• Beschreibe eine Mahlzeit in wenigen Worten („Spaghetti Bolognese und Salat“), wenn du kein Foto hast.
+• Scanne einen Barcode oder die Nährwerttabelle eines Produkts.
+• Füge letzte und favorisierte Mahlzeiten mit einem Tipp erneut hinzu.
+• Prüfe und korrigiere jedes Lebensmittel vor dem Speichern.
+
+EIN ÜBERSICHTLICHES TAGEBUCH
+• Kalorienziel nach deinem Profil berechnet (Grundumsatz und Tagesbedarf), um abzunehmen, das Gewicht zu halten oder zuzunehmen.
+• Frühstück, Mittagessen, Abendessen und Snacks mit Tagesverteilung.
+• Kalorienring, Makrobalken, Zucker und Wasser.
+• Mahlzeiten auch für vergangene Tage eintragen.
+
+AUSWERTUNGEN UND GEWICHT
+• Diagramme nach Tag, Woche und Monat mit deinen Ziellinien.
+• Gewichtskurve und Trend über 1 Monat, 3 Monate, 6 Monate, 1 Jahr oder den gesamten Zeitraum.
+
+DEINE DATEN BLEIBEN BEI DIR
+• Kein Konto, keine Werbung, keine Tracker.
+• Profil, Mahlzeiten, Fotos und Wiegungen werden nur auf deinem Handy gespeichert.
+• Sicherungen jederzeit exportieren und importieren.
+• Nur die von dir angeforderten KI-Analysen und Barcode-Suchen nutzen das Internet.
+
+PRAKTISCH
+• KI-Analysen kostenlos inklusive, mit Tageslimit.
+• 6 Sprachen: Deutsch, Französisch, Englisch, Spanisch, Portugiesisch, Italienisch.
+• Metrische oder imperiale Einheiten (kg/lb, cm/ft, ml/fl oz).
+• Helles, dunkles oder automatisches Design.
+• Funktioniert offline (außer KI und Barcode-Suche).
+
+Kal-Track richtet sich an Erwachsene (ab 18 Jahren). Die Nährwerte sind Schätzungen und ersetzen nicht den Rat eines Arztes oder Ernährungsberaters.

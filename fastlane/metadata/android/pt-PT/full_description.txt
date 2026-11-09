@@ -1,0 +1,33 @@
+O Kal-Track é um contador de calorias e macros simples, rápido e que respeita a sua privacidade.
+
+FOTOGRAFE E ESTÁ FEITO
+• Tire uma foto ao seu prato: a inteligência artificial reconhece os alimentos, estima as porções e calcula calorias, proteínas, hidratos de carbono, gorduras e açúcares.
+• Descreva uma refeição em poucas palavras («esparguete à bolonhesa e salada») se não tiver foto.
+• Leia um código de barras ou o rótulo nutricional de um produto.
+• Volte a adicionar as refeições recentes e favoritas com um toque.
+• Verifique e corrija cada alimento antes de guardar.
+
+UM DIÁRIO CLARO
+• Objetivo calórico calculado segundo o seu perfil (metabolismo basal e gasto diário) para perder, manter ou ganhar peso.
+• Pequeno-almoço, almoço, jantar e lanches, com a distribuição do dia.
+• Anel de calorias, barras de macros, açúcares e hidratação.
+• Adicione refeições em dias passados.
+
+ANÁLISES E PESO
+• Gráficos por dia, semana e mês com as suas linhas de objetivo.
+• Curva de peso e tendência em 1 mês, 3 meses, 6 meses, 1 ano ou todo o período.
+
+OS SEUS DADOS FICAM CONSIGO
+• Sem conta, sem publicidade, sem rastreadores.
+• Perfil, refeições, fotos e pesagens ficam guardados apenas no seu telemóvel.
+• Exporte e importe cópias de segurança a qualquer momento.
+• Apenas as análises com IA que pede e as pesquisas de código de barras usam a internet.
+
+PRÁTICO
+• Análises com IA incluídas gratuitamente, dentro de um limite diário.
+• 6 idiomas: português, francês, inglês, espanhol, alemão, italiano.
+• Unidades métricas ou imperiais (kg/lb, cm/pés, ml/fl oz).
+• Tema claro, escuro ou automático.
+• Funciona offline (exceto a IA e o código de barras).
+
+O Kal-Track destina-se a adultos (18 anos ou mais). Os valores nutricionais são estimativas e não substituem o conselho de um médico ou nutricionista.

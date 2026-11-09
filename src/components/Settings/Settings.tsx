@@ -16,7 +16,7 @@ import { db, exportBackup, getStorageInfo, importBackup, requestPersistentStorag
 import { saveFile } from '@/lib/native';
 import { COLORS, MEAL_SHORT, MEAL_TYPES, round, todayISO } from '@/lib/utils';
 import type { ActivityLevel, BackupFile, Goal, GoalPace, MacroPreset, Profile, Sex } from '@/types';
-import { LANGS, detectLang, t, type LangSetting } from '@/i18n';
+import { LANGS, detectLang, getLang, t, type LangSetting } from '@/i18n';
 import { applyTheme, type ThemeSetting } from '@/lib/theme';
 
 export function Settings() {
@@ -598,6 +598,14 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           Kal-Track v1.0
         </p>
         <p>{t("100 % local · aucune donnée envoyée hors de l'appareil, sauf les analyses IA vers Google Gemini et les recherches de code-barres vers Open Food Facts.")}</p>
+        <a
+          href={`https://labarthejulien1-bit.github.io/Kal-Track/privacy.html?lang=${getLang()}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 font-medium text-emerald-500 underline underline-offset-2"
+        >
+          {t('Politique de confidentialité')}
+        </a>
       </div>
     </div>
   );

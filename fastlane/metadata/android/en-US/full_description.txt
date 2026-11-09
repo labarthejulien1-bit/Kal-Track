@@ -1,0 +1,33 @@
+Kal-Track is a simple, fast calorie and macro counter that respects your privacy.
+
+SNAP IT, LOG IT
+• Take a photo of your plate: artificial intelligence recognizes the foods, estimates portions and calculates calories, protein, carbs, fat and sugar.
+• Describe a meal in a few words ("spaghetti bolognese and salad") when you have no photo.
+• Scan a barcode or a product's nutrition label.
+• Re-add your recent and favorite meals in one tap.
+• Review and edit every item before saving.
+
+A CLEAR DIARY
+• Calorie goal calculated from your profile (basal metabolic rate and daily energy expenditure) to lose, maintain or gain weight.
+• Breakfast, lunch, dinner and snacks, with your daily distribution.
+• Calorie ring, macro bars, sugar and hydration.
+• Log meals on past days.
+
+INSIGHTS AND WEIGHT
+• Daily, weekly and monthly charts with your goal lines.
+• Weight curve and trend over 1 month, 3 months, 6 months, 1 year or all time.
+
+YOUR DATA STAYS WITH YOU
+• No account, no ads, no trackers.
+• Profile, meals, photos and weigh-ins are stored only on your phone.
+• Export and import backups at any time.
+• Only the AI analyses you request and barcode lookups use the internet.
+
+CONVENIENT
+• AI analyses included for free, within a daily limit.
+• 6 languages: English, French, Spanish, Portuguese, German, Italian.
+• Metric or imperial units (kg/lb, cm/ft-in, ml/fl oz).
+• Light, dark or automatic theme.
+• Works offline (except AI and barcode lookups).
+
+Kal-Track is intended for adults (18+). Nutrition values are estimates and do not replace the advice of a doctor or dietitian.

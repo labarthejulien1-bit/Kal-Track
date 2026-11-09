@@ -379,6 +379,7 @@ const d: Record<string, string> = {
   "≈ {n} semaines": "≈ {n} settimane",
   "Sauvegarde Kal-Track": "Backup di Kal-Track",
   "Export impossible": "Esportazione non riuscita",
+  "Politique de confidentialité": "Informativa sulla privacy",
 };
 
 export default d;
