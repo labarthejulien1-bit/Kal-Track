@@ -6,7 +6,6 @@ import { duplicateMeal, useMealsForDate, useStreak } from '@/hooks/useMeals';
 import { useApp } from '@/components/AppContext';
 import { DateNavigator } from './DateNavigator';
 import { CalorieSummary, MacroCircles } from './CalorieSummary';
-import { MealDistribution } from './MealDistribution';
 import { MealSection } from './MealSection';
 import { WaterTracker } from './WaterTracker';
 import { ActivityCard } from './ActivityCard';
@@ -75,10 +74,7 @@ export function Dashboard() {
       <DateNavigator date={selectedDate} onChange={changeDate} />
       <div ref={contentRef} className="space-y-1">
       <Section id="j.calories" title={t('Calories')} summary={`${round(totals.calories)} / ${goals.calories} kcal`}>
-        <CalorieSummary totals={totals} goals={goals} goal={profile.goal} bonus={activity.bonusKcal} />
-      </Section>
-      <Section id="j.distribution" title={t('Répartition de la journée')} summary={`${round(totals.calories)} kcal`}>
-        <MealDistribution byType={byType} total={totals.calories} goal={goals.calories} split={profile.mealSplit} />
+        <CalorieSummary totals={totals} goals={goals} bonus={activity.bonusKcal} byType={byType} split={profile.mealSplit} isToday={selectedDate === todayISO()} />
       </Section>
       <Section
         id="j.macros"

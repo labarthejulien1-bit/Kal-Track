@@ -511,6 +511,15 @@ const d: Record<string, string> = {
   "{n} j de retard": "{n} T im Rückstand",
   "Zone": "Fläche",
   "Objectif par semaine": "Wochenziel",
+  "Objectif dépassé de {n} kcal : demain on repart du bon pied 💪": "Ziel um {n} kcal überschritten: Morgen geht’s gut weiter 💪",
+  "Bonne journée ! Ton objectif : {n} kcal": "Schönen Tag! Dein Ziel: {n} kcal",
+  "Pile dans le rythme pour {h}": "Genau im Plan für {h}",
+  "En avance de {n} kcal sur le rythme": "{n} kcal vor dem Plan",
+  "{n} kcal de marge sur le rythme": "{n} kcal Spielraum gegenüber dem Plan",
+  "Il te reste {n} kcal · prochain repas : {meal} (≈ {m} kcal)": "Noch {n} kcal · nächste Mahlzeit: {meal} (≈ {m} kcal)",
+  "Il te reste {n} kcal pour aujourd’hui": "Noch {n} kcal für heute",
+  "Protéines : encore {n} g 🍗": "Eiweiß: noch {n} g 🍗",
+  "dont +{n} grâce au sport": "davon +{n} dank Sport",
 };
 
 export default d;

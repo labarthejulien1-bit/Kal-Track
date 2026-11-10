@@ -511,6 +511,15 @@ const d: Record<string, string> = {
   "{n} j de retard": "{n} g di ritardo",
   "Zone": "Area",
   "Objectif par semaine": "Obiettivo settimanale",
+  "Objectif dépassé de {n} kcal : demain on repart du bon pied 💪": "Obiettivo superato di {n} kcal: domani si riparte col piede giusto 💪",
+  "Bonne journée ! Ton objectif : {n} kcal": "Buona giornata! Il tuo obiettivo: {n} kcal",
+  "Pile dans le rythme pour {h}": "Perfettamente in ritmo per le {h}",
+  "En avance de {n} kcal sur le rythme": "{n} kcal in anticipo sul ritmo",
+  "{n} kcal de marge sur le rythme": "{n} kcal di margine sul ritmo",
+  "Il te reste {n} kcal · prochain repas : {meal} (≈ {m} kcal)": "Ti restano {n} kcal · prossimo pasto: {meal} (≈ {m} kcal)",
+  "Il te reste {n} kcal pour aujourd’hui": "Ti restano {n} kcal per oggi",
+  "Protéines : encore {n} g 🍗": "Proteine: ancora {n} g 🍗",
+  "dont +{n} grâce au sport": "di cui +{n} grazie allo sport",
 };
 
 export default d;

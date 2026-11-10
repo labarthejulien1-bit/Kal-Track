@@ -1,67 +1,179 @@
-import { Flame, Target, UtensilsCrossed, Candy, Wheat } from 'lucide-react';
-import { Ring } from '@/components/common';
+import { Candy, Wheat } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { COLORS, round } from '@/lib/utils';
-import type { Goals, Nutrients } from '@/types';
-import { GOAL_LABELS } from '@/services/bmrCalculator';
-import type { Goal } from '@/types';
+import { COLORS, MEAL_COLORS, MEAL_LABELS, MEAL_SHORT, MEAL_TYPES, round } from '@/lib/utils';
+import type { Goals, MealType, Nutrients, Profile } from '@/types';
 import { t } from '@/i18n';
 
-export function CalorieSummary({ totals, goals, goal, bonus = 0 }: { totals: Nutrients; goals: Goals; goal: Goal; bonus?: number }) {
-  const remaining = goals.calories - totals.calories;
+/** Créneaux habituels des repas (heures) pour le repère « où tu devrais en être ». */
+const MEAL_WINDOWS: Record<MealType, [number, number]> = { breakfast: [7, 9.5], lunch: [12, 14], snack: [16, 17.5], dinner: [19, 21] };
+
+/** Calories attendues à l'heure h selon la répartition des repas (montée progressive pendant chaque créneau). */
+function expectedAt(h: number, targets: Record<MealType, number>) {
+  return MEAL_TYPES.reduce((n, m) => {
+    const [s, e] = MEAL_WINDOWS[m];
+    return n + targets[m] * Math.min(1, Math.max(0, (h - s) / (e - s)));
+  }, 0);
+}
+
+/**
+ * Anneau « coach » des calories : consommé / objectif, bonus sport en orange, repère horaire (aujourd'hui),
+ * message du jour, et à droite l'avancement de chaque repas.
+ */
+export function CalorieSummary({
+  totals,
+  goals,
+  bonus = 0,
+  byType,
+  split,
+  isToday,
+}: {
+  totals: Nutrients;
+  goals: Goals;
+  bonus?: number;
+  byType: Record<MealType, { totals: Nutrients }>;
+  split: Profile['mealSplit'];
+  isToday: boolean;
+}) {
+  const goal = Math.max(1, goals.calories);
+  const eaten = totals.calories;
+  const remaining = goal - eaten;
   const over = remaining < 0;
+  const targets = Object.fromEntries(MEAL_TYPES.map((m) => [m, (goal * split[m]) / 100])) as Record<MealType, number>;
+
+  const now = new Date();
+  const hour = now.getHours() + now.getMinutes() / 60;
+  const expected = expectedAt(hour, targets);
+  const pace = isToday && hour >= 6 ? Math.min(1, expected / goal) : null;
+  const hLabel = `${now.getHours()}h`;
+
+  // Message du jour (uniquement aujourd'hui)
+  let status: { text: string; color: string } | null = null;
+  let hint: string | null = null;
+  if (isToday) {
+    const diff = eaten - expected;
+    const tol = Math.max(120, goal * 0.08);
+    if (over) status = { text: t('Objectif dépassé de {n} kcal : demain on repart du bon pied 💪', { n: round(-remaining) }), color: '#ef4444' };
+    else if (hour < 7 && eaten === 0) status = { text: t('Bonne journée ! Ton objectif : {n} kcal', { n: round(goal) }), color: COLORS.kcal };
+    else if (Math.abs(diff) <= tol) status = { text: t('Pile dans le rythme pour {h}', { h: hLabel }), color: COLORS.kcal };
+    else if (diff > 0) status = { text: t('En avance de {n} kcal sur le rythme', { n: round(diff) }), color: '#f59e0b' };
+    else status = { text: t('{n} kcal de marge sur le rythme', { n: round(-diff) }), color: '#0ea5e9' };
+    if (!over) {
+      const next = MEAL_TYPES.filter((m) => MEAL_WINDOWS[m][1] > hour && byType[m].totals.calories < targets[m] * 0.5).sort((x, y) => MEAL_WINDOWS[x][0] - MEAL_WINDOWS[y][0])[0];
+      hint = next
+        ? t('Il te reste {n} kcal · prochain repas : {meal} (≈ {m} kcal)', { n: round(remaining), m: round(targets[next]), meal: MEAL_LABELS[next] })
+        : t('Il te reste {n} kcal pour aujourd’hui', { n: round(remaining) });
+    }
+  }
+  const protLeft = round(goals.protein - totals.protein);
+
+  // Géométrie de l'anneau
+  const size = 172;
+  const stroke = 15;
+  const r = (size - stroke) / 2;
+  const cx = size / 2;
+  const C = 2 * Math.PI * r;
+  const frac = Math.min(eaten / goal, 1);
+  const overFrac = Math.max(0, Math.min((eaten - goal) / goal, 1));
+  const bonusStart = bonus > 0 ? (goal - bonus) / goal : 1;
+  const ang = (f: number) => (f * 360 - 90) * (Math.PI / 180);
+  const mx = pace !== null ? cx + r * Math.cos(ang(pace)) : 0;
+  const my = pace !== null ? cx + r * Math.sin(ang(pace)) : 0;
+
   return (
     <Card className="overflow-hidden p-4">
-      <div className="flex items-center gap-4">
-        <Ring value={totals.calories} max={goals.calories} size={156} stroke={14} color={COLORS.kcal} ticks>
-          <span className="text-3xl font-bold tabular-nums text-slate-50">{round(totals.calories)}</span>
-          <span className="text-[11px] text-slate-400">{t('kcal consommées')}</span>
-          {over && (
-            <span className="mt-1 rounded-full bg-red-600/90 px-2 py-0.5 text-xs font-bold tabular-nums text-white shadow-lg shadow-red-600/30">
-              +{round(-remaining)} kcal
-            </span>
-          )}
-        </Ring>
-        <div className="flex flex-1 flex-col gap-3">
-          <Stat icon={<Target className="h-4 w-4" />} label={t('Objectif')} value={goals.calories} color="#94a3b8" />
-          <Stat icon={<UtensilsCrossed className="h-4 w-4" />} label={over ? t('En trop') : t('Restant')} value={round(Math.abs(remaining))} color={over ? '#ef4444' : COLORS.kcal} />
-          <Stat icon={<Flame className="h-4 w-4" />} label={t('Progression')} value={`${round((totals.calories / Math.max(1, goals.calories)) * 100)}%`} color={over ? '#ef4444' : '#fbbf24'} />
-          <div className="flex flex-wrap gap-1">
-            <span className="w-fit rounded-full bg-slate-700/60 px-2 py-0.5 text-[10px] text-slate-300">{GOAL_LABELS[goal]}</span>
-            {bonus > 0 && <span className="w-fit rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">💪 +{bonus} {t('sport')}</span>}
+      <div className="flex items-center gap-3">
+        <div className="relative shrink-0" style={{ width: size, height: size }}>
+          <svg width={size} height={size}>
+            <g transform={`rotate(-90 ${cx} ${cx})`}>
+              <circle cx={cx} cy={cx} r={r} stroke="var(--c-track)" strokeWidth={stroke} fill="none" />
+              {/* Bonus sport : fin de l'anneau en orange clair */}
+              {bonus > 0 && (
+                <circle cx={cx} cy={cx} r={r} stroke="#f97316" strokeOpacity={0.3} strokeWidth={stroke} fill="none" strokeDasharray={`${C * (1 - bonusStart)} ${C}`} strokeDashoffset={-C * bonusStart} />
+              )}
+              <circle
+                cx={cx}
+                cy={cx}
+                r={r}
+                stroke={COLORS.kcal}
+                strokeWidth={stroke}
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={C}
+                strokeDashoffset={C * (1 - frac)}
+                style={{ transition: 'stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)' }}
+              />
+              {overFrac > 0 && (
+                <>
+                  <circle cx={cx} cy={cx} r={r} stroke="var(--c-card-solid)" strokeWidth={stroke + 4} fill="none" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - overFrac)} />
+                  <circle cx={cx} cy={cx} r={r} stroke="#ef4444" strokeWidth={stroke} fill="none" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - overFrac)} />
+                </>
+              )}
+            </g>
+            {/* Repère : où tu devrais en être à cette heure-ci */}
+            {pace !== null && !over && (
+              <g>
+                <circle cx={mx} cy={my} r={11} fill="var(--c-strong)" stroke="var(--c-card-solid)" strokeWidth={2.5} />
+                <text x={mx} y={my + 3.5} textAnchor="middle" fontSize={9} fontWeight={700} fill="var(--c-card-solid)">
+                  {hLabel}
+                </text>
+              </g>
+            )}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+            <span className="text-[34px] font-extrabold leading-none tabular-nums text-slate-50">{round(eaten)}</span>
+            <span className="mt-1 text-[11px] tabular-nums text-slate-400">/ {round(goal)} kcal</span>
+            {over ? (
+              <span className="mt-1.5 rounded-full bg-red-600/90 px-2 py-0.5 text-xs font-bold tabular-nums text-white shadow-lg shadow-red-600/30">+{round(-remaining)} kcal</span>
+            ) : (
+              bonus > 0 && <span className="mt-1 max-w-[120px] text-[10px] font-semibold leading-tight text-orange-500">{t('dont +{n} grâce au sport', { n: bonus })}</span>
+            )}
           </div>
         </div>
+
+        {/* Avancement de chaque repas */}
+        <div className="min-w-0 flex-1 space-y-2.5">
+          {MEAL_TYPES.map((m) => {
+            const v = byType[m].totals.calories;
+            const tg = targets[m];
+            const mOver = v > tg;
+            return (
+              <div key={m}>
+                <div className="mb-1 flex items-baseline justify-between gap-1 text-xs">
+                  <span className="flex min-w-0 items-center gap-1 truncate text-slate-300">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: MEAL_COLORS[m] }} />
+                    <span className="truncate">{MEAL_SHORT[m]}</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums">
+                    <b className={mOver ? 'text-red-500' : 'text-slate-100'}>{round(v)}</b>
+                    <span className="text-slate-500">/{round(tg)}</span>
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-700">
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (v / Math.max(1, tg)) * 100)}%`, background: mOver ? '#ef4444' : MEAL_COLORS[m] }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px]">
-        <ZoneChip label={t('Perte')} value={goals.loseTarget} color={COLORS.lose} active={goal === 'lose'} />
-        <ZoneChip label={t('Maintien')} value={goals.maintenance} color={COLORS.maintain} active={goal === 'maintain'} />
-        <ZoneChip label={t('Prise')} value={goals.gainTarget} color={COLORS.gain} active={goal === 'gain'} />
-      </div>
+
+      {/* Message du jour */}
+      {status && (
+        <div className="mt-3 space-y-1.5">
+          <div className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold" style={{ color: status.color, background: `${status.color}14` }}>
+            {status.text}
+          </div>
+          {(hint || protLeft > 15) && (
+            <p className="px-1 text-xs leading-snug text-slate-400">
+              {hint}
+              {hint && protLeft > 15 && ' · '}
+              {protLeft > 15 && t('Protéines : encore {n} g 🍗', { n: protLeft })}
+            </p>
+          )}
+        </div>
+      )}
     </Card>
-  );
-}
-
-function ZoneChip({ label, value, color, active }: { label: string; value: number; color: string; active: boolean }) {
-  return (
-    <div className="rounded-lg border px-2 py-1" style={{ borderColor: active ? color : 'var(--c-line)', background: active ? `${color}18` : 'transparent' }}>
-      <div style={{ color }} className="font-semibold">{label}</div>
-      <div className="tabular-nums text-slate-300">{value} kcal</div>
-    </div>
-  );
-}
-
-function Stat({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: React.ReactNode; color: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: `${color}22`, color }}>
-        {icon}
-      </span>
-      <div className="leading-tight">
-        <div className="text-[11px] text-slate-400">{label}</div>
-        <div className="font-semibold tabular-nums text-slate-100">{value}</div>
-      </div>
-    </div>
   );
 }
 
