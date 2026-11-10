@@ -509,6 +509,8 @@ const d: Record<string, string> = {
   "À ce rythme : {w} le {d}": "A este ritmo: {w} el {d}",
   "{n} j d’avance": "{n} d de adelanto",
   "{n} j de retard": "{n} d de retraso",
+  "Zone": "Zona",
+  "Objectif par semaine": "Objetivo semanal",
 };
 
 export default d;
