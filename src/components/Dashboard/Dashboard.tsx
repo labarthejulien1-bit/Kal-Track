@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Flame, Copy } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { duplicateMeal, useMealsForDate, useStreak } from '@/hooks/useMeals';
@@ -8,6 +8,9 @@ import { CalorieSummary, MacroCircles } from './CalorieSummary';
 import { MealDistribution } from './MealDistribution';
 import { MealSection } from './MealSection';
 import { WaterTracker } from './WaterTracker';
+import { ActivityCard } from './ActivityCard';
+import { useActivity } from '@/hooks/useActivity';
+import { healthSupported } from '@/lib/health';
 import { Section } from '@/components/ui/collapsible';
 import { useWater } from '@/hooks/useWater';
 import { fmtWater } from '@/lib/units';
@@ -18,7 +21,13 @@ import { t } from '@/i18n';
 
 export function Dashboard() {
   const { selectedDate, setSelectedDate } = useApp();
-  const { profile, goals } = useProfile();
+  const { profile, goals: baseGoals } = useProfile();
+  const activity = useActivity(selectedDate, profile.workoutsPerWeek, profile.sportBonus !== false);
+  // Séances en plus de celles prévues : calories ajoutées à l'objectif du jour (principalement en glucides).
+  const goals = useMemo(
+    () => (activity.bonusKcal > 0 ? { ...baseGoals, calories: baseGoals.calories + activity.bonusKcal, carbs: baseGoals.carbs + Math.round(activity.bonusKcal / 4) } : baseGoals),
+    [baseGoals, activity.bonusKcal],
+  );
   const { meals, totals, byType } = useMealsForDate(selectedDate);
   const streak = useStreak();
   const water = useWater(selectedDate);
@@ -119,7 +128,7 @@ export function Dashboard() {
       <DateNavigator date={selectedDate} onChange={changeDate} />
       <div ref={contentRef} className="space-y-1">
       <Section id="j.calories" title={t('Calories')} summary={`${round(totals.calories)} / ${goals.calories} kcal`}>
-        <CalorieSummary totals={totals} goals={goals} goal={profile.goal} />
+        <CalorieSummary totals={totals} goals={goals} goal={profile.goal} bonus={activity.bonusKcal} />
       </Section>
       <Section id="j.distribution" title={t('Répartition de la journée')} summary={`${round(totals.calories)} kcal`}>
         <MealDistribution byType={byType} total={totals.calories} goal={goals.calories} split={profile.mealSplit} />
@@ -156,6 +165,20 @@ export function Dashboard() {
             />
           ))}
         </div>
+      </Section>
+
+      <Section
+        id="j.activity"
+        title={t('Activité')}
+        summary={[
+          healthSupported && profile.health?.connected ? `${activity.steps.toLocaleString()} ${t('pas')}` : null,
+          activity.sessions.length ? t(activity.sessions.length > 1 ? '{n} séances' : '{n} séance', { n: activity.sessions.length }) : null,
+          activity.bonusKcal ? `+${activity.bonusKcal} kcal` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ') || undefined}
+      >
+        <ActivityCard date={selectedDate} activity={activity} />
       </Section>
 
       <Section id="j.water" title={t('Hydratation')} summary={`${fmtWater(water.ml)} / ${fmtWater(goals.water)}`}>

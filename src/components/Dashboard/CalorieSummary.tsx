@@ -8,7 +8,7 @@ import { GOAL_LABELS } from '@/services/bmrCalculator';
 import type { Goal } from '@/types';
 import { t } from '@/i18n';
 
-export function CalorieSummary({ totals, goals, goal }: { totals: Nutrients; goals: Goals; goal: Goal }) {
+export function CalorieSummary({ totals, goals, goal, bonus = 0 }: { totals: Nutrients; goals: Goals; goal: Goal; bonus?: number }) {
   const remaining = goals.calories - totals.calories;
   const over = remaining < 0;
   return (
@@ -27,7 +27,10 @@ export function CalorieSummary({ totals, goals, goal }: { totals: Nutrients; goa
           <Stat icon={<Target className="h-4 w-4" />} label={t('Objectif')} value={goals.calories} color="#94a3b8" />
           <Stat icon={<UtensilsCrossed className="h-4 w-4" />} label={over ? t('En trop') : t('Restant')} value={round(Math.abs(remaining))} color={over ? '#ef4444' : COLORS.kcal} />
           <Stat icon={<Flame className="h-4 w-4" />} label={t('Progression')} value={`${round((totals.calories / Math.max(1, goals.calories)) * 100)}%`} color={over ? '#ef4444' : '#fbbf24'} />
-          <span className="w-fit rounded-full bg-slate-700/60 px-2 py-0.5 text-[10px] text-slate-300">{GOAL_LABELS[goal]}</span>
+          <div className="flex flex-wrap gap-1">
+            <span className="w-fit rounded-full bg-slate-700/60 px-2 py-0.5 text-[10px] text-slate-300">{GOAL_LABELS[goal]}</span>
+            {bonus > 0 && <span className="w-fit rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">💪 +{bonus} {t('sport')}</span>}
+          </div>
         </div>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px]">

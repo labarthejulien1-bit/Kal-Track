@@ -61,6 +61,12 @@ export interface Profile {
   accessCode: string; // code d'accès au serveur IA Kal-Track
   /** Rappel quotidien (application Android) : 1 notification max par jour. */
   reminder?: { enabled: boolean; time: string };
+  /** Santé Android (Health Connect) : lecture des pas, séances, calories actives et poids. */
+  health?: { connected: boolean; lastSync?: number };
+  /** Objectif de pas quotidien. */
+  stepsGoal?: number;
+  /** Ajoute les calories des séances en plus de celles prévues à l'objectif du jour. */
+  sportBonus?: boolean;
   language?: 'auto' | 'fr' | 'en' | 'es' | 'pt' | 'de' | 'it';
   theme?: 'light' | 'dark' | 'auto';
   units?: { weight?: 'kg' | 'lb'; height?: 'cm' | 'ftin'; water?: 'ml' | 'floz' };
@@ -116,6 +122,31 @@ export interface Goals extends Nutrients {
   clamped: boolean;
 }
 
+export type SportType = 'walk' | 'run' | 'bike' | 'strength' | 'swim' | 'team' | 'yoga' | 'hiit' | 'dance' | 'other';
+export type SportIntensity = 'light' | 'moderate' | 'intense';
+
+/** Séance de sport (saisie manuelle ou importée de Santé Android). */
+export interface Activity {
+  id?: number;
+  date: string; // YYYY-MM-DD
+  startTime: number; // horodatage du début (ordre des séances dans la semaine)
+  type: SportType;
+  minutes: number;
+  kcal: number; // calories actives (nettes)
+  intensity?: SportIntensity;
+  source: 'manual' | 'health';
+  extId?: string; // identifiant de la séance Santé Android (évite les doublons)
+  appName?: string; // application d'origine (Santé Android)
+}
+
+/** Résumé quotidien lu dans Santé Android (mis en cache localement). */
+export interface HealthDay {
+  date: string;
+  steps: number;
+  activeKcal: number;
+  syncedAt: number;
+}
+
 export interface BackupFile {
   app: 'kal-track';
   version: number;
@@ -124,4 +155,5 @@ export interface BackupFile {
   meals: Meal[];
   weightLogs: WeightLog[];
   waterLogs: WaterLog[];
+  activities?: Activity[];
 }

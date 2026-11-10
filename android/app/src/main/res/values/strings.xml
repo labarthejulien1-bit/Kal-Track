@@ -4,4 +4,5 @@
     <string name="title_activity_main">Kal-Track</string>
     <string name="package_name">com.kaltrack.app</string>
     <string name="custom_url_scheme">com.kaltrack.app</string>
+    <string name="privacy_policy_url">https://labarthejulien1-bit.github.io/Kal-Track/privacy.html</string>
 </resources>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, Languages, Moon, Palette, Ruler, Sun, SunMoon, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
+import { Bell, HeartPulse, Languages, Moon, Palette, Ruler, Sun, SunMoon, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
 import { CollapsibleCard } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { checkAccessCode, normalizeCode } from '@/services/geminiVision';
 import { ACTIVITY_FACTORS, MACRO_PRESETS, PACE_DELTAS, computeGoals, macroSplitFor } from '@/services/bmrCalculator';
 import { db, exportBackup, getStorageInfo, importBackup, requestPersistentStorage } from '@/db/database';
 import { saveFile } from '@/lib/native';
+import { connectHealth, healthAvailable, healthSupported, installHealthConnect, openHealthSettings, syncHealth } from '@/lib/health';
 import { notificationsSupported, requestNotificationPermission, sendTestReminder } from '@/lib/notifications';
 import { COLORS, MEAL_SHORT, MEAL_TYPES, round, todayISO } from '@/lib/utils';
 import type { ActivityLevel, BackupFile, Goal, GoalPace, MacroPreset, Profile, Sex } from '@/types';
@@ -300,6 +301,64 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
             ]}
           />
 
+      </CollapsibleCard>
+
+      {/* ---------- Santé Android & sport ---------- */}
+      <CollapsibleCard
+        id="s.health"
+        icon={<HeartPulse className="h-4 w-4 text-rose-400" />}
+        title={healthSupported ? t('Santé Android & sport') : t('Sport')}
+        summary={[
+          healthSupported ? (profile.health?.connected ? t('Connectée') : t('Non connectée')) : null,
+          profile.sportBonus !== false ? t('bonus sport activé') : t('bonus sport désactivé'),
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      >
+        <div className="space-y-3">
+          {healthSupported && (
+            <>
+              <p className="text-xs text-slate-400">
+                {t('Kal-Track lit tes pas, tes séances de sport, tes calories actives et le poids de ta balance depuis Santé Android (Health Connect). Lecture seule : les données restent sur ton téléphone.')}
+              </p>
+              {profile.health?.connected ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => openHealthSettings().catch(() => {})}>
+                    {t('Gérer les autorisations')}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => updateProfile({ health: { connected: false } })}>
+                    {t('Déconnecter')}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  className="w-full"
+                  onClick={async () => {
+                    if (!(await healthAvailable())) {
+                      toast(t('Santé Android n’est pas disponible : installe « Health Connect » depuis le Play Store.'), 'info');
+                      await installHealthConnect().catch(() => {});
+                      return;
+                    }
+                    if (!(await connectHealth().catch(() => false))) return toast(t('Aucune autorisation accordée.'), 'error');
+                    await updateProfile({ health: { connected: true } });
+                    syncHealth(profile, { force: true, days: 14 }).catch(() => {});
+                    toast(t('Santé Android connectée ✔'));
+                  }}
+                >
+                  <HeartPulse /> {t('Connecter Santé Android')}
+                </Button>
+              )}
+              <NumberField label={t('Objectif de pas par jour')} value={profile.stepsGoal ?? 8000} onChange={(v) => updateProfile({ stepsGoal: Math.max(1000, Math.round(v)) })} unit={t('pas')} />
+            </>
+          )}
+          <label className="flex items-start justify-between gap-3 text-xs text-slate-300">
+            <span>
+              <b className="block text-sm text-slate-100">{t('Bonus sport')}</b>
+              {t('Tes {n} séances prévues par semaine sont déjà comptées dans ton objectif. Chaque séance en plus ajoute ses calories à l’objectif du jour.', { n: profile.workoutsPerWeek })}
+            </span>
+            <Switch checked={profile.sportBonus !== false} onCheckedChange={(v) => updateProfile({ sportBonus: v })} />
+          </label>
+        </div>
       </CollapsibleCard>
 
       {/* ---------- Rappel quotidien (application Android) ---------- */}

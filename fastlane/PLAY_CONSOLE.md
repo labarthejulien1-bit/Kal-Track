@@ -56,3 +56,21 @@ Code-barres : le numéro EAN d'un produit n'est pas une donnée personnelle → 
 
 - **Activer la facturation sur le projet Google AI Studio / Gemini (offre payante)** : les conditions de l'API Gemini n'autorisent que l'offre payante pour une application utilisée dans l'Union européenne, en Suisse ou au Royaume-Uni. La politique de confidentialité indique les conditions payantes (pas d'entraînement sur les données).
 - Remplacer `CONTACT_EMAIL` dans `public/privacy.html` par l'adresse de contact du compte développeur.
+
+## Santé Android (Health Connect) — déclaration Play Console
+
+Play Console → Contenu de l'application → **Autorisations Health Connect** (déclaration « Applications de santé »).
+
+Autorisations demandées (lecture seule) et justification :
+
+| Autorisation | Justification à saisir |
+|---|---|
+| `READ_STEPS` | Afficher le nombre de pas du jour dans le journal et suggérer le niveau d'activité utilisé pour calculer l'objectif calorique. |
+| `READ_EXERCISE` | Afficher les séances de sport du jour et ajouter les calories des séances supplémentaires à l'objectif calorique. |
+| `READ_ACTIVE_CALORIES_BURNED` | Afficher les calories actives brûlées et calculer les calories de chaque séance. |
+| `READ_WEIGHT` | Importer automatiquement le poids mesuré par une balance connectée dans la courbe de poids. |
+
+- Catégorie d'usage : **Suivi de la nutrition et du poids / remise en forme**.
+- Les données restent sur l'appareil, ne sont ni transmises ni partagées, ni utilisées pour la publicité.
+- URL de la politique (section Health Connect incluse) : https://labarthejulien1-bit.github.io/Kal-Track/privacy.html
+- Sécurité des données : les données Health Connect ne quittent pas l'appareil → **rien de plus à déclarer comme « collecté »**.
