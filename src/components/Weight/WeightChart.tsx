@@ -1,10 +1,10 @@
 import { useId, useMemo } from 'react';
-import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, Area } from 'recharts';
+import { CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, Area } from 'recharts';
 import { TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { COLORS, addDays, capitalize, formatDate, fromISODate, round, toISODate } from '@/lib/utils';
 import { axisProps, gridProps } from '@/components/Analytics/chartKit';
 import { locale, t } from '@/i18n';
-import { fmtW, wOut, wUnit } from '@/lib/units';
+import { fmtW, wIn, wOut, wUnit } from '@/lib/units';
 import type { WeightLog } from '@/types';
 
 export type WeightRange = '1S' | '1M' | '3M' | '6M' | '1A' | 'Tout';
@@ -20,6 +20,7 @@ interface Row {
   label: string;
   Poids?: number;
   Plan?: number;
+  Proj?: number;
   above?: boolean;
   last?: boolean;
 }
@@ -60,9 +61,20 @@ export function WeightChart({
       return rate < 0 ? Math.max(v, targetWeight) : Math.min(v, targetWeight);
     };
 
-    // Le graphique commence à la première pesée de la période (pas de vide à gauche).
+    // Date où la trajectoire atteint le poids cible (point d'arrivée de l'objectif).
+    const kneeTs = flat ? null : startTs + ((targetWeight - start.weight) / rate) * DAY;
+
+    // Axe du temps : commence à la première pesée de la période et couvre TOUTE la période choisie,
+    // quitte à laisser du vide à droite (futur) pour voir la trajectoire jusqu'à l'objectif.
     const firstTs = fromISODate(visible[0].date).getTime();
     const domainStart = Math.min(firstTs, toTs - DAY);
+    let domainEnd: number;
+    if (range === 'Tout') {
+      const goalEnd = kneeTs && kneeTs > toTs ? kneeTs + 3 * DAY : toTs;
+      domainEnd = Math.min(Math.max(toTs, goalEnd, domainStart + 7 * DAY), domainStart + 3 * 365 * DAY);
+    } else {
+      domainEnd = Math.max(toTs, domainStart + RANGE_DAYS[range] * DAY);
+    }
     const label = (ts: number) => capitalize(formatDate(toISODate(new Date(ts)), { weekday: 'short', day: 'numeric', month: 'short' }));
 
     const rows: Row[] = visible.map((l, i) => {
@@ -70,13 +82,43 @@ export function WeightChart({
       const plan = planAt(x);
       return { x, label: label(x), Poids: wOut(l.weight), Plan: wOut(plan), above: l.weight > plan + 0.05, last: i === visible.length - 1 };
     });
-    // Points du plan seuls : début d'axe, coude où l'objectif est atteint, aujourd'hui.
-    const extra: number[] = [domainStart, toTs];
-    if (!flat) {
-      const knee = startTs + ((targetWeight - start.weight) / rate) * DAY;
-      if (knee > domainStart && knee < toTs) extra.push(knee);
-    }
+    // Points de la trajectoire : bords de l'axe, départ, arrivée (objectif atteint).
+    const extra: number[] = [domainStart, domainEnd];
+    if (startTs > domainStart && startTs < domainEnd) extra.push(startTs);
+    if (kneeTs && kneeTs > domainStart && kneeTs < domainEnd) extra.push(kneeTs);
     for (const x of extra) if (!rows.some((r) => Math.abs(r.x - x) < DAY / 2)) rows.push({ x, label: label(x), Plan: wOut(planAt(x)) });
+
+    // Tendance actuelle prolongée (régression sur les 21 derniers jours, au moins 3 pesées).
+    const lastLog = visible[visible.length - 1];
+    const lastTs = fromISODate(lastLog.date).getTime();
+    const recent = logs.filter((l) => l.date >= addDays(lastLog.date, -21));
+    let projEnd: number | null = null;
+    let reachTs: number | null = null; // date estimée d'arrivée à l'objectif au rythme actuel
+    if (recent.length >= 3 && domainEnd - lastTs > 2 * DAY) {
+      const xs = recent.map((l) => (fromISODate(l.date).getTime() - lastTs) / DAY);
+      const ys = recent.map((l) => l.weight);
+      const mx = xs.reduce((a, b) => a + b, 0) / xs.length;
+      const my = ys.reduce((a, b) => a + b, 0) / ys.length;
+      const den = xs.reduce((n, x) => n + (x - mx) ** 2, 0);
+      if (den > 0) {
+        const slope = xs.reduce((n, x, i) => n + (x - mx) * (ys[i] - my), 0) / den;
+        const at0 = my - slope * mx; // valeur lissée au jour de la dernière pesée
+        projEnd = at0 + slope * ((domainEnd - lastTs) / DAY);
+        const lr = rows.find((r) => r.x === lastTs);
+        if (lr) lr.Proj = wOut(at0);
+        // La projection s'arrête quand elle atteint le poids cible.
+        const reach = slope !== 0 ? (targetWeight - at0) / slope : -1;
+        if (reach > 0 && reach < 3 * 365) reachTs = lastTs + reach * DAY;
+        if (reach > 0 && lastTs + reach * DAY < domainEnd) {
+          const rx = lastTs + reach * DAY;
+          rows.push({ x: rx, label: label(rx), Plan: wOut(planAt(rx)), Proj: wOut(targetWeight) });
+          projEnd = targetWeight;
+        } else {
+          const er = rows.find((r) => Math.abs(r.x - domainEnd) < DAY / 2);
+          if (er) er.Proj = wOut(projEnd);
+        }
+      }
+    }
     rows.sort((a, b) => a.x - b.x);
 
     // Dégradé horizontal bleu / rouge, avec bascule exacte aux croisements de la trajectoire.
@@ -98,19 +140,38 @@ export function WeightChart({
       stops.push({ o: (p.x - x0) / span, c });
     });
 
-    const values = rows.flatMap((r) => [r.Poids, r.Plan]).filter((v): v is number => v !== undefined);
+    const values = rows.flatMap((r) => [r.Poids, r.Plan, r.Proj]).filter((v): v is number => v !== undefined);
+    values.push(wOut(start.weight), wOut(targetWeight));
     const pad = wUnit() === 'lb' ? 1.5 : 0.6;
     const yMin = Math.floor(Math.min(...values) - pad);
     const yMax = Math.ceil(Math.max(...values) + pad);
 
-    const spanDays = (toTs - domainStart) / DAY;
+    const spanDays = (domainEnd - domainStart) / DAY;
     const nTicks = spanDays <= 8 ? Math.round(spanDays) + 1 : 5;
-    const ticks = Array.from({ length: nTicks }, (_, i) => Math.round(domainStart + ((toTs - domainStart) * i) / (nTicks - 1)));
+    const ticks = Array.from({ length: nTicks }, (_, i) => Math.round(domainStart + ((domainEnd - domainStart) * i) / (nTicks - 1)));
 
     const firstW = visible[0].weight;
     const lastW = visible[visible.length - 1].weight;
     const lastPlan = planAt(fromISODate(visible[visible.length - 1].date).getTime());
-    return { rows, stops, domain: [domainStart, toTs] as [number, number], yMin, yMax, ticks, spanDays, delta: lastW - firstW, vsPlan: lastW - lastPlan };
+    const inDomain = (x: number) => x >= domainStart && x <= domainEnd;
+    return {
+      rows,
+      stops,
+      domain: [domainStart, domainEnd] as [number, number],
+      yMin,
+      yMax,
+      ticks,
+      spanDays,
+      delta: lastW - firstW,
+      vsPlan: lastW - lastPlan,
+      todayTs: toTs,
+      showToday: domainEnd - toTs > DAY,
+      startDot: inDomain(startTs) ? { x: startTs, y: wOut(start.weight) } : null,
+      endDot: kneeTs && inDomain(kneeTs) ? { x: kneeTs, y: wOut(targetWeight) } : null,
+      goalDate: kneeTs,
+      hasProj: projEnd !== null,
+      reachTs,
+    };
   }, [logs, range, today, targetWeight, weeklyChangeKg]);
 
   if (!model) return <p className="py-10 text-center text-xs text-slate-500">{t('Aucune pesée sur cette période.')}</p>;
@@ -145,6 +206,17 @@ export function WeightChart({
         >
           {ahead ? t('Dans la trajectoire') : t('{n} au-dessus de la trajectoire', { n: `+${fmtW(model.vsPlan)}` })}
         </span>
+        {model.reachTs && (
+          <span className="rounded-full bg-sky-500/10 px-2.5 py-1 font-semibold tabular-nums text-sky-500">
+            {t('À ce rythme : {w} le {d}', { w: fmtW(targetWeight), d: formatDate(toISODate(new Date(model.reachTs)), { day: 'numeric', month: 'short' }) })}
+            {model.goalDate && Math.abs(model.goalDate - model.reachTs) > 2 * DAY && (
+              <span className={model.reachTs < model.goalDate ? 'text-emerald-500' : 'text-rose-500'}>
+                {' '}
+                ({model.reachTs < model.goalDate ? t('{n} j d’avance', { n: Math.round((model.goalDate - model.reachTs) / DAY) }) : t('{n} j de retard', { n: Math.round((model.reachTs - model.goalDate) / DAY) })})
+              </span>
+            )}
+          </span>
+        )}
       </div>
 
       <ResponsiveContainer width="100%" height={260}>
@@ -173,8 +245,31 @@ export function WeightChart({
 
           {/* Zone sous la courbe : bleue, rouge au-dessus de la trajectoire */}
           <Area dataKey="Poids" stroke="none" fill={`url(#seg-${uid})`} fillOpacity={1} mask={`url(#mask-${uid})`} baseValue={model.yMin} type="monotone" isAnimationActive={false} activeDot={false} />
-          {/* Trajectoire vers l'objectif */}
+          {/* Aujourd'hui : séparation passé / futur */}
+          {model.showToday && (
+            <ReferenceLine x={model.todayTs} stroke="var(--c-axis)" strokeDasharray="2 3" label={{ value: t('Auj.'), position: 'insideBottomRight', fontSize: 10, fill: 'var(--c-tick)' }} />
+          )}
+          {/* Trajectoire vers l'objectif : ligne droite du départ à l'arrivée */}
           <Line dataKey="Plan" stroke={PLAN} strokeWidth={2} strokeDasharray="6 5" dot={false} activeDot={false} type="linear" connectNulls isAnimationActive={false} />
+          {/* Tendance actuelle prolongée */}
+          {model.hasProj && (
+            <Line dataKey="Proj" stroke={BLUE} strokeOpacity={0.55} strokeWidth={2} strokeDasharray="2 4" dot={false} activeDot={false} type="linear" connectNulls isAnimationActive={false} />
+          )}
+          {/* Départ et arrivée de l'objectif */}
+          {model.startDot && (
+            <ReferenceDot x={model.startDot.x} y={model.startDot.y} r={6} fill={RED} stroke="var(--c-dot)" strokeWidth={2.5} label={<DotLabel text={`${t('Départ')} ${fmtW(wIn(model.startDot.y))}`} side="right" />} />
+          )}
+          {model.endDot && (
+            <ReferenceDot
+              x={model.endDot.x}
+              y={model.endDot.y}
+              r={6}
+              fill={RED}
+              stroke="var(--c-dot)"
+              strokeWidth={2.5}
+              label={<DotLabel text={`🎯 ${fmtW(targetWeight)} · ${formatDate(toISODate(new Date(model.endDot.x)), { day: 'numeric', month: 'short' })}`} side="left" />}
+            />
+          )}
           {/* Pesées */}
           <Line
             dataKey="Poids"
@@ -184,7 +279,7 @@ export function WeightChart({
             connectNulls
             isAnimationActive
             animationDuration={700}
-            dot={(props: { cx?: number; cy?: number; payload?: Row; index?: number }) => <WeightDot key={props.index} {...props} glow={`glow-${uid}`} />}
+            dot={(props: { cx?: number; cy?: number; payload?: Row; index?: number }) => <WeightDot key={props.index} {...props} glow={`glow-${uid}`} right={model.showToday} />}
             activeDot={{ r: 6, fill: BLUE, stroke: 'var(--c-dot)', strokeWidth: 2 }}
           />
         </ComposedChart>
@@ -198,6 +293,14 @@ export function WeightChart({
         <span className="flex items-center gap-1.5">
           <span className="w-4 border-t-2 border-dashed" style={{ borderColor: PLAN }} /> {t('Trajectoire vers {w}', { w: fmtW(targetWeight) })}
         </span>
+        {model.hasProj && (
+          <span className="flex items-center gap-1.5">
+            <span className="w-4 border-t-2 border-dotted" style={{ borderColor: `${BLUE}99` }} /> {t('Tendance actuelle')}
+          </span>
+        )}
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: RED }} /> {t('Départ / objectif')}
+        </span>
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm" style={{ background: `${RED}66` }} /> {t('Au-dessus')}
         </span>
@@ -206,7 +309,23 @@ export function WeightChart({
   );
 }
 
-function WeightDot({ cx, cy, payload, glow }: { cx?: number; cy?: number; payload?: Row; glow: string }) {
+/** Petite étiquette à côté d'un point rouge (départ / arrivée). */
+function DotLabel({ viewBox, text, side }: { viewBox?: { x?: number; y?: number }; text: string; side: 'left' | 'right' }) {
+  const x = viewBox?.x ?? 0;
+  const y = viewBox?.y ?? 0;
+  const w = text.length * 6 + 12;
+  const left = side === 'left' ? x - w - 8 : x + 8;
+  return (
+    <g transform={`translate(${left}, ${y - 26})`}>
+      <rect width={w} height={18} rx={9} fill={RED} opacity={0.92} />
+      <text x={w / 2} y={12.5} textAnchor="middle" fontSize={10.5} fontWeight={700} fill="#fff">
+        {text}
+      </text>
+    </g>
+  );
+}
+
+function WeightDot({ cx, cy, payload, glow, right }: { cx?: number; cy?: number; payload?: Row; glow: string; right?: boolean }) {
   if (cx == null || cy == null || payload?.Poids === undefined) return <g />;
   const c = payload.above ? RED : BLUE;
   if (!payload.last) return <circle cx={cx} cy={cy} r={3.5} fill="var(--c-dot)" stroke={c} strokeWidth={2} />;
@@ -217,7 +336,7 @@ function WeightDot({ cx, cy, payload, glow }: { cx?: number; cy?: number; payloa
     <g>
       <circle cx={cx} cy={cy} r={9} fill={c} opacity={0.45} filter={`url(#${glow})`} />
       <circle cx={cx} cy={cy} r={5.5} fill={c} stroke="var(--c-dot)" strokeWidth={2.5} />
-      <g transform={`translate(${cx - w - 2}, ${cy - 31})`}>
+      <g transform={`translate(${right ? cx + 8 : cx - w - 2}, ${right ? cy + 10 : cy - 31})`}>
         <rect width={w} height={19} rx={9.5} fill={c} />
         <text x={w / 2} y={13} textAnchor="middle" fontSize={11} fontWeight={700} fill="#fff">
           {text}

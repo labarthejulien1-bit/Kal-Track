@@ -502,6 +502,13 @@ const d: Record<string, string> = {
   "Par analyse": "Per analysis",
   "{n} analyses": "{n} analyses",
   "Maximum possible avec le plafond actuel : {n} $ / mois": "Maximum possible with the current cap: {n} $ / month",
+  "Auj.": "Today",
+  "Départ": "Start",
+  "Tendance actuelle": "Current trend",
+  "Départ / objectif": "Start / goal",
+  "À ce rythme : {w} le {d}": "At this pace: {w} on {d}",
+  "{n} j d’avance": "{n} days ahead",
+  "{n} j de retard": "{n} days behind",
 };
 
 export default d;
