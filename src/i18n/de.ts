@@ -531,9 +531,9 @@ const d: Record<string, string> = {
   "Masquer": "Ausblenden",
   "Afficher": "Einblenden",
   "Ta séance prévue par semaine est déjà comptée dans ton objectif. Chaque séance en plus ajoute ses calories à l’objectif du jour.": "Deine geplante Trainingseinheit pro Woche ist bereits in deinem Ziel enthalten. Jede zusätzliche Einheit fügt ihre Kalorien dem Tagesziel hinzu.",
-  "{n} kcal restantes": "noch {n} kcal",
-  "{n} kcal en trop": "{n} kcal zu viel",
   "Prochain repas : {meal} (≈ {m} kcal)": "Nächste Mahlzeit: {meal} (≈ {m} kcal)",
+  "en trop|calories": "zu viel",
+  "restantes|calories": "übrig",
 };
 
 export default d;

@@ -112,8 +112,9 @@ export function CalorieSummary({
             <span className="text-[34px] font-extrabold leading-none tabular-nums text-slate-50">{round(eaten)}</span>
             <span className="mt-1 text-[11px] tabular-nums text-slate-400">/ {round(goal)} kcal</span>
             {/* Calories restantes (vert) ou en trop (rouge) */}
-            <span className={cn('mt-1.5 text-xs font-bold tabular-nums', over ? 'text-red-500' : 'text-emerald-500')}>
-              {over ? t('{n} kcal en trop', { n: round(-remaining) }) : t('{n} kcal restantes', { n: round(remaining) })}
+            <span className={cn('mt-1.5 flex flex-col text-xs font-bold leading-tight', over ? 'text-red-500' : 'text-emerald-500')}>
+              <span className="tabular-nums">{round(Math.abs(remaining))} kcal</span>
+              <span>{over ? t('en trop|calories') : t('restantes|calories')}</span>
             </span>
             {!over && bonus > 0 && <span className="mt-0.5 max-w-[120px] text-[10px] font-semibold leading-tight text-orange-500">{t('dont +{n} grâce au sport', { n: bonus })}</span>}
           </div>
