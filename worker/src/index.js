@@ -169,7 +169,7 @@ function corsHeaders(request, env) {
   return {
     'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0] || '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Kal-Code, X-Kal-Device',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Kal-Code, X-Kal-Device, X-Kal-Model',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
@@ -210,10 +210,12 @@ export default {
       /* configuration invalide */
     }
     let entry;
+    let isAdmin = false;
     const publicEntry = { name: 'Public', daily: Number(env.PUBLIC_DAILY) || 1000, perDevice: Number(env.PUBLIC_PER_DEVICE) || 10 };
     if (code) {
       entry = codes[await sha256(code)];
       if (!entry) return json({ error: { code: 'bad_code', message: "Code d'accès invalide." } }, 401, cors);
+      isAdmin = !!entry.admin;
       // Code administrateur : ouvre les statistiques, mais l'IA reste au quota public comme tout le monde.
       if (entry.adminOnly && !['/stats', '/alert/test'].includes(url.pathname)) entry = publicEntry;
     } else {
@@ -320,7 +322,10 @@ export default {
       return json({ error: { code: 'quota', reason, limit: reason === 'device' ? perDevice : limit, message } }, 429, cors);
     }
 
-    const model = env.MODEL || 'gemini-3.5-flash-lite';
+    // Tests comparatifs : la clé administrateur peut choisir un modèle parmi une liste autorisée.
+    const TEST_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'];
+    const asked = (request.headers.get('X-Kal-Model') || '').trim();
+    const model = isAdmin && TEST_MODELS.includes(asked) ? asked : env.MODEL || 'gemini-3.5-flash-lite';
     const upstream = await fetch(`${env.GEMINI_BASE_OVERRIDE || GEMINI_BASE}/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
@@ -345,7 +350,7 @@ export default {
         /* la mesure ne doit jamais bloquer une analyse */
       }
     }
-    const headers = { 'Content-Type': 'application/json', ...cors, 'X-Kal-Remaining': String(perDevice ? Math.max(0, perDevice - (taken.usedDev ?? 0)) : Math.max(0, limit - (taken.used ?? 0))) };
+    const headers = { 'Content-Type': 'application/json', ...cors, 'X-Kal-Model': model, 'X-Kal-Remaining': String(perDevice ? Math.max(0, perDevice - (taken.usedDev ?? 0)) : Math.max(0, limit - (taken.used ?? 0))) };
     return new Response(text, { status: upstream.status, headers });
   },
 };
