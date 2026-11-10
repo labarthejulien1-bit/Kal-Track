@@ -29,10 +29,11 @@ export function CollapseBody({ open, children }: { open: boolean; children: Reac
   return (
     <div
       className="grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none"
-      style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      // minmax(0, 1fr) : le contenu ne peut jamais être plus large que l'écran (textes longs → retour à la ligne).
+      style={{ gridTemplateRows: open ? '1fr' : '0fr', gridTemplateColumns: 'minmax(0, 1fr)' }}
       onTransitionEnd={(e) => e.target === e.currentTarget && setAnimating(false)}
     >
-      <div ref={inner} aria-hidden={!open} className={cn('min-h-0', (!open || animating) && 'overflow-hidden')}>
+      <div ref={inner} aria-hidden={!open} className={cn('min-h-0 min-w-0', (!open || animating) && 'overflow-hidden')}>
         {children}
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, ImagePlus, Barcode, ScanText, MessageSquareText, Keyboard, History, Loader2, Sparkles, Star, Search, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Sheet } from '@/components/ui/dialog';
 import { maybeAskReview } from '@/lib/feedback';
+import { isNative } from '@/lib/native';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea, Label } from '@/components/ui/input';
 import { Thumbnail } from '@/components/common';
@@ -185,23 +186,38 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   };
 
 
-  const pickPhoto = (mode: 'photo' | 'label', fromCamera: boolean) => {
+  const pickPhoto = async (mode: 'photo' | 'label', fromCamera: boolean) => {
     setPendingMode(mode);
     setError('');
+    // Application Android : vrai appareil photo (le sélecteur de fichiers ouvrirait la galerie).
+    if (fromCamera && isNative) {
+      try {
+        const { Camera } = await import('@capacitor/camera');
+        const shot = await Camera.takePhoto({ quality: 85, targetWidth: 1600, targetHeight: 1600, correctOrientation: true });
+        if (!shot.webPath) return;
+        const blob = await (await fetch(shot.webPath)).blob();
+        await onFile(blob, mode);
+      } catch (e) {
+        const msg = String((e as Error)?.message ?? e);
+        if (!/cancel|annul/i.test(msg)) setError(msg);
+      }
+      return;
+    }
     (fromCamera ? cameraInput : galleryInput).current?.click();
   };
 
-  const onFile = async (file?: File) => {
+  const onFile = async (file?: Blob, modeOverride?: 'photo' | 'label') => {
+    const pendingMode_ = modeOverride ?? pendingMode;
     if (!file) return;
     try {
       setStep('analyzing');
       const img = await compressImage(file);
       setPhoto(img);
-      if (pendingMode === 'label') await runLabel(img);
+      if (pendingMode_ === 'label') await runLabel(img);
       else setStep('photo-preview');
     } catch (e) {
       setError((e as Error).message);
-      setStep(pendingMode);
+      setStep(pendingMode_);
     }
   };
 
