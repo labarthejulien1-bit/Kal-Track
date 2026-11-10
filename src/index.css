@@ -27,14 +27,27 @@
   html {
     -webkit-tap-highlight-color: transparent;
     background: #0f172a;
+    /* Aucun débordement horizontal (balayage) : l'écran et la barre du bas ne bougent jamais. */
+    overflow-x: clip;
   }
   body {
-    @apply bg-slate-900 text-slate-100 antialiased;
+    @apply text-slate-100 antialiased;
+    background: transparent; /* la couleur de fond est portée par <html>, le dégradé par body::before */
     font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    overscroll-behavior-y: none;
+    overscroll-behavior: none;
+    overflow-x: clip;
+  }
+  /* Dégradé d'ambiance sur un calque fixe à part (au lieu de background-attachment: fixed,
+     qui force Android à tout redessiner à chaque image pendant le défilement). */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    transform: translateZ(0);
     background-image: radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.08), transparent 40%),
       radial-gradient(circle at 100% 30%, rgba(99, 102, 241, 0.08), transparent 40%);
-    background-attachment: fixed;
   }
   input[type='number']::-webkit-inner-spin-button,
   input[type='number']::-webkit-outer-spin-button {

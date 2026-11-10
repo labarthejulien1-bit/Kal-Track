@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
+import { useSwipe } from '@/components/SwipeArea';
 import { Flame, Copy } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { duplicateMeal, useMealsForDate, useStreak } from '@/hooks/useMeals';
@@ -14,7 +15,7 @@ import { healthSupported } from '@/lib/health';
 import { Section } from '@/components/ui/collapsible';
 import { useWater } from '@/hooks/useWater';
 import { fmtWater } from '@/lib/units';
-import { addDays, haptic, MEAL_TYPES, round, slideIn, todayISO } from '@/lib/utils';
+import { addDays, MEAL_TYPES, round, todayISO } from '@/lib/utils';
 import { db } from '@/db/database';
 import { useToast } from '@/components/ui/toast';
 import { t } from '@/i18n';
@@ -41,76 +42,22 @@ export function Dashboard() {
   };
 
   // ---- Navigation par balayage horizontal (swipe) ----
-  const dirRef = useRef<'next' | 'prev' | null>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const touch = useRef<{ x: number; y: number; lock: 'h' | 'v' | null; dx: number } | null>(null);
+  const today = todayISO();
+  const { ref: contentRef, handlers, prepare } = useSwipe({
+    animKey: selectedDate,
+    canNext: selectedDate < today,
+    onNext: () => setSelectedDate(addDays(selectedDate, 1)),
+    onPrev: () => setSelectedDate(addDays(selectedDate, -1)),
+  });
 
   const changeDate = (d: string) => {
     if (d === selectedDate) return;
-    dirRef.current = d > selectedDate ? 'next' : 'prev';
+    prepare(d > selectedDate ? 'next' : 'prev');
     setSelectedDate(d);
   };
 
-  const goDay = (delta: number) => {
-    const d = addDays(selectedDate, delta);
-    if (d > todayISO()) return;
-    haptic(8);
-    changeDate(d);
-  };
-
-  useEffect(() => {
-    if (dirRef.current) slideIn(contentRef.current, dirRef.current);
-    dirRef.current = null;
-  }, [selectedDate]);
-
-  const resetDrag = () => {
-    const el = contentRef.current;
-    if (!el) return;
-    el.style.transition = 'transform .2s ease-out, opacity .2s ease-out';
-    el.style.transform = '';
-    el.style.opacity = '';
-  };
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    const edge = 24; // laisse libres les gestes « retour » d'Android sur les bords
-    if (e.touches.length > 1 || t.clientX < edge || t.clientX > window.innerWidth - edge || (e.target as HTMLElement).closest('input, textarea, select, [data-no-swipe]')) {
-      touch.current = null;
-      return;
-    }
-    touch.current = { x: t.clientX, y: t.clientY, lock: null, dx: 0 };
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    const s = touch.current;
-    if (!s) return;
-    const t = e.touches[0];
-    const dx = t.clientX - s.x;
-    const dy = t.clientY - s.y;
-    if (!s.lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) s.lock = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'h' : 'v';
-    if (s.lock !== 'h') return;
-    s.dx = dx;
-    const blocked = dx < 0 && selectedDate >= todayISO(); // pas de jour futur : effet élastique
-    const shown = dx * (blocked ? 0.12 : 0.4);
-    const el = contentRef.current;
-    if (el) {
-      el.style.transition = 'none';
-      el.style.transform = `translateX(${shown}px)`;
-      el.style.opacity = String(1 - Math.min(Math.abs(shown) / 400, 0.3));
-    }
-  };
-
-  const onTouchEnd = () => {
-    const s = touch.current;
-    touch.current = null;
-    resetDrag();
-    if (!s || s.lock !== 'h') return;
-    if (s.dx < -60) goDay(1);
-    else if (s.dx > 60) goDay(-1);
-  };
-
   return (
-    <div className="space-y-3 [touch-action:pan-y]" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
+    <div className="space-y-3 [touch-action:pan-y]" {...handlers}>
       <header className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-2">
           <img src="./logo.svg" alt="" className="h-9 w-9 rounded-xl" />
