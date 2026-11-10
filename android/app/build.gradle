@@ -3,6 +3,9 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.kaltrack.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    // NDK de la machine de build (GitHub Actions) : nécessaire pour extraire les symboles de débogage natifs.
+    def ndkHome = System.getenv("ANDROID_NDK_LATEST_HOME") ?: System.getenv("ANDROID_NDK_HOME")
+    if (ndkHome) ndkPath = ndkHome
     defaultConfig {
         applicationId "com.kaltrack.app"
         minSdkVersion rootProject.ext.minSdkVersion
