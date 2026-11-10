@@ -2,7 +2,8 @@ name: Application Android
 
 # Fabrique l'application Android (Capacitor) :
 #  - APK de test « Kal-Track test » à installer à la main sur le téléphone ;
-#  - AAB signé pour le Play Store, si la clé de signature est enregistrée dans les secrets.
+#  - AAB signé pour le Play Store : uniquement sur demande (lancement manuel « Run workflow »),
+#    pour regrouper plusieurs modifications dans une même mise à jour du Store.
 on:
   push:
     branches: [master, android]
@@ -46,6 +47,7 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: AAB Play Store (signé)
+        if: github.event_name == 'workflow_dispatch'
         working-directory: android
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -69,6 +71,7 @@ jobs:
           KEYSTORE_FILE="$RUNNER_TEMP/upload.keystore" ./gradlew --no-daemon bundleRelease
           rm -f "$RUNNER_TEMP/upload.keystore"
       - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
         with:
           name: kal-track-playstore-${{ env.VERSION_NAME }}-aab
           path: android/app/build/outputs/bundle/release/app-release.aab
