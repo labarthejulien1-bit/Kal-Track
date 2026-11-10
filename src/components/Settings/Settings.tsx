@@ -147,7 +147,11 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
 
   // --- Stockage ---
   const [storage, setStorage] = useState<{ persisted: boolean; usage: number; quota: number } | null>(null);
-  const refreshStorage = () => getStorageInfo().then(setStorage).catch(() => {});
+  // Application Android : données dans l'espace privé de l'appli, jamais effacées automatiquement.
+  const refreshStorage = () =>
+    getStorageInfo()
+      .then((s) => setStorage(isNative ? { ...s, persisted: true } : s))
+      .catch(() => {});
   useEffect(() => {
     refreshStorage();
   }, []);
@@ -692,11 +696,11 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
                 <p className="font-semibold text-slate-200">{storage?.persisted ? t('Stockage persistant activé') : t('Stockage non persistant')}</p>
                 <p className="text-slate-500">
                   {storage ? t('{n} Mo utilisés', { n: (storage.usage / 1024 / 1024).toFixed(1) }) : '…'}
-                  {storage?.persisted ? ` · ${t('protégé contre le nettoyage automatique')}` : ` · ${t('installe l’appli sur l’écran d’accueil')}`}
+                  {storage?.persisted ? ` · ${isNative ? t('stocké dans l’application, sur ton téléphone') : t('protégé contre le nettoyage automatique')}` : ` · ${t('installe l’appli sur l’écran d’accueil')}`}
                 </p>
               </div>
             </div>
-            {!storage?.persisted && (
+            {!storage?.persisted && !isNative && (
               <Button size="sm" variant="secondary" onClick={async () => { const ok = await requestPersistentStorage(); toast(ok ? t('Stockage persistant accordé') : t('Refusé par le navigateur'), ok ? 'success' : 'error'); refreshStorage(); }}>
                 {t('Activer')}
               </Button>

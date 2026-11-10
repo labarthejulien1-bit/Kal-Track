@@ -520,6 +520,7 @@ const d: Record<string, string> = {
   "Il te reste {n} kcal pour aujourd’hui": "{n} kcal left for today",
   "Protéines : encore {n} g 🍗": "Protein: {n} g still to go 🍗",
   "dont +{n} grâce au sport": "including +{n} from exercise",
+  "stocké dans l’application, sur ton téléphone": "stored in the app, on your phone",
 };
 
 export default d;
