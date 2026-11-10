@@ -215,7 +215,7 @@ export default {
       entry = codes[await sha256(code)];
       if (!entry) return json({ error: { code: 'bad_code', message: "Code d'accès invalide." } }, 401, cors);
       // Code administrateur : ouvre les statistiques, mais l'IA reste au quota public comme tout le monde.
-      if (entry.adminOnly && url.pathname !== '/stats') entry = publicEntry;
+      if (entry.adminOnly && !['/stats', '/alert/test'].includes(url.pathname)) entry = publicEntry;
     } else {
       // Accès public inclus dans l'appli : quota par téléphone + plafond total.
       entry = publicEntry;
