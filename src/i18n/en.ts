@@ -495,6 +495,13 @@ const d: Record<string, string> = {
   "Donner mon avis": "Give feedback",
   "Problème sur Kal-Track": "Problem with Kal-Track",
   "Signaler un problème": "Report a problem",
+  "Coût réel de l’IA (administrateur)": "Real AI cost (admin)",
+  "Aujourd’hui": "Today",
+  "Ce mois-ci": "This month",
+  "Prévision du mois": "Month forecast",
+  "Par analyse": "Per analysis",
+  "{n} analyses": "{n} analyses",
+  "Maximum possible avec le plafond actuel : {n} $ / mois": "Maximum possible with the current cap: {n} $ / month",
 };
 
 export default d;

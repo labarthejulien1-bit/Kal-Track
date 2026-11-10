@@ -458,3 +458,23 @@ export async function testGeminiConnection(apiKey: string, model: string): Promi
     return { ok: false, message: (e as Error).message };
   }
 }
+
+export interface AiStats {
+  model: string;
+  today: { n: number; usd: number };
+  month: { n: number; usd: number };
+  perAnalysisUsd: number | null;
+  monthForecastUsd: number;
+  maxMonthUsd: number | null;
+}
+
+/** Coût réel de l'IA mesuré par le serveur (réservé au code administrateur). */
+export async function fetchAiStats(code: string): Promise<AiStats | null> {
+  if (!code) return null;
+  try {
+    const res = await fetch(`${AI_PROXY_URL}/stats`, { headers: { 'X-Kal-Device': getDeviceId(), 'X-Kal-Code': normalizeCode(code) } });
+    return res.ok ? ((await res.json()) as AiStats) : null;
+  } catch {
+    return null;
+  }
+}

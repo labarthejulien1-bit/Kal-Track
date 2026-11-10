@@ -8,6 +8,7 @@
  * Routes :
  *   GET  /ticket   -> « ticket fondateur » : date du jour signée (preuve d'utilisation précoce, rien n'est stocké)
  *   GET  /status   -> état du code (nom, quota utilisé / restant)
+ *   GET  /stats    -> coût réel de l'IA (jour / mois), réservé au code administrateur
  *   POST /generate -> corps Gemini generateContent (system_instruction, contents, generationConfig)
  */
 import { DurableObject } from 'cloudflare:workers';
@@ -18,7 +19,28 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 /** Compteur de quotas (un seul objet, stockage SQLite intégré). */
 export class QuotaCounter extends DurableObject {
   async fetch(request) {
-    const { action, day, code, device, limit, perDevice, globalLimit } = await request.json();
+    const { action, day, code, device, limit, perDevice, globalLimit, usage = {} } = await request.json();
+    // Statistiques de coût (objet « stats » séparé, conservées 400 jours).
+    if (action === 'usage') {
+      const k = `u:${day}`;
+      const cur = (await this.ctx.storage.get(k)) ?? { n: 0, in: 0, out: 0, img: 0 };
+      cur.n += 1;
+      cur.in += usage.in || 0;
+      cur.out += usage.out || 0;
+      cur.img += usage.img ? 1 : 0;
+      await this.ctx.storage.put(k, cur);
+      return Response.json({ ok: true });
+    }
+    if (action === 'report') {
+      const rows = await this.ctx.storage.list({ prefix: 'u:' });
+      const days = {};
+      for (const [k, v] of rows) days[k.slice(2)] = v;
+      if (Math.random() < 0.05) {
+        const old = new Date(Date.now() - 400 * 864e5).toISOString().slice(0, 10);
+        for (const k of rows.keys()) if (k.slice(2) < old) await this.ctx.storage.delete(k);
+      }
+      return Response.json({ days });
+    }
     // Clé secrète de signature des tickets (générée une seule fois, jamais transmise).
     if (action === 'key') {
       let key = await this.ctx.storage.get('ticket-key');
@@ -64,6 +86,12 @@ function prevDay(day) {
   return d.toISOString().slice(0, 10);
 }
 
+function prevDays(day, n) {
+  const d = new Date(`${day}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
 function today() {
   // Jour calendaire en heure de Paris (remise à zéro des quotas à minuit).
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
@@ -74,6 +102,17 @@ async function hmac(keyHex, text) {
   const key = await crypto.subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(text));
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function statsStub(env) {
+  return env.QUOTA.get(env.QUOTA.idFromName('stats'));
+}
+
+/** Coût en dollars à partir des jetons (tarifs du modèle, en $ par million de jetons). */
+function costOf(t, env) {
+  const pin = Number(env.PRICE_IN_PER_M) || 0.3;
+  const pout = Number(env.PRICE_OUT_PER_M) || 2.5;
+  return (t.in * pin + t.out * pout) / 1e6;
 }
 
 async function ticketKey(env) {
@@ -157,6 +196,39 @@ export default {
     const callQuota = (action) =>
       quota.fetch('https://quota/', { method: 'POST', body: JSON.stringify({ action, day, code: entry.name, device: perDevice ? device : '', limit, perDevice, globalLimit }) }).then((r) => r.json());
 
+    // Coût réel de l'IA (réservé aux codes « admin »).
+    if (url.pathname === '/stats' && request.method === 'GET') {
+      if (!entry.admin) return json({ error: { code: 'forbidden', message: 'Réservé à l’administrateur.' } }, 403, cors);
+      const { days } = await statsStub(env)
+        .fetch('https://stats/', { method: 'POST', body: JSON.stringify({ action: 'report' }) })
+        .then((r) => r.json());
+      const month = day.slice(0, 7);
+      const sum = (pred) => {
+        const t = { n: 0, in: 0, out: 0, img: 0 };
+        for (const [d, v] of Object.entries(days)) if (pred(d)) for (const k of Object.keys(t)) t[k] += v[k] || 0;
+        return { ...t, usd: Number(costOf(t, env).toFixed(4)) };
+      };
+      const today_ = sum((d) => d === day);
+      const monthT = sum((d) => d.startsWith(month));
+      const last30 = sum((d) => d > prevDays(day, 30));
+      const dayOfMonth = Number(day.slice(8, 10));
+      return json(
+        {
+          model: env.MODEL || 'gemini-3.5-flash-lite',
+          prices: { inPerM: Number(env.PRICE_IN_PER_M) || 0.3, outPerM: Number(env.PRICE_OUT_PER_M) || 2.5 },
+          today: today_,
+          month: monthT,
+          last30,
+          perAnalysisUsd: last30.n ? Number((last30.usd / last30.n).toFixed(5)) : null,
+          monthForecastUsd: Number(((monthT.usd / Math.max(1, dayOfMonth)) * 30).toFixed(2)),
+          maxMonthUsd: last30.n ? Number(((last30.usd / last30.n) * (Number(env.GLOBAL_DAILY_LIMIT) || 1000) * 30).toFixed(2)) : null,
+          days: Object.fromEntries(Object.entries(days).filter(([d]) => d > prevDays(day, 31)).map(([d, v]) => [d, { ...v, usd: Number(costOf(v, env).toFixed(4)) }])),
+        },
+        200,
+        cors,
+      );
+    }
+
     if (url.pathname === '/status' && request.method === 'GET') {
       const { used, usedDev } = await callQuota('peek');
       const groupLeft = Math.max(0, limit - used);
@@ -211,6 +283,20 @@ export default {
     const text = await upstream.text();
     // En cas d'échec côté Google, l'analyse n'est pas décomptée.
     if (!upstream.ok) await callQuota('refund');
+    else {
+      // Mesure du coût réel : jetons facturés renvoyés par Gemini (sortie = réponse + réflexion éventuelle).
+      try {
+        const u = JSON.parse(text).usageMetadata || {};
+        const usage = {
+          in: u.promptTokenCount || 0,
+          out: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0),
+          img: JSON.stringify(payload.contents || '').includes('inline_data'),
+        };
+        await statsStub(env).fetch('https://stats/', { method: 'POST', body: JSON.stringify({ action: 'usage', day, usage }) });
+      } catch {
+        /* la mesure ne doit jamais bloquer une analyse */
+      }
+    }
     const headers = { 'Content-Type': 'application/json', ...cors, 'X-Kal-Remaining': String(perDevice ? Math.max(0, perDevice - (taken.usedDev ?? 0)) : Math.max(0, limit - (taken.used ?? 0))) };
     return new Response(text, { status: upstream.status, headers });
   },

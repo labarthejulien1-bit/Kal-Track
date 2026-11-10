@@ -9,6 +9,9 @@ workers_dev = true
 [vars]
 # Modèle utilisé pour tous les utilisateurs (invisible côté appli)
 MODEL = "gemini-3.5-flash-lite"
+# Tarifs du modèle ($ par million de jetons) pour la mesure du coût réel (/stats)
+PRICE_IN_PER_M = "0.30"
+PRICE_OUT_PER_M = "2.50"
 # Accès public (sans code) inclus dans l'appli
 PUBLIC_DAILY = "500"
 PUBLIC_PER_DEVICE = "20"
@@ -19,7 +22,7 @@ ALLOWED_ORIGINS = "https://labarthejulien1-bit.github.io,https://localhost,http:
 # Codes d'accès : empreinte SHA-256 du code -> nom, quota quotidien total (daily)
 # et, optionnellement, quota quotidien par téléphone (perDevice).
 # Les codes eux-mêmes ne sont jamais écrits dans le dépôt.
-ACCESS_CODES = '{"e6fefe7804c0f8bc9bcf86528b55a467442e1e774e03398be6fb88de91c1fd02": {"name": "Juju", "daily": 100}, "dab277c11577d388355e6230263667bdde7f708624ea2df112a72b8e3085a416": {"name": "Amis", "daily": 500, "perDevice": 20}}'
+ACCESS_CODES = '{"e6fefe7804c0f8bc9bcf86528b55a467442e1e774e03398be6fb88de91c1fd02": {"name": "Juju", "daily": 100, "admin": true}, "dab277c11577d388355e6230263667bdde7f708624ea2df112a72b8e3085a416": {"name": "Amis", "daily": 500, "perDevice": 20}}'
 
 [[durable_objects.bindings]]
 name = "QUOTA"

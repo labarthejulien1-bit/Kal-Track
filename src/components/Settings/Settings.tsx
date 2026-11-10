@@ -11,7 +11,7 @@ import { fmtH, fmtW, getUnits, waterIn, waterOut, waterUnitLabel, wOut, wUnit, t
 import { Sheet } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { ensureProfile, useProfile } from '@/hooks/useProfile';
-import { checkAccessCode, normalizeCode } from '@/services/geminiVision';
+import { checkAccessCode, fetchAiStats, normalizeCode, type AiStats } from '@/services/geminiVision';
 import { ACTIVITY_FACTORS, MACRO_PRESETS, PACE_DELTAS, computeGoals, macroSplitFor } from '@/services/bmrCalculator';
 import { db, exportBackup, getStorageInfo, importBackup, requestPersistentStorage } from '@/db/database';
 import { isNative, saveFile } from '@/lib/native';
@@ -100,6 +100,10 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
   const [code, setCode] = useState(profile.accessCode ?? '');
   const [checking, setChecking] = useState(false);
   const [access, setAccess] = useState<{ ok: boolean; message: string; name?: string } | null>(null);
+  const [stats, setStats] = useState<AiStats | null>(null);
+  useEffect(() => {
+    fetchAiStats(profile.accessCode ?? '').then(setStats);
+  }, [profile.accessCode]);
   const [showHelp, setShowHelp] = useState(false);
   const [showCode, setShowCode] = useState(false);
   const devTaps = useRef(0);
@@ -262,6 +266,18 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
                   {t('Retirer mon code')}
                 </button>
               )}
+            </div>
+          )}
+          {stats && (
+            <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-3 text-xs">
+              <p className="mb-2 font-semibold text-indigo-300">{t('Coût réel de l’IA (administrateur)')} · {stats.model}</p>
+              <div className="grid grid-cols-2 gap-2 tabular-nums">
+                <StatLine label={t('Aujourd’hui')} value={`$${stats.today.usd.toFixed(3)}`} sub={t('{n} analyses', { n: stats.today.n })} />
+                <StatLine label={t('Ce mois-ci')} value={`$${stats.month.usd.toFixed(2)}`} sub={t('{n} analyses', { n: stats.month.n })} />
+                <StatLine label={t('Prévision du mois')} value={`$${stats.monthForecastUsd.toFixed(2)}`} />
+                <StatLine label={t('Par analyse')} value={stats.perAnalysisUsd != null ? `$${stats.perAnalysisUsd.toFixed(4)}` : '—'} />
+              </div>
+              {stats.maxMonthUsd != null && <p className="mt-2 text-[11px] text-slate-400">{t('Maximum possible avec le plafond actuel : {n} $ / mois', { n: stats.maxMonthUsd.toFixed(0) })}</p>}
             </div>
           )}
           <p className="text-[11px] text-slate-500">{t("Tes repas restent sur ton téléphone. Seules les photos et descriptions à analyser sont envoyées à l'IA, de façon sécurisée.")}</p>
@@ -761,6 +777,16 @@ function Zone({ label, value, color, active }: { label: string; value: number; c
     <div className="rounded-lg border p-1.5" style={{ borderColor: active ? color : 'var(--c-line)', background: active ? `${color}18` : undefined }}>
       <div className="text-[10px]" style={{ color }}>{label}</div>
       <div className="font-semibold tabular-nums text-slate-200">{value}</div>
+    </div>
+  );
+}
+
+function StatLine({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-lg bg-slate-900/50 p-2">
+      <div className="text-[10px] text-slate-500">{label}</div>
+      <div className="text-sm font-bold text-slate-100">{value}</div>
+      {sub && <div className="text-[10px] text-slate-500">{sub}</div>}
     </div>
   );
 }
