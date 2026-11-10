@@ -75,6 +75,7 @@ export function GraduatedGauge({
   color,
   markers = [],
   isLimit,
+  digits = 0,
 }: {
   label: string;
   value: number;
@@ -83,6 +84,8 @@ export function GraduatedGauge({
   color: string;
   markers?: { value: number; color: string; label: string }[];
   isLimit?: boolean;
+  /** Décimales affichées (ex. 2 pour des litres). */
+  digits?: number;
 }) {
   const scaleMax = Math.max(goal * 1.5, value * 1.05, ...markers.map((m) => m.value * 1.05));
   const pos = (v: number) => `${Math.min(100, (v / scaleMax) * 100)}%`;
@@ -95,7 +98,7 @@ export function GraduatedGauge({
       <div className="flex items-baseline justify-between text-xs">
         <span className="font-semibold" style={{ color }}>{label}</span>
         <span className="text-slate-300">
-          <span className="text-sm font-bold tabular-nums">{round(value, 1)}</span> / {round(goal)} {unit}
+          <span className="text-sm font-bold tabular-nums">{round(value, Math.max(1, digits))}</span> / {round(goal, digits)} {unit}
           <span className="ml-2 rounded-full px-1.5 py-0.5 text-[10px]" style={{ background: `${statusColor}22`, color: statusColor }}>
             {round(pct)}% · {status}
           </span>
@@ -114,7 +117,7 @@ export function GraduatedGauge({
       <div className="relative h-3 text-[9px] text-slate-500">
         {ticks.map((t, i) => (
           <span key={i} className="absolute -translate-x-1/2 tabular-nums" style={{ left: pos(t) }}>
-            {round(t)}
+            {round(t, digits ? 1 : 0)}
           </span>
         ))}
       </div>

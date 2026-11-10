@@ -7,10 +7,13 @@ import { useProfile } from '@/hooks/useProfile';
 import { COLORS, MEAL_SHORT, MEAL_TYPES, addDays, relativeDayLabel, round, todayISO } from '@/lib/utils';
 import { ChartTooltip, GraduatedGauge, axisProps, gridProps } from './chartKit';
 import { t } from '@/i18n';
+import { useWater } from '@/hooks/useWater';
+import { waterChart, waterChartUnit } from '@/lib/units';
 
 export function DayView({ date, setDate }: { date: string; setDate: (d: string) => void }) {
   const { goals } = useProfile();
   const { totals, byType, meals } = useMealsForDate(date);
+  const { ml: waterMl } = useWater(date);
 
   // Détail par repas : chaque barre empile les kcal issues des protéines / glucides / lipides.
   const perMeal = MEAL_TYPES.map((mt) => {
@@ -80,6 +83,7 @@ export function DayView({ date, setDate }: { date: string; setDate: (d: string) 
           <GraduatedGauge label={t('Lipides')} value={totals.fat} goal={goals.fat} unit="g" color={COLORS.fat} />
           <GraduatedGauge label={t('Sucres')} value={totals.sugar} goal={goals.sugar} unit="g" color={COLORS.sugar} isLimit />
           <GraduatedGauge label={t('Fibres')} value={totals.fiber} goal={goals.fiber} unit="g" color={COLORS.fiber} />
+          <GraduatedGauge label={t('Eau')} value={waterChart(waterMl)} goal={waterChart(goals.water)} unit={waterChartUnit()} color={COLORS.water} digits={waterChartUnit() === 'L' ? 2 : 0} />
           <p className="text-[10px] text-slate-500">
             {t('Trait rouge = objectif · pointillés :')} <span style={{ color: COLORS.lose }}>{t('perte')}</span>, <span style={{ color: COLORS.maintain }}>{t('maintien')}</span>, <span style={{ color: COLORS.gain }}>{t('prise')}</span>
           </p>

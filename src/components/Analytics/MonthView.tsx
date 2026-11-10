@@ -9,13 +9,15 @@ import { COLORS, addDays, addMonths, capitalize, cn, endOfMonth, formatDate, rou
 import { ChartTooltip, StatGrid, ZoneLegend, axisProps, calorieReferenceLines, gridProps, seriesStats } from './chartKit';
 import { MacroWeekChart } from './WeekView';
 import { t } from '@/i18n';
-import { fmtW, wOut, wUnit } from '@/lib/units';
+import { fmtW, waterChart, waterChartUnit, wOut, wUnit } from '@/lib/units';
+import { useWaterRange } from '@/hooks/useWater';
 
 export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; setAnchor: (d: string) => void; onPickDay: (d: string) => void }) {
   const { goals, profile } = useProfile();
   const start = startOfMonth(anchor);
   const end = endOfMonth(anchor);
   const { days } = useMealsRange(start, end);
+  const water = useWaterRange(start, end);
   const { logs } = useWeights();
   const today = todayISO();
 
@@ -32,7 +34,10 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
     Glucides: round(d.carbs, 1),
     Lipides: round(d.fat, 1),
     Sucres: round(d.sugar, 1),
+    Eau: waterChart(water[d.date] ?? 0),
   }));
+  const waterDays = Object.entries(water).filter(([d, ml]) => ml > 0 && d <= today).map(([, ml]) => ml);
+  const waterAvg = waterDays.length ? waterChart(waterDays.reduce((s, v) => s + v, 0) / waterDays.length) : 0;
 
   const trend = trendSeries(logs);
   const monthWeights = trend.filter((w) => w.date >= start && w.date <= end).map((w) => ({ label: formatDate(w.date, { day: 'numeric', month: 'short' }), Poids: wOut(w.weight), Tendance: wOut(w.trend) }));
@@ -168,6 +173,7 @@ export function MonthView({ anchor, setAnchor, onPickDay }: { anchor: string; se
       <MacroWeekChart data={data} dataKey="Glucides" color={COLORS.carbs} goal={goals.carbs} avg={avg('carbs')} height={130} />
       <MacroWeekChart data={data} dataKey="Lipides" color={COLORS.fat} goal={goals.fat} avg={avg('fat')} height={130} />
       <MacroWeekChart data={data} dataKey="Sucres" color={COLORS.sugar} goal={goals.sugar} avg={avg('sugar')} height={130} limit />
+      <MacroWeekChart data={data} dataKey="Eau" color={COLORS.water} goal={waterChart(goals.water)} avg={waterAvg} unit={waterChartUnit()} height={130} />
     </div>
   );
 }

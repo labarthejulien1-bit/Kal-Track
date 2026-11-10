@@ -66,3 +66,6 @@ export const waterOut = (ml: number) => (current.water === 'floz' ? r(ml / FLOZ,
 export const waterIn = (v: number) => (current.water === 'floz' ? v * FLOZ : v);
 export const fmtWater = (ml: number) => (current.water === 'floz' ? `${r(ml / FLOZ, 0)} fl oz` : `${(ml / 1000).toFixed(ml % 1000 === 0 ? 1 : 2)} L`);
 export const waterUnitLabel = () => (current.water === 'floz' ? 'fl oz' : 'ml');
+/** Eau pour les graphiques d'analyse : litres (2 décimales) ou fl oz. */
+export const waterChart = (ml: number) => (current.water === 'floz' ? r(ml / FLOZ, 0) : r(ml / 1000, 2));
+export const waterChartUnit = () => (current.water === 'floz' ? 'fl oz' : 'L');

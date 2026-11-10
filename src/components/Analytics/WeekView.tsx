@@ -7,13 +7,15 @@ import { useProfile } from '@/hooks/useProfile';
 import { COLORS, addDays, capitalize, formatDate, round, startOfWeek, todayISO } from '@/lib/utils';
 import { ChartTooltip, StatGrid, ZoneLegend, axisProps, calorieReferenceLines, gridProps, seriesStats } from './chartKit';
 import { t } from '@/i18n';
-import { wOut, wUnit } from '@/lib/units';
+import { waterChart, waterChartUnit, wOut, wUnit } from '@/lib/units';
+import { useWaterRange } from '@/hooks/useWater';
 
 export function WeekView({ anchor, setAnchor }: { anchor: string; setAnchor: (d: string) => void }) {
   const { goals } = useProfile();
   const start = startOfWeek(anchor);
   const end = addDays(start, 6);
   const { days } = useMealsRange(start, end);
+  const water = useWaterRange(start, end);
   const today = todayISO();
 
   const data = days.map((d) => ({
@@ -27,12 +29,15 @@ export function WeekView({ anchor, setAnchor }: { anchor: string; setAnchor: (d:
     Glucides: round(d.carbs, 1),
     Lipides: round(d.fat, 1),
     Sucres: round(d.sugar, 1),
+    Eau: waterChart(water[d.date] ?? 0),
     future: d.date > today,
   }));
 
   const kcal = seriesStats(days.map((d) => d.calories), goals.calories);
   const loggedDays = days.filter((d) => d.calories > 0);
   const avg = (k: 'protein' | 'carbs' | 'fat' | 'sugar') => (loggedDays.length ? loggedDays.reduce((s, d) => s + d[k], 0) / loggedDays.length : 0);
+  const waterDays = Object.entries(water).filter(([d, ml]) => ml > 0 && d <= today).map(([, ml]) => ml);
+  const waterAvg = waterDays.length ? waterChart(waterDays.reduce((s, v) => s + v, 0) / waterDays.length) : 0;
   const weekBalance = loggedDays.reduce((s, d) => s + (d.calories - goals.maintenance), 0);
   const yMax = Math.max(goals.gainTarget, ...days.map((d) => d.calories)) * 1.1;
 
@@ -114,12 +119,19 @@ export function WeekView({ anchor, setAnchor }: { anchor: string; setAnchor: (d:
         <MacroWeekChart data={data} dataKey="Glucides" color={COLORS.carbs} goal={goals.carbs} avg={avg('carbs')} />
         <MacroWeekChart data={data} dataKey="Lipides" color={COLORS.fat} goal={goals.fat} avg={avg('fat')} />
         <MacroWeekChart data={data} dataKey="Sucres" color={COLORS.sugar} goal={goals.sugar} avg={avg('sugar')} limit />
+        <MacroWeekChart data={data} dataKey="Eau" color={COLORS.water} goal={waterChart(goals.water)} avg={waterAvg} unit={waterChartUnit()} />
       </div>
     </div>
   );
 }
 
-export function MacroWeekChart({ data, dataKey, color, goal, avg, limit, height = 150 }: { data: object[]; dataKey: string; color: string; goal: number; avg: number; limit?: boolean; height?: number }) {
+export function MacroWeekChart({ data, dataKey, color, goal, avg, limit, height = 150, unit = 'g' }: { data: object[]; dataKey: string; color: string; goal: number; avg: number; limit?: boolean; height?: number; unit?: string }) {
+  // Graduation « ronde » de l'axe : par 10 g, ou par 0,5 pour les petites valeurs (litres d'eau).
+  const step = goal < 10 ? 0.5 : 10;
+  const dataMax = Math.max(0, ...data.map((d) => Number((d as Record<string, unknown>)[dataKey]) || 0));
+  const top = Math.ceil(Math.max(dataMax, goal * 1.25) / step) * step;
+  // Petites valeurs (litres) : graduations régulières (tous les 1 L, ou 0,5 L si l'échelle est courte).
+  const ticks = goal < 10 ? Array.from({ length: Math.floor(top / (top > 2 ? 1 : 0.5)) + 1 }, (_, i) => i * (top > 2 ? 1 : 0.5)) : undefined;
   return (
     <Section
       id={`a.macro.${dataKey}`}
@@ -127,7 +139,7 @@ export function MacroWeekChart({ data, dataKey, color, goal, avg, limit, height 
       summary={
         <>
         <span className="text-[11px] text-slate-400">
-        {t('moy.')} <b className="text-slate-200">{round(avg, 1)} g</b> · {limit ? t('limite') : t('objectif')} {goal} g ·{' '}
+        {t('moy.')} <b className="text-slate-200">{round(avg, goal < 10 ? 2 : 1)} {unit}</b> · {limit ? t('limite') : t('objectif')} {goal} {unit} ·{' '}
         <b style={{ color: limit ? (avg > goal ? '#f43f5e' : '#10b981') : Math.abs(avg - goal) <= goal * 0.1 ? '#10b981' : '#f59e0b' }}>{goal ? round((avg / goal) * 100) : 0}%</b>
         </span>
         </>
@@ -139,10 +151,10 @@ export function MacroWeekChart({ data, dataKey, color, goal, avg, limit, height 
           <ComposedChart data={data} margin={{ top: 8, right: 6, left: -18, bottom: 0 }}>
             <CartesianGrid {...gridProps} vertical={false} />
             <XAxis dataKey="label" {...axisProps} />
-            <YAxis {...axisProps} tickCount={5} domain={[0, (max: number) => Math.ceil(Math.max(max, goal * 1.25) / 10) * 10]} unit="g" />
-            <Tooltip content={<ChartTooltip unit=" g" />} cursor={{ fill: 'var(--c-hover)' }} />
+            <YAxis {...axisProps} tickCount={5} ticks={ticks} domain={[0, top]} unit={unit === 'g' ? 'g' : undefined} />
+            <Tooltip content={<ChartTooltip unit={` ${unit}`} />} cursor={{ fill: 'var(--c-hover)' }} />
             <Bar dataKey={dataKey} name={t(dataKey)} fill={color} radius={[4, 4, 0, 0]} />
-            <ReferenceLine y={goal} stroke={COLORS.target} strokeDasharray={limit ? '4 3' : undefined} label={{ value: `${goal} g`, fill: COLORS.target, fontSize: 9, position: 'insideTopRight' }} />
+            <ReferenceLine y={goal} stroke={COLORS.target} strokeDasharray={limit ? '4 3' : undefined} label={{ value: `${goal} ${unit}`, fill: COLORS.target, fontSize: 9, position: 'insideTopRight' }} />
           </ComposedChart>
         </ResponsiveContainer>
       </CardContent>
