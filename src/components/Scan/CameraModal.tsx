@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, ImagePlus, Barcode, ScanText, MessageSquareText, Keyboard, History, Loader2, Sparkles, Star, Search, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Sheet } from '@/components/ui/dialog';
+import { maybeAskReview } from '@/lib/feedback';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea, Label } from '@/components/ui/input';
 import { Thumbnail } from '@/components/common';
@@ -305,6 +306,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
       haptic(25);
       toast(request?.edit ? t('Repas mis à jour') : t('Ajouté au {meal}', { meal: MEAL_LABELS[meal.mealType].toLowerCase() }));
       onClose();
+      if (!request?.edit) maybeAskReview(); // moment positif : repas bien enregistré
     } catch (e) {
       console.error(e);
       toast(t('Enregistrement impossible : {msg}', { msg: String((e as Error)?.message || e) }), 'error');

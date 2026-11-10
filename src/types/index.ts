@@ -67,6 +67,10 @@ export interface Profile {
   stepsGoal?: number;
   /** Ajoute les calories des séances en plus de celles prévues à l'objectif du jour. */
   sportBonus?: boolean;
+  /** « Ticket fondateur » signé par le serveur : date de première utilisation (avantages des premiers utilisateurs). */
+  founder?: { since: string; sig: string };
+  /** Dernière demande d'avis Play Store (horodatage). */
+  reviewAskedAt?: number;
   language?: 'auto' | 'fr' | 'en' | 'es' | 'pt' | 'de' | 'it';
   theme?: 'light' | 'dark' | 'auto';
   units?: { weight?: 'kg' | 'lb'; height?: 'cm' | 'ftin'; water?: 'ml' | 'floz' };

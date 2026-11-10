@@ -6,6 +6,7 @@
  * ajoute la clé secrète et transmet à Google. La clé ne quitte jamais le serveur.
  *
  * Routes :
+ *   GET  /ticket   -> « ticket fondateur » : date du jour signée (preuve d'utilisation précoce, rien n'est stocké)
  *   GET  /status   -> état du code (nom, quota utilisé / restant)
  *   POST /generate -> corps Gemini generateContent (system_instruction, contents, generationConfig)
  */
@@ -18,6 +19,15 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 export class QuotaCounter extends DurableObject {
   async fetch(request) {
     const { action, day, code, device, limit, perDevice, globalLimit } = await request.json();
+    // Clé secrète de signature des tickets (générée une seule fois, jamais transmise).
+    if (action === 'key') {
+      let key = await this.ctx.storage.get('ticket-key');
+      if (!key) {
+        key = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('');
+        await this.ctx.storage.put('ticket-key', key);
+      }
+      return Response.json({ key });
+    }
     const kCode = `${day}:${code}`;
     const kDev = device ? `${day}:${code}:${device}` : null;
     const kAll = `${day}:__all__`;
@@ -59,6 +69,20 @@ function today() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
 }
 
+async function hmac(keyHex, text) {
+  const raw = new Uint8Array(keyHex.match(/../g).map((h) => parseInt(h, 16)));
+  const key = await crypto.subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(text));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function ticketKey(env) {
+  // Objet séparé du compteur de quotas (dont le ménage efface les anciennes clés).
+  const stub = env.QUOTA.get(env.QUOTA.idFromName('tickets'));
+  const { key } = await stub.fetch('https://tickets/', { method: 'POST', body: JSON.stringify({ action: 'key' }) }).then((r) => r.json());
+  return key;
+}
+
 async function sha256(text) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -88,6 +112,18 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === '/' || url.pathname === '/health') {
       return json({ ok: true, service: 'kal-track-ai' }, 200, cors);
+    }
+
+    // Ticket fondateur : prouve que l'appli était utilisée à cette date (avantages des premiers utilisateurs).
+    // Rien n'est enregistré : le serveur signe simplement la date du jour.
+    if (url.pathname === '/ticket' && request.method === 'GET') {
+      const since = today();
+      return json({ since, sig: await hmac(await ticketKey(env), `founder:${since}`) }, 200, cors);
+    }
+    if (url.pathname === '/ticket/verify' && request.method === 'POST') {
+      const { since, sig } = await request.json().catch(() => ({}));
+      const ok = typeof since === 'string' && typeof sig === 'string' && sig === (await hmac(await ticketKey(env), `founder:${since}`));
+      return json({ ok, since: ok ? since : null }, 200, cors);
     }
 
     // --- Vérification du code d'accès ---

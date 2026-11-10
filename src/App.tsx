@@ -8,6 +8,7 @@ import { Settings } from '@/components/Settings/Settings';
 import { CameraModal } from '@/components/Scan/CameraModal';
 import { ReminderScheduler } from '@/components/ReminderScheduler';
 import { HealthSync } from '@/components/HealthSync';
+import { ensureFounderTicket } from '@/lib/founder';
 import { Onboarding } from '@/components/Onboarding';
 import { ToastProvider } from '@/components/ui/toast';
 import { useProfile } from '@/hooks/useProfile';
@@ -57,6 +58,11 @@ export default function App() {
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
+
+  // Ticket « fondateur » (première utilisation), demandé une seule fois.
+  useEffect(() => {
+    if (!loading && hasProfile && !profile.founder) ensureFounderTicket();
+  }, [loading, hasProfile, profile.founder]);
 
   // Bouton retour Android sans fenêtre ouverte : revient au Journal, puis quitte l'appli.
   useEffect(() => {

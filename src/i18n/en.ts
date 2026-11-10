@@ -490,6 +490,11 @@ const d: Record<string, string> = {
   "Séances de sport prévues / semaine": "Planned workouts / week",
   "+{n} en plus": "+{n} extra",
   "manuelle": "manual",
+  "Noter Kal-Track": "Rate Kal-Track",
+  "Mon avis sur Kal-Track": "My feedback on Kal-Track",
+  "Donner mon avis": "Give feedback",
+  "Problème sur Kal-Track": "Problem with Kal-Track",
+  "Signaler un problème": "Report a problem",
 };
 
 export default d;

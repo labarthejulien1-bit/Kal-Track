@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, HeartPulse, Languages, Moon, Palette, Ruler, Sun, SunMoon, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
+import { Bell, HeartPulse, MessageSquareHeart, Star, Languages, Moon, Palette, Ruler, Sun, SunMoon, Sparkles, Loader2, CheckCircle2, XCircle, User, Calculator, SlidersHorizontal, Database, Download, Upload, ShieldCheck, Trash2, Info, HelpCircle } from 'lucide-react';
 import { CollapsibleCard } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
@@ -14,7 +14,8 @@ import { ensureProfile, useProfile } from '@/hooks/useProfile';
 import { checkAccessCode, normalizeCode } from '@/services/geminiVision';
 import { ACTIVITY_FACTORS, MACRO_PRESETS, PACE_DELTAS, computeGoals, macroSplitFor } from '@/services/bmrCalculator';
 import { db, exportBackup, getStorageInfo, importBackup, requestPersistentStorage } from '@/db/database';
-import { saveFile } from '@/lib/native';
+import { isNative, saveFile } from '@/lib/native';
+import { PLAY_URL, feedbackMailto } from '@/lib/feedback';
 import { connectHealth, healthAvailable, healthSupported, installHealthConnect, openHealthSettings, syncHealth } from '@/lib/health';
 import { notificationsSupported, requestNotificationPermission, sendTestReminder } from '@/lib/notifications';
 import { COLORS, MEAL_SHORT, MEAL_TYPES, round, todayISO } from '@/lib/utils';
@@ -720,6 +721,19 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           Kal-Track v1.0
         </p>
         <p>{t("100 % local · aucune donnée envoyée hors de l'appareil, sauf les analyses IA vers Google Gemini et les recherches de code-barres vers Open Food Facts.")}</p>
+        <div className="mb-2 mt-1 grid w-full max-w-sm grid-cols-2 gap-2 text-xs">
+          {isNative && (
+            <a href={PLAY_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500/10 px-3 py-2.5 font-semibold text-amber-500">
+              <Star className="h-4 w-4" /> {t('Noter Kal-Track')}
+            </a>
+          )}
+          <a href={feedbackMailto(t('Mon avis sur Kal-Track'))} className={`flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/10 px-3 py-2.5 font-semibold text-emerald-500 ${isNative ? '' : 'col-span-2'}`}>
+            <MessageSquareHeart className="h-4 w-4" /> {t('Donner mon avis')}
+          </a>
+        </div>
+        <a href={feedbackMailto(t('Problème sur Kal-Track'))} className="mb-1 font-medium text-slate-400 underline underline-offset-2">
+          {t('Signaler un problème')}
+        </a>
         <a
           href={`https://labarthejulien1-bit.github.io/Kal-Track/privacy.html?lang=${getLang()}`}
           target="_blank"
