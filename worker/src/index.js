@@ -105,8 +105,8 @@ async function hmac(keyHex, text) {
 }
 
 /** E-mail d'alerte (Resend) : nombre d'analyses du jour et coût réel. Sans clé configurée, rien n'est envoyé. */
-async function sendAlert(env, day, count) {
-  if (!env.RESEND_API_KEY || !env.ALERT_EMAIL) return;
+async function sendAlert(env, day, count, test = false) {
+  if (!env.RESEND_API_KEY || !env.ALERT_EMAIL) return { ok: false, reason: 'no_key' };
   try {
     const { days } = await statsStub(env)
       .fetch('https://stats/', { method: 'POST', body: JSON.stringify({ action: 'report' }) })
@@ -121,20 +121,22 @@ async function sendAlert(env, day, count) {
     const usd = (t) => costOf(t, env).toFixed(2);
     const limit = Number(env.GLOBAL_DAILY_LIMIT) || 1000;
     const text = [
-      `Kal-Track : ${count} analyses IA aujourd'hui (${day}).`,
+      test ? `Kal-Track : e-mail de test, les alertes fonctionnent ✔ (${day}).` : `Kal-Track : ${count} analyses IA aujourd'hui (${day}).`,
       '',
       `Aujourd'hui : ${today.n} analyses · ${usd(today)} $`,
       `Ce mois-ci : ${month.n} analyses · ${usd(month)} $`,
       `Plafond global : ${limit} analyses / jour · ${env.PUBLIC_PER_DEVICE || 10} par téléphone`,
       `Modèle : ${env.MODEL || 'gemini-3.5-flash-lite'}`,
     ].join('\n');
-    await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: 'Kal-Track <onboarding@resend.dev>', to: [env.ALERT_EMAIL], subject: `Kal-Track : ${count} analyses IA aujourd'hui`, text }),
+      body: JSON.stringify({ from: 'Kal-Track <onboarding@resend.dev>', to: [env.ALERT_EMAIL], subject: test ? 'Kal-Track : test des alertes ✔' : `Kal-Track : ${count} analyses IA aujourd'hui`, text }),
     });
-  } catch {
+    return { ok: res.ok, status: res.status, detail: res.ok ? undefined : (await res.text()).slice(0, 300) };
+  } catch (e) {
     /* une alerte ne doit jamais bloquer le service */
+    return { ok: false, reason: String(e) };
   }
 }
 
@@ -232,6 +234,13 @@ export default {
     const quota = env.QUOTA.get(env.QUOTA.idFromName('global'));
     const callQuota = (action) =>
       quota.fetch('https://quota/', { method: 'POST', body: JSON.stringify({ action, day, code: entry.name, device: perDevice ? device : '', limit, perDevice, globalLimit }) }).then((r) => r.json());
+
+    // E-mail d'alerte de test (réservé aux codes « admin »).
+    if (url.pathname === '/alert/test' && request.method === 'POST') {
+      if (!entry.admin) return json({ error: { code: 'forbidden', message: 'Réservé à l’administrateur.' } }, 403, cors);
+      const r = await sendAlert(env, today(), 0, true);
+      return json(r, 200, cors);
+    }
 
     // Coût réel de l'IA (réservé aux codes « admin »).
     if (url.pathname === '/stats' && request.method === 'GET') {
