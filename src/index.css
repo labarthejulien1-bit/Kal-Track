@@ -68,23 +68,3 @@
   outline: none;
 }
 
-/* Effet « page de livre » (balayage entre les jours / périodes) : ombre qui s'assombrit vers le bord qui se soulève. */
-.page-turn {
-  position: relative;
-  backface-visibility: hidden;
-  transform-style: flat;
-}
-.page-turn::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 30;
-  pointer-events: none;
-  border-radius: 1.25rem;
-  opacity: var(--shade, 0);
-  transition: opacity 140ms linear;
-  background: linear-gradient(to right, rgba(2, 6, 23, 0.04), rgba(2, 6, 23, 0.55));
-}
-.page-turn[data-turn='prev']::after {
-  background: linear-gradient(to left, rgba(2, 6, 23, 0.04), rgba(2, 6, 23, 0.55));
-}
