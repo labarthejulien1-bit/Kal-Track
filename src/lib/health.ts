@@ -49,8 +49,13 @@ export async function connectHealth(): Promise<boolean> {
   return grantedFrom(res.permissions).length > 0;
 }
 
-function grantedFrom(list: { [k: string]: boolean }[]) {
-  return list.flatMap((o) => Object.entries(o).filter(([, v]) => v).map(([k]) => k));
+/**
+ * Autorisations accordées. Sur Android, le plugin renvoie un objet `{ READ_STEPS: true, … }`
+ * (et non le tableau annoncé par ses types) : on accepte les deux formes.
+ */
+function grantedFrom(perms: unknown): string[] {
+  const list = Array.isArray(perms) ? perms : perms && typeof perms === 'object' ? [perms] : [];
+  return list.flatMap((o) => Object.entries(o as Record<string, unknown>).filter(([, v]) => v === true).map(([k]) => k));
 }
 
 export interface SyncResult {
