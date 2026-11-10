@@ -491,7 +491,9 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           <label className="flex items-start justify-between gap-3 text-xs text-slate-300">
             <span>
               <b className="block text-sm text-slate-100">{t('Bonus sport')}</b>
-              {t('Tes {n} séances prévues par semaine sont déjà comptées dans ton objectif. Chaque séance en plus ajoute ses calories à l’objectif du jour.', { n: profile.workoutsPerWeek })}
+              {profile.workoutsPerWeek === 1
+                ? t('Ta séance prévue par semaine est déjà comptée dans ton objectif. Chaque séance en plus ajoute ses calories à l’objectif du jour.')
+                : t('Tes {n} séances prévues par semaine sont déjà comptées dans ton objectif. Chaque séance en plus ajoute ses calories à l’objectif du jour.', { n: profile.workoutsPerWeek })}
             </span>
             <Switch checked={profile.sportBonus !== false} onCheckedChange={(v) => updateProfile({ sportBonus: v })} />
           </label>

@@ -530,6 +530,7 @@ const d: Record<string, string> = {
   "L’IMC est un repère général : il ne tient pas compte de la masse musculaire.": "L’IMC è un riferimento generale: non tiene conto della massa muscolare.",
   "Masquer": "Nascondi",
   "Afficher": "Mostra",
+  "Ta séance prévue par semaine est déjà comptée dans ton objectif. Chaque séance en plus ajoute ses calories à l’objectif du jour.": "La tua sessione settimanale prevista è già inclusa nel tuo obiettivo. Ogni sessione in più aggiunge le sue calorie all’obiettivo del giorno.",
 };
 
 export default d;

@@ -530,6 +530,7 @@ const d: Record<string, string> = {
   "L’IMC est un repère général : il ne tient pas compte de la masse musculaire.": "Der BMI ist ein allgemeiner Richtwert: Er berücksichtigt keine Muskelmasse.",
   "Masquer": "Ausblenden",
   "Afficher": "Einblenden",
+  "Ta séance prévue par semaine est déjà comptée dans ton objectif. Chaque séance en plus ajoute ses calories à l’objectif du jour.": "Deine geplante Trainingseinheit pro Woche ist bereits in deinem Ziel enthalten. Jede zusätzliche Einheit fügt ihre Kalorien dem Tagesziel hinzu.",
 };
 
 export default d;
