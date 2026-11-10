@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { CartesianGrid, ComposedChart, Customized, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, Area } from 'recharts';
-import { TrendingDown, TrendingUp, Minus } from 'lucide-react';
+import { TrendingDown, TrendingUp, Minus, Plus, X } from 'lucide-react';
 import { COLORS, addDays, capitalize, formatDate, fromISODate, round, toISODate } from '@/lib/utils';
 import { axisProps, gridProps } from '@/components/Analytics/chartKit';
 import { locale, t } from '@/i18n';
@@ -432,6 +432,7 @@ function Toggle({ on, onClick, icon, label }: { on: boolean; onClick: () => void
       type="button"
       onClick={onClick}
       aria-pressed={on}
+      title={on ? t('Masquer') : t('Afficher')}
       className={cn(
         'flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-all active:scale-95',
         on ? 'border-slate-600 bg-slate-800/60 text-slate-200' : 'border-dashed border-slate-700 text-slate-500 opacity-60',
@@ -439,6 +440,8 @@ function Toggle({ on, onClick, icon, label }: { on: boolean; onClick: () => void
     >
       {icon}
       <span className={on ? '' : 'line-through'}>{label}</span>
+      {/* Croix = masquer ; « + » = réafficher */}
+      {on ? <X className="h-3 w-3 shrink-0 opacity-60" strokeWidth={2.5} /> : <Plus className="h-3 w-3 shrink-0" strokeWidth={2.5} />}
     </button>
   );
 }

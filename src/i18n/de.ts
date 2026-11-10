@@ -521,6 +521,15 @@ const d: Record<string, string> = {
   "Protéines : encore {n} g 🍗": "Eiweiß: noch {n} g 🍗",
   "dont +{n} grâce au sport": "davon +{n} dank Sport",
   "stocké dans l’application, sur ton téléphone": "in der App auf deinem Handy gespeichert",
+  "Maigreur": "Untergewicht",
+  "Normal": "Normal",
+  "Poids actuel": "Aktuelles Gewicht",
+  "Poids de forme pour ta taille": "Gesundes Gewicht für deine Größe",
+  "{n} à perdre pour un IMC normal": "{n} abnehmen für einen normalen BMI",
+  "{n} à prendre pour un IMC normal": "{n} zunehmen für einen normalen BMI",
+  "L’IMC est un repère général : il ne tient pas compte de la masse musculaire.": "Der BMI ist ein allgemeiner Richtwert: Er berücksichtigt keine Muskelmasse.",
+  "Masquer": "Ausblenden",
+  "Afficher": "Einblenden",
 };
 
 export default d;

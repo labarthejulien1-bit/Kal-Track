@@ -15,7 +15,7 @@ import { adaptiveTdee, bmiCategory } from '@/services/bmrCalculator';
 import { COLORS, addDays, daysBetween, formatDate, haptic, round, todayISO, capitalize } from '@/lib/utils';
 import { db } from '@/db/database';
 import { decimalSep, t } from '@/i18n';
-import { fmtW, wIn, wOut, wStep, wUnit } from '@/lib/units';
+import { fmtH, fmtW, wIn, wOut, wStep, wUnit } from '@/lib/units';
 
 
 export function WeightTab() {
@@ -103,7 +103,7 @@ export function WeightTab() {
           <button className="rounded-full bg-slate-700/70 p-3" onClick={() => bump(-wStep())} aria-label={`-${wStep()} ${wUnit()}`}>
             <Minus className="h-5 w-5" />
           </button>
-          <div className="relative">
+          <div className="flex items-baseline gap-1">
             <input
               type="text"
               inputMode="decimal"
@@ -111,9 +111,9 @@ export function WeightTab() {
               value={weight === '' ? String(round(currentValue, 1)).replace('.', decimalSep()) : weight}
               onChange={(e) => setWeight(e.target.value.replace(/[^0-9.,]/g, '') || ' ')}
               onFocus={(e) => e.target.select()}
-              className="w-36 bg-transparent text-center text-4xl font-bold tabular-nums text-slate-50 focus:outline-none"
+              className="w-28 bg-transparent text-right text-4xl font-bold tabular-nums text-slate-50 focus:outline-none"
             />
-            <span className="absolute -right-4 bottom-2 text-sm text-slate-400">{wUnit()}</span>
+            <span className="w-7 text-sm text-slate-400">{wUnit()}</span>
           </div>
           <button className="rounded-full bg-slate-700/70 p-3" onClick={() => bump(wStep())} aria-label={`+${wStep()} ${wUnit()}`}>
             <Plus className="h-5 w-5" />
@@ -272,7 +272,77 @@ export function WeightTab() {
         </CardContent>
       </Card>
       </Section>
+
+      <Section id="w.bmi" title={t('IMC')} summary={`${round(bmi, 1)} · ${cat.label}`}>
+        <BmiCard bmi={bmi} heightCm={profile.height} weightKg={last?.weight ?? profile.weight} />
+      </Section>
     </div>
+  );
+}
+
+/** IMC selon le poids actuel : valeur, catégorie, jauge des zones et poids de forme pour la taille. */
+function BmiCard({ bmi, heightCm, weightKg }: { bmi: number; heightCm: number; weightKg: number }) {
+  const cat = bmiCategory(bmi);
+  const h2 = (heightCm / 100) ** 2;
+  const lo = 18.5 * h2;
+  const hi = 24.9 * h2;
+  const MIN = 15;
+  const MAX = 40;
+  const pos = (v: number) => `${((Math.min(MAX, Math.max(MIN, v)) - MIN) / (MAX - MIN)) * 100}%`;
+  const zones: [number, number, string, string][] = [
+    [MIN, 18.5, '#38bdf8', t('Maigreur')],
+    [18.5, 25, '#10b981', t('Normal')],
+    [25, 30, '#f59e0b', t('Surpoids')],
+    [30, MAX, '#f43f5e', t('Obésité')],
+  ];
+  const toNormal = weightKg > hi ? weightKg - hi : weightKg < lo ? lo - weightKg : 0;
+  return (
+    <Card className="p-4">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <div className="text-4xl font-extrabold tabular-nums leading-none" style={{ color: cat.color }}>
+            {round(bmi, 1)}
+          </div>
+          <div className="mt-1 text-sm font-semibold" style={{ color: cat.color }}>
+            {cat.label}
+          </div>
+        </div>
+        <div className="text-right text-xs text-slate-400">
+          {t('Poids actuel')} : <b className="text-slate-200">{fmtW(weightKg)}</b>
+          <br />
+          {t('Taille')} : <b className="text-slate-200">{fmtH(heightCm)}</b>
+        </div>
+      </div>
+
+      {/* Jauge des zones avec la position actuelle */}
+      <div className="relative mt-5">
+        <div className="flex h-3 overflow-hidden rounded-full">
+          {zones.map(([a, b, c]) => (
+            <div key={a} style={{ width: `${((b - a) / (MAX - MIN)) * 100}%`, background: c, opacity: 0.85 }} />
+          ))}
+        </div>
+        <div className="absolute -top-1.5 h-6 w-1.5 -translate-x-1/2 rounded-full border-2 border-white bg-slate-900 shadow" style={{ left: pos(bmi) }} />
+        <div className="mt-1.5 flex text-[10px] text-slate-500">
+          {zones.map(([a, b, , label]) => (
+            <span key={a} className="truncate text-center" style={{ width: `${((b - a) / (MAX - MIN)) * 100}%` }}>
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-1 rounded-xl bg-slate-900/50 p-3 text-xs text-slate-300">
+        <p>
+          {t('Poids de forme pour ta taille')} : <b className="text-emerald-500">{fmtW(lo, 0)} – {fmtW(hi, 0)}</b>
+        </p>
+        {toNormal > 0.1 && (
+          <p className="text-slate-400">
+            {weightKg > hi ? t('{n} à perdre pour un IMC normal', { n: fmtW(toNormal) }) : t('{n} à prendre pour un IMC normal', { n: fmtW(toNormal) })}
+          </p>
+        )}
+        <p className="text-[11px] text-slate-500">{t('L’IMC est un repère général : il ne tient pas compte de la masse musculaire.')}</p>
+      </div>
+    </Card>
   );
 }
 

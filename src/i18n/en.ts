@@ -521,6 +521,15 @@ const d: Record<string, string> = {
   "Protéines : encore {n} g 🍗": "Protein: {n} g still to go 🍗",
   "dont +{n} grâce au sport": "including +{n} from exercise",
   "stocké dans l’application, sur ton téléphone": "stored in the app, on your phone",
+  "Maigreur": "Underweight",
+  "Normal": "Normal",
+  "Poids actuel": "Current weight",
+  "Poids de forme pour ta taille": "Healthy weight for your height",
+  "{n} à perdre pour un IMC normal": "{n} to lose for a normal BMI",
+  "{n} à prendre pour un IMC normal": "{n} to gain for a normal BMI",
+  "L’IMC est un repère général : il ne tient pas compte de la masse musculaire.": "BMI is a general guide: it does not account for muscle mass.",
+  "Masquer": "Hide",
+  "Afficher": "Show",
 };
 
 export default d;

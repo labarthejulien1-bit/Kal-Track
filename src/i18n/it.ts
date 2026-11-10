@@ -521,6 +521,15 @@ const d: Record<string, string> = {
   "Protéines : encore {n} g 🍗": "Proteine: ancora {n} g 🍗",
   "dont +{n} grâce au sport": "di cui +{n} grazie allo sport",
   "stocké dans l’application, sur ton téléphone": "salvato nell’app, sul tuo telefono",
+  "Maigreur": "Sottopeso",
+  "Normal": "Normale",
+  "Poids actuel": "Peso attuale",
+  "Poids de forme pour ta taille": "Peso forma per la tua altezza",
+  "{n} à perdre pour un IMC normal": "{n} da perdere per un IMC normale",
+  "{n} à prendre pour un IMC normal": "{n} da prendere per un IMC normale",
+  "L’IMC est un repère général : il ne tient pas compte de la masse musculaire.": "L’IMC è un riferimento generale: non tiene conto della massa muscolare.",
+  "Masquer": "Nascondi",
+  "Afficher": "Mostra",
 };
 
 export default d;
