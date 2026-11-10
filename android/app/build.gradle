@@ -44,6 +44,8 @@ android {
         release {
             if (System.getenv("KEYSTORE_FILE")) signingConfig signingConfigs.release
             minifyEnabled false
+            // Symboles de débogage du code natif joints à l'AAB (rapports de plantage lisibles dans la Play Console)
+            ndk { debugSymbolLevel 'SYMBOL_TABLE' }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
