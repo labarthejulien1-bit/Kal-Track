@@ -55,7 +55,7 @@ Code-barres : le numéro EAN d'un produit n'est pas une donnée personnelle → 
 ## ⚠️ Prérequis avant publication
 
 - **Activer la facturation sur le projet Google AI Studio / Gemini (offre payante)** : les conditions de l'API Gemini n'autorisent que l'offre payante pour une application utilisée dans l'Union européenne, en Suisse ou au Royaume-Uni. La politique de confidentialité indique les conditions payantes (pas d'entraînement sur les données).
-- Remplacer `CONTACT_EMAIL` dans `public/privacy.html` par l'adresse de contact du compte développeur.
+- Adresse de contact (fiche du store, politique de confidentialité) : kalapps.contact@gmail.com
 
 ## Santé Android (Health Connect) — déclaration Play Console
 

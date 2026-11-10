@@ -34,6 +34,12 @@ jobs:
         run: |
           if [ -z "$GEMINI_API_KEY" ]; then echo "::error::Secret GEMINI_API_KEY manquant"; exit 1; fi
           printf '%s' "$GEMINI_API_KEY" | npx -y wrangler@4.152.0 secret put GEMINI_API_KEY
+      - name: Enregistrer la clé Resend (alertes e-mail, facultatif)
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          if [ -z "$RESEND_API_KEY" ]; then echo "Pas de clé Resend : alertes e-mail désactivées."; exit 0; fi
+          printf '%s' "$RESEND_API_KEY" | npx -y wrangler@4.152.0 secret put RESEND_API_KEY
       - name: Vérifier que le serveur répond
         run: |
           sleep 5

@@ -76,7 +76,7 @@ export class QuotaCounter extends DurableObject {
       const keep = new Set([day, prevDay(day)]);
       for (const k of all.keys()) if (!keep.has(k.split(':')[0])) await this.ctx.storage.delete(k);
     }
-    return Response.json({ ok: true, used: used + 1, usedDev: usedDev + 1 });
+    return Response.json({ ok: true, used: used + 1, usedDev: usedDev + 1, usedAll: usedAll + 1 });
   }
 }
 
@@ -102,6 +102,40 @@ async function hmac(keyHex, text) {
   const key = await crypto.subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(text));
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** E-mail d'alerte (Resend) : nombre d'analyses du jour et coût réel. Sans clé configurée, rien n'est envoyé. */
+async function sendAlert(env, day, count) {
+  if (!env.RESEND_API_KEY || !env.ALERT_EMAIL) return;
+  try {
+    const { days } = await statsStub(env)
+      .fetch('https://stats/', { method: 'POST', body: JSON.stringify({ action: 'report' }) })
+      .then((r) => r.json());
+    const sum = (pred) => {
+      const t = { n: 0, in: 0, out: 0 };
+      for (const [d, v] of Object.entries(days)) if (pred(d)) for (const k of Object.keys(t)) t[k] += v[k] || 0;
+      return t;
+    };
+    const today = sum((d) => d === day);
+    const month = sum((d) => d.startsWith(day.slice(0, 7)));
+    const usd = (t) => costOf(t, env).toFixed(2);
+    const limit = Number(env.GLOBAL_DAILY_LIMIT) || 1000;
+    const text = [
+      `Kal-Track : ${count} analyses IA aujourd'hui (${day}).`,
+      '',
+      `Aujourd'hui : ${today.n} analyses · ${usd(today)} $`,
+      `Ce mois-ci : ${month.n} analyses · ${usd(month)} $`,
+      `Plafond global : ${limit} analyses / jour · ${env.PUBLIC_PER_DEVICE || 10} par téléphone`,
+      `Modèle : ${env.MODEL || 'gemini-3.5-flash-lite'}`,
+    ].join('\n');
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: 'Kal-Track <onboarding@resend.dev>', to: [env.ALERT_EMAIL], subject: `Kal-Track : ${count} analyses IA aujourd'hui`, text }),
+    });
+  } catch {
+    /* une alerte ne doit jamais bloquer le service */
+  }
 }
 
 function statsStub(env) {
@@ -144,7 +178,7 @@ function json(data, status, cors) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const cors = corsHeaders(request, env);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
 
@@ -174,12 +208,15 @@ export default {
       /* configuration invalide */
     }
     let entry;
+    const publicEntry = { name: 'Public', daily: Number(env.PUBLIC_DAILY) || 1000, perDevice: Number(env.PUBLIC_PER_DEVICE) || 10 };
     if (code) {
       entry = codes[await sha256(code)];
       if (!entry) return json({ error: { code: 'bad_code', message: "Code d'accès invalide." } }, 401, cors);
+      // Code administrateur : ouvre les statistiques, mais l'IA reste au quota public comme tout le monde.
+      if (entry.adminOnly && url.pathname !== '/stats') entry = publicEntry;
     } else {
       // Accès public inclus dans l'appli : quota par téléphone + plafond total.
-      entry = { name: 'Public', daily: Number(env.PUBLIC_DAILY) || 500, perDevice: Number(env.PUBLIC_PER_DEVICE) || 20 };
+      entry = publicEntry;
     }
 
     const day = today();
@@ -293,6 +330,8 @@ export default {
           img: JSON.stringify(payload.contents || '').includes('inline_data'),
         };
         await statsStub(env).fetch('https://stats/', { method: 'POST', body: JSON.stringify({ action: 'usage', day, usage }) });
+        const every = Number(env.ALERT_EVERY) || 0;
+        if (every && taken.usedAll && taken.usedAll % every === 0) ctx.waitUntil(sendAlert(env, day, taken.usedAll));
       } catch {
         /* la mesure ne doit jamais bloquer une analyse */
       }

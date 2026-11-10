@@ -13,16 +13,19 @@ MODEL = "gemini-3.5-flash-lite"
 PRICE_IN_PER_M = "0.30"
 PRICE_OUT_PER_M = "2.50"
 # Accès public (sans code) inclus dans l'appli
-PUBLIC_DAILY = "500"
-PUBLIC_PER_DEVICE = "20"
+PUBLIC_DAILY = "1000"
+PUBLIC_PER_DEVICE = "10"
 # Plafond global d'analyses par jour (protection de la facture)
 GLOBAL_DAILY_LIMIT = "1000"
+# Alerte e-mail toutes les N analyses (tous utilisateurs confondus), via Resend
+ALERT_EMAIL = "kalapps.contact@gmail.com"
+ALERT_EVERY = "100"
 # Sites autorisés à appeler le relais
 ALLOWED_ORIGINS = "https://labarthejulien1-bit.github.io,https://localhost,http://localhost:5173,http://localhost:4173"
 # Codes d'accès : empreinte SHA-256 du code -> nom, quota quotidien total (daily)
 # et, optionnellement, quota quotidien par téléphone (perDevice).
 # Les codes eux-mêmes ne sont jamais écrits dans le dépôt.
-ACCESS_CODES = '{"e6fefe7804c0f8bc9bcf86528b55a467442e1e774e03398be6fb88de91c1fd02": {"name": "Juju", "daily": 100, "admin": true}, "dab277c11577d388355e6230263667bdde7f708624ea2df112a72b8e3085a416": {"name": "Amis", "daily": 500, "perDevice": 20}}'
+ACCESS_CODES = '{"e6fefe7804c0f8bc9bcf86528b55a467442e1e774e03398be6fb88de91c1fd02": {"name": "Admin", "adminOnly": true, "admin": true}, "dab277c11577d388355e6230263667bdde7f708624ea2df112a72b8e3085a416": {"name": "Amis", "daily": 1000, "perDevice": 10}}'
 
 [[durable_objects.bindings]]
 name = "QUOTA"
