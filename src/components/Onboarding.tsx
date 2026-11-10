@@ -48,16 +48,16 @@ export function Onboarding({ open, onDone }: { open: boolean; onDone: () => void
         </div>
         <WeightField label={t('Poids cible')} kg={p.targetWeight} onChange={(v) => set({ targetWeight: v })} />
         <div>
-          <Label>{t('Activité quotidienne')}</Label>
+          <Label>{t('Activité au quotidien (travail, déplacements, pas)')}</Label>
           <Picker<ActivityLevel>
-            title={t('Activité quotidienne')}
+            title={t('Activité au quotidien (travail, déplacements, pas)')}
             value={p.activityLevel}
             onChange={(v) => set({ activityLevel: v })}
             options={(Object.keys(ACTIVITY_FACTORS) as ActivityLevel[]).map((k) => ({ value: k, label: ACTIVITY_FACTORS[k].label, hint: ACTIVITY_FACTORS[k].hint }))}
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <NumberField label={t('Séances sport / sem.')} value={p.workoutsPerWeek} onChange={(v) => set({ workoutsPerWeek: v })} />
+          <NumberField label={t('Séances de sport prévues / sem.')} value={p.workoutsPerWeek} onChange={(v) => set({ workoutsPerWeek: v })} />
           <NumberField label={t('Durée moyenne')} value={p.workoutMinutes} onChange={(v) => set({ workoutMinutes: v })} unit="min" />
         </div>
         <div>

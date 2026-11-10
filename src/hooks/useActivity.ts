@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/database';
-import { bonusSessions, keyOf } from '@/lib/sport';
+import { bonusSessions, isWorkout, keyOf } from '@/lib/sport';
 import { startOfWeek } from '@/lib/utils';
 import type { Activity, HealthDay } from '@/types';
 
@@ -22,5 +22,7 @@ export function useActivity(date: string, plannedPerWeek: number, bonusEnabled: 
   const bonusKeys = bonusSessions(week, plannedPerWeek);
   const bonusKcal = bonusEnabled ? sessions.filter((s) => bonusKeys.has(keyOf(s))).reduce((n, s) => n + s.kcal, 0) : 0;
   const sessionKcal = sessions.reduce((n, s) => n + s.kcal, 0);
-  return { loaded: data !== undefined, steps: day?.steps ?? 0, activeKcal: day?.activeKcal ?? 0, hasHealthDay: !!day, sessions, bonusKeys, bonusKcal, sessionKcal };
+  // Séances sportives de la semaine jusqu'à ce jour (pour le compteur « x / N prévues »).
+  const weekWorkouts = week.filter(isWorkout).length;
+  return { loaded: data !== undefined, steps: day?.steps ?? 0, activeKcal: day?.activeKcal ?? 0, hasHealthDay: !!day, sessions, bonusKeys, bonusKcal, sessionKcal, weekWorkouts };
 }

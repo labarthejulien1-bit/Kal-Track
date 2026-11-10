@@ -47,8 +47,19 @@ export function sportFromHealth(workoutType: string): SportType {
  * Renvoie l'ensemble des séances « bonus » (par id ou extId).
  */
 export function bonusSessions(weekActivities: Activity[], plannedPerWeek: number) {
-  const sorted = [...weekActivities].sort((a, b) => a.startTime - b.startTime);
+  const sorted = weekActivities.filter(isWorkout).sort((a, b) => a.startTime - b.startTime);
   return new Set(sorted.slice(Math.max(0, Math.round(plannedPerWeek))).map(keyOf));
+}
+
+/**
+ * Séance « sportive » comptée dans les séances prévues / bonus.
+ * Exclues : marches détectées automatiquement par la montre (déjà dans l'activité quotidienne)
+ * et séances de moins de 15 min.
+ */
+export function isWorkout(a: Activity) {
+  if (a.minutes < 15) return false;
+  if (a.source === 'health' && a.type === 'walk') return false;
+  return true;
 }
 
 export const keyOf = (a: Activity) => a.extId ?? `m${a.id}`;

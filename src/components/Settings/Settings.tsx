@@ -515,16 +515,16 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
             <NumberField label={t('Masse grasse (optionnel)')} value={profile.bodyFat ?? 0} onChange={(v) => updateProfile({ bodyFat: v || undefined })} unit="%" allowEmpty placeholder="—" />
           </div>
           <div>
-            <Label>{t('Activité quotidienne (hors sport)')}</Label>
+            <Label>{t('Activité au quotidien (travail, déplacements, pas)')}</Label>
             <Picker<ActivityLevel>
-              title={t('Activité quotidienne (hors sport)')}
+              title={t('Activité au quotidien (travail, déplacements, pas)')}
               value={profile.activityLevel}
               onChange={(v) => updateProfile({ activityLevel: v })}
               options={(Object.keys(ACTIVITY_FACTORS) as ActivityLevel[]).map((k) => ({ value: k, label: ACTIVITY_FACTORS[k].label, hint: ACTIVITY_FACTORS[k].hint, badge: `×${ACTIVITY_FACTORS[k].factor}` }))}
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <NumberField label={t('Séances de sport / semaine')} value={profile.workoutsPerWeek} onChange={(v) => updateProfile({ workoutsPerWeek: v })} unit="×" />
+            <NumberField label={t('Séances de sport prévues / semaine')} value={profile.workoutsPerWeek} onChange={(v) => updateProfile({ workoutsPerWeek: v })} unit="×" />
             <NumberField label={t('Durée moyenne')} value={profile.workoutMinutes} onChange={(v) => updateProfile({ workoutMinutes: v })} unit="min" step={5} />
           </div>
           <div>
