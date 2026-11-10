@@ -1,7 +1,7 @@
 import { Candy, Wheat } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { COLORS, MEAL_COLORS, MEAL_LABELS, MEAL_SHORT, MEAL_TYPES, round } from '@/lib/utils';
+import { COLORS, MEAL_COLORS, cn, MEAL_LABELS, MEAL_SHORT, MEAL_TYPES, round } from '@/lib/utils';
 import type { Goals, MealType, Nutrients, Profile } from '@/types';
 import { t } from '@/i18n';
 
@@ -47,23 +47,11 @@ export function CalorieSummary({
   const pace = isToday && hour >= 6 ? Math.min(1, expected / goal) : null;
   const hLabel = `${now.getHours()}h`;
 
-  // Message du jour (uniquement aujourd'hui)
-  let status: { text: string; color: string } | null = null;
+  // Conseil du jour (uniquement aujourd'hui) : prochain repas à prévoir.
   let hint: string | null = null;
-  if (isToday) {
-    const diff = eaten - expected;
-    const tol = Math.max(120, goal * 0.08);
-    if (over) status = { text: t('Objectif dépassé de {n} kcal : demain on repart du bon pied 💪', { n: round(-remaining) }), color: '#ef4444' };
-    else if (hour < 7 && eaten === 0) status = { text: t('Bonne journée ! Ton objectif : {n} kcal', { n: round(goal) }), color: COLORS.kcal };
-    else if (Math.abs(diff) <= tol) status = { text: t('Pile dans le rythme pour {h}', { h: hLabel }), color: COLORS.kcal };
-    else if (diff > 0) status = { text: t('En avance de {n} kcal sur le rythme', { n: round(diff) }), color: '#f59e0b' };
-    else status = { text: t('{n} kcal de marge sur le rythme', { n: round(-diff) }), color: '#0ea5e9' };
-    if (!over) {
-      const next = MEAL_TYPES.filter((m) => MEAL_WINDOWS[m][1] > hour && byType[m].totals.calories < targets[m] * 0.5).sort((x, y) => MEAL_WINDOWS[x][0] - MEAL_WINDOWS[y][0])[0];
-      hint = next
-        ? t('Il te reste {n} kcal · prochain repas : {meal} (≈ {m} kcal)', { n: round(remaining), m: round(targets[next]), meal: MEAL_LABELS[next] })
-        : t('Il te reste {n} kcal pour aujourd’hui', { n: round(remaining) });
-    }
+  if (isToday && !over) {
+    const next = MEAL_TYPES.filter((m) => MEAL_WINDOWS[m][1] > hour && byType[m].totals.calories < targets[m] * 0.5).sort((x, y) => MEAL_WINDOWS[x][0] - MEAL_WINDOWS[y][0])[0];
+    if (next) hint = t('Prochain repas : {meal} (≈ {m} kcal)', { m: round(targets[next]), meal: MEAL_LABELS[next] });
   }
   const protLeft = round(goals.protein - totals.protein);
 
@@ -123,11 +111,11 @@ export function CalorieSummary({
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <span className="text-[34px] font-extrabold leading-none tabular-nums text-slate-50">{round(eaten)}</span>
             <span className="mt-1 text-[11px] tabular-nums text-slate-400">/ {round(goal)} kcal</span>
-            {over ? (
-              <span className="mt-1.5 rounded-full bg-red-600/90 px-2 py-0.5 text-xs font-bold tabular-nums text-white shadow-lg shadow-red-600/30">+{round(-remaining)} kcal</span>
-            ) : (
-              bonus > 0 && <span className="mt-1 max-w-[120px] text-[10px] font-semibold leading-tight text-orange-500">{t('dont +{n} grâce au sport', { n: bonus })}</span>
-            )}
+            {/* Calories restantes (vert) ou en trop (rouge) */}
+            <span className={cn('mt-1.5 text-xs font-bold tabular-nums', over ? 'text-red-500' : 'text-emerald-500')}>
+              {over ? t('{n} kcal en trop', { n: round(-remaining) }) : t('{n} kcal restantes', { n: round(remaining) })}
+            </span>
+            {!over && bonus > 0 && <span className="mt-0.5 max-w-[120px] text-[10px] font-semibold leading-tight text-orange-500">{t('dont +{n} grâce au sport', { n: bonus })}</span>}
           </div>
         </div>
 
@@ -158,20 +146,13 @@ export function CalorieSummary({
         </div>
       </div>
 
-      {/* Message du jour */}
-      {status && (
-        <div className="mt-3 space-y-1.5">
-          <div className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold" style={{ color: status.color, background: `${status.color}14` }}>
-            {status.text}
-          </div>
-          {(hint || protLeft > 15) && (
-            <p className="px-1 text-xs leading-snug text-slate-400">
-              {hint}
-              {hint && protLeft > 15 && ' · '}
-              {protLeft > 15 && t('Protéines : encore {n} g 🍗', { n: protLeft })}
-            </p>
-          )}
-        </div>
+      {/* Prochain repas · protéines (l'emoji reste collé à son texte) */}
+      {(hint || protLeft > 15) && (
+        <p className="mt-3 px-1 text-xs leading-snug text-slate-400">
+          {hint}
+          {hint && protLeft > 15 && ' · '}
+          {protLeft > 15 && <span className="whitespace-nowrap">{t('Protéines : encore {n} g 🍗', { n: protLeft })}</span>}
+        </p>
       )}
     </Card>
   );
