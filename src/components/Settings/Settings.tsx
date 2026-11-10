@@ -258,7 +258,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
               options={(Object.keys(ACTIVITY_FACTORS) as ActivityLevel[]).map((k) => ({ value: k, label: ACTIVITY_FACTORS[k].label, hint: ACTIVITY_FACTORS[k].hint, badge: `×${ACTIVITY_FACTORS[k].factor}` }))}
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 items-end gap-2">
             <NumberField label={t('Séances de sport prévues / semaine')} value={profile.workoutsPerWeek} onChange={(v) => updateProfile({ workoutsPerWeek: v })} unit="×" />
             <NumberField label={t('Durée moyenne')} value={profile.workoutMinutes} onChange={(v) => updateProfile({ workoutMinutes: v })} unit="min" step={5} />
           </div>

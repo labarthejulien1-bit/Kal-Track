@@ -56,7 +56,7 @@ export function Onboarding({ open, onDone }: { open: boolean; onDone: () => void
             options={(Object.keys(ACTIVITY_FACTORS) as ActivityLevel[]).map((k) => ({ value: k, label: ACTIVITY_FACTORS[k].label, hint: ACTIVITY_FACTORS[k].hint }))}
           />
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 items-end gap-2">
           <NumberField label={t('Séances de sport prévues / sem.')} value={p.workoutsPerWeek} onChange={(v) => set({ workoutsPerWeek: v })} />
           <NumberField label={t('Durée moyenne')} value={p.workoutMinutes} onChange={(v) => set({ workoutMinutes: v })} unit="min" />
         </div>
