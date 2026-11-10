@@ -213,6 +213,117 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
         </span>
       </div>
 
+      {/* ---------- Profil ---------- */}
+      <CollapsibleCard
+        id="s.profile"
+        icon={<User className="h-4 w-4 text-emerald-400" />}
+        title={t('Profil')}
+        summary={[profile.name, profile.sex === 'male' ? t('Homme') : t('Femme'), `${profile.age} ${t('ans')}`, fmtH(profile.height), fmtW(profile.weight)].filter(Boolean).join(' · ')}
+      >
+        <div className="space-y-3">
+          <div>
+            <Label>{t('Prénom')}</Label>
+            <Input value={profile.name} onChange={(e) => updateProfile({ name: e.target.value })} placeholder={t('Optionnel')} autoComplete="given-name" autoCapitalize="words" className="text-base" />
+          </div>
+          <div>
+            <Label>{t('Sexe')}</Label>
+            <SegmentedTabs<Sex>
+              value={profile.sex}
+              onChange={(v) => updateProfile({ sex: v })}
+              options={[
+                { value: 'male', label: t('Homme') },
+                { value: 'female', label: t('Femme') },
+              ]}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <NumberField label={t('Âge')} value={profile.age} onChange={(v) => updateProfile({ age: v })} unit={t('ans')} />
+            <HeightField label={t('Taille')} cm={profile.height} onChange={(v) => updateProfile({ height: v })} />
+            <WeightField label={t('Poids')} kg={profile.weight} onChange={(v) => updateProfile({ weight: v })} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <WeightField label={t('Poids cible')} kg={profile.targetWeight} onChange={(v) => updateProfile({ targetWeight: v })} />
+            <NumberField label={t('Masse grasse (optionnel)')} value={profile.bodyFat ?? 0} onChange={(v) => updateProfile({ bodyFat: v || undefined })} unit="%" allowEmpty placeholder="—" />
+          </div>
+          <div>
+            <Label>{t('Activité au quotidien (travail, déplacements, pas)')}</Label>
+            <Picker<ActivityLevel>
+              title={t('Activité au quotidien (travail, déplacements, pas)')}
+              value={profile.activityLevel}
+              onChange={(v) => updateProfile({ activityLevel: v })}
+              options={(Object.keys(ACTIVITY_FACTORS) as ActivityLevel[]).map((k) => ({ value: k, label: ACTIVITY_FACTORS[k].label, hint: ACTIVITY_FACTORS[k].hint, badge: `×${ACTIVITY_FACTORS[k].factor}` }))}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <NumberField label={t('Séances de sport prévues / semaine')} value={profile.workoutsPerWeek} onChange={(v) => updateProfile({ workoutsPerWeek: v })} unit="×" />
+            <NumberField label={t('Durée moyenne')} value={profile.workoutMinutes} onChange={(v) => updateProfile({ workoutMinutes: v })} unit="min" step={5} />
+          </div>
+          <div>
+            <Label>{t('Objectif')}</Label>
+            <SegmentedTabs<Goal> value={profile.goal} onChange={(v) => updateProfile({ goal: v })} options={(['lose', 'maintain', 'gain'] as Goal[]).map((g) => ({ value: g, label: { lose: t('Perte'), maintain: t('Maintien'), gain: t('Prise') }[g] }))} />
+          </div>
+          {profile.goal !== 'maintain' && (
+            <div>
+              <Label>{t('Rythme')}</Label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(Object.keys(PACE_DELTAS) as GoalPace[]).map((p) => {
+                  const d = PACE_DELTAS[p][profile.goal === 'lose' ? 'lose' : 'gain'];
+                  const active = profile.pace === p;
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => updateProfile({ pace: p })}
+                      className={`rounded-xl border p-2 text-center text-xs ${active ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 text-slate-400'}`}
+                    >
+                      <div className="font-semibold">{PACE_DELTAS[p].label}</div>
+                      <div>{d > 0 ? '+' : ''}{d} {t('kcal/j')}</div>
+                      <div className="text-[10px] opacity-70">≈ {d > 0 ? '+' : ''}{wOut((d * 7) / 7700, 2)} {t('{u}/sem', { u: wUnit() })}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div>
+            <Label>{t('Répartition des macronutriments')}</Label>
+            <Picker<MacroPreset>
+              title={t('Répartition des macronutriments')}
+              value={profile.macroPreset}
+              onChange={(v) => updateProfile({ macroPreset: v })}
+              options={[
+                ...(Object.keys(MACRO_PRESETS) as Exclude<MacroPreset, 'custom'>[]).map((k) => ({
+                  value: k as MacroPreset,
+                  label: MACRO_PRESETS[k].label,
+                  hint: `${t('Protéines')} ${MACRO_PRESETS[k].protein} % · ${t('Glucides')} ${MACRO_PRESETS[k].carbs} % · ${t('Lipides')} ${MACRO_PRESETS[k].fat} %`,
+                })),
+                { value: 'custom' as MacroPreset, label: t('Personnalisée') },
+              ]}
+            />
+            {profile.macroPreset === 'custom' && (
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <NumberField label={t('Protéines')} value={profile.macroSplit.protein} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, protein: v } })} unit="%" color={COLORS.protein} />
+                <NumberField label={t('Glucides')} value={profile.macroSplit.carbs} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, carbs: v } })} unit="%" color={COLORS.carbs} />
+                <NumberField label={t('Lipides')} value={profile.macroSplit.fat} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, fat: v } })} unit="%" color={COLORS.fat} />
+              </div>
+            )}
+            {splitSum !== 100 && <p className="mt-1 text-[11px] text-amber-400">{t('Le total fait {n}% (devrait faire 100 %).', { n: splitSum })}</p>}
+          </div>
+          <div>
+            <Label>{t('Répartition des calories par repas')}</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {MEAL_TYPES.map((mt) => (
+                <NumberField key={mt} label={MEAL_SHORT[mt]} value={profile.mealSplit[mt]} onChange={(v) => updateProfile({ mealSplit: { ...profile.mealSplit, [mt]: v } })} unit="%" />
+              ))}
+            </div>
+            {mealSum !== 100 && <p className="mt-1 text-[11px] text-amber-400">{t('Le total fait {n}% (devrait faire 100 %).', { n: mealSum })}</p>}
+          </div>
+          <NumberField label={t("Objectif d'hydratation (0 = automatique)")} value={waterOut(profile.waterGoalMl ?? 0)} onChange={(v) => updateProfile({ waterGoalMl: v ? Math.round(waterIn(v)) : undefined })} unit={waterUnitLabel()} allowEmpty placeholder={t('Auto')} />
+          <Button className="w-full" onClick={saveNow}>
+            <CheckCircle2 /> {t('Enregistrer le profil')}
+          </Button>
+        </div>
+      </CollapsibleCard>
+
       {/* ---------- IA ---------- */}
       <CollapsibleCard
         id="s.ai"
@@ -294,30 +405,35 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
         </div>
       </Sheet>
 
-      {/* ---------- Apparence ---------- */}
+      {/* ---------- Calcul ---------- */}
       <CollapsibleCard
-        id="s.theme"
-        icon={<Palette className="h-4 w-4 text-fuchsia-400" />}
-        title={t('Apparence')}
-        summary={{ light: t('Clair'), dark: t('Sombre'), auto: t('Auto') }[profile.theme ?? 'light']}
+        id="s.calc"
+        icon={<Calculator className="h-4 w-4 text-amber-400" />}
+        title={t('Calcul de tes besoins')}
+        summary={`${goals.calories} kcal · ${t('P')} ${goals.protein} · ${t('G')} ${goals.carbs} · ${t('L')} ${goals.fat} g`}
       >
-
-          <SegmentedTabs<ThemeSetting>
-            value={profile.theme ?? 'light'}
-            onChange={async (theme) => {
-              applyTheme(theme);
-              await updateProfile({ theme });
-              dirty.current = true;
-              await flush();
-              await db.userProfile.update(1, { theme });
-            }}
-            options={[
-              { value: 'light', label: <span className="flex items-center justify-center gap-1.5"><Sun className="h-4 w-4" /> {t('Clair')}</span> },
-              { value: 'dark', label: <span className="flex items-center justify-center gap-1.5"><Moon className="h-4 w-4" /> {t('Sombre')}</span> },
-              { value: 'auto', label: <span className="flex items-center justify-center gap-1.5"><SunMoon className="h-4 w-4" /> {t('Auto')}</span> },
-            ]}
-          />
-
+        <div className="space-y-2 text-xs">
+          <Row label={`${t('Métabolisme de base')} (${goals.bmrMethod})`} value={`${goals.bmr} kcal`} />
+          <Row label={t('Dépense totale (TDEE, activité + sport)')} value={`${goals.tdee} kcal`} />
+          <div className="grid grid-cols-3 gap-2 py-1 text-center">
+            <Zone label={t('Perte')} value={goals.loseTarget} color={COLORS.lose} active={profile.goal === 'lose'} />
+            <Zone label={t('Maintien')} value={goals.maintenance} color={COLORS.maintain} active={profile.goal === 'maintain'} />
+            <Zone label={t('Prise')} value={goals.gainTarget} color={COLORS.gain} active={profile.goal === 'gain'} />
+          </div>
+          <Row label={t('Objectif quotidien')} value={<b className="text-emerald-400">{goals.calories} kcal</b>} />
+          <Row label={t('Protéines / Glucides / Lipides')} value={`${goals.protein} g · ${goals.carbs} g · ${goals.fat} g`} />
+          <Row label={t('Protéines par {u} de poids', { u: wUnit() })} value={`${round(goals.protein / Math.max(1, wOut(profile.weight)), 1)} g/${wUnit()}`} />
+          <Row label={t('Limite de sucres (OMS < 10 %)')} value={`${goals.sugar} g`} />
+          <Row label={t('Fibres recommandées')} value={`${goals.fiber} g`} />
+          <Row label={t('Variation attendue')} value={`${goals.weeklyChangeKg > 0 ? '+' : ''}${wOut(goals.weeklyChangeKg, 2)} ${t('{u} / semaine', { u: wUnit() })}`} />
+          {goals.weeksToTarget !== null && <Row label={t("Temps estimé jusqu'au poids cible")} value={t('≈ {n} semaines', { n: Math.ceil(goals.weeksToTarget) })} />}
+          <Row label={t('IMC')} value={goals.bmi} />
+          {goals.clamped && (
+            <p className="flex gap-1.5 rounded-lg bg-amber-500/10 p-2 text-amber-300">
+              <Info className="h-4 w-4 shrink-0" /> {t('Objectif relevé au minimum de sécurité ({n} kcal). Un déficit plus important est déconseillé.', { n: goals.minSafe })}
+            </p>
+          )}
+        </div>
       </CollapsibleCard>
 
       {/* ---------- Santé Android & sport ---------- */}
@@ -439,6 +555,32 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
         </CollapsibleCard>
       )}
 
+      {/* ---------- Apparence ---------- */}
+      <CollapsibleCard
+        id="s.theme"
+        icon={<Palette className="h-4 w-4 text-fuchsia-400" />}
+        title={t('Apparence')}
+        summary={{ light: t('Clair'), dark: t('Sombre'), auto: t('Auto') }[profile.theme ?? 'light']}
+      >
+
+          <SegmentedTabs<ThemeSetting>
+            value={profile.theme ?? 'light'}
+            onChange={async (theme) => {
+              applyTheme(theme);
+              await updateProfile({ theme });
+              dirty.current = true;
+              await flush();
+              await db.userProfile.update(1, { theme });
+            }}
+            options={[
+              { value: 'light', label: <span className="flex items-center justify-center gap-1.5"><Sun className="h-4 w-4" /> {t('Clair')}</span> },
+              { value: 'dark', label: <span className="flex items-center justify-center gap-1.5"><Moon className="h-4 w-4" /> {t('Sombre')}</span> },
+              { value: 'auto', label: <span className="flex items-center justify-center gap-1.5"><SunMoon className="h-4 w-4" /> {t('Auto')}</span> },
+            ]}
+          />
+
+      </CollapsibleCard>
+
       {/* ---------- Langue ---------- */}
       <CollapsibleCard
         id="s.lang"
@@ -496,148 +638,6 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
               />
             </div>
           ))}
-        </div>
-      </CollapsibleCard>
-
-      {/* ---------- Profil ---------- */}
-      <CollapsibleCard
-        id="s.profile"
-        icon={<User className="h-4 w-4 text-emerald-400" />}
-        title={t('Profil')}
-        summary={[profile.name, profile.sex === 'male' ? t('Homme') : t('Femme'), `${profile.age} ${t('ans')}`, fmtH(profile.height), fmtW(profile.weight)].filter(Boolean).join(' · ')}
-      >
-        <div className="space-y-3">
-          <div>
-            <Label>{t('Prénom')}</Label>
-            <Input value={profile.name} onChange={(e) => updateProfile({ name: e.target.value })} placeholder={t('Optionnel')} autoComplete="given-name" autoCapitalize="words" className="text-base" />
-          </div>
-          <div>
-            <Label>{t('Sexe')}</Label>
-            <SegmentedTabs<Sex>
-              value={profile.sex}
-              onChange={(v) => updateProfile({ sex: v })}
-              options={[
-                { value: 'male', label: t('Homme') },
-                { value: 'female', label: t('Femme') },
-              ]}
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <NumberField label={t('Âge')} value={profile.age} onChange={(v) => updateProfile({ age: v })} unit={t('ans')} />
-            <HeightField label={t('Taille')} cm={profile.height} onChange={(v) => updateProfile({ height: v })} />
-            <WeightField label={t('Poids')} kg={profile.weight} onChange={(v) => updateProfile({ weight: v })} />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <WeightField label={t('Poids cible')} kg={profile.targetWeight} onChange={(v) => updateProfile({ targetWeight: v })} />
-            <NumberField label={t('Masse grasse (optionnel)')} value={profile.bodyFat ?? 0} onChange={(v) => updateProfile({ bodyFat: v || undefined })} unit="%" allowEmpty placeholder="—" />
-          </div>
-          <div>
-            <Label>{t('Activité au quotidien (travail, déplacements, pas)')}</Label>
-            <Picker<ActivityLevel>
-              title={t('Activité au quotidien (travail, déplacements, pas)')}
-              value={profile.activityLevel}
-              onChange={(v) => updateProfile({ activityLevel: v })}
-              options={(Object.keys(ACTIVITY_FACTORS) as ActivityLevel[]).map((k) => ({ value: k, label: ACTIVITY_FACTORS[k].label, hint: ACTIVITY_FACTORS[k].hint, badge: `×${ACTIVITY_FACTORS[k].factor}` }))}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <NumberField label={t('Séances de sport prévues / semaine')} value={profile.workoutsPerWeek} onChange={(v) => updateProfile({ workoutsPerWeek: v })} unit="×" />
-            <NumberField label={t('Durée moyenne')} value={profile.workoutMinutes} onChange={(v) => updateProfile({ workoutMinutes: v })} unit="min" step={5} />
-          </div>
-          <div>
-            <Label>{t('Objectif')}</Label>
-            <SegmentedTabs<Goal> value={profile.goal} onChange={(v) => updateProfile({ goal: v })} options={(['lose', 'maintain', 'gain'] as Goal[]).map((g) => ({ value: g, label: { lose: t('Perte'), maintain: t('Maintien'), gain: t('Prise') }[g] }))} />
-          </div>
-          {profile.goal !== 'maintain' && (
-            <div>
-              <Label>{t('Rythme')}</Label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {(Object.keys(PACE_DELTAS) as GoalPace[]).map((p) => {
-                  const d = PACE_DELTAS[p][profile.goal === 'lose' ? 'lose' : 'gain'];
-                  const active = profile.pace === p;
-                  return (
-                    <button
-                      key={p}
-                      onClick={() => updateProfile({ pace: p })}
-                      className={`rounded-xl border p-2 text-center text-xs ${active ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 text-slate-400'}`}
-                    >
-                      <div className="font-semibold">{PACE_DELTAS[p].label}</div>
-                      <div>{d > 0 ? '+' : ''}{d} {t('kcal/j')}</div>
-                      <div className="text-[10px] opacity-70">≈ {d > 0 ? '+' : ''}{wOut((d * 7) / 7700, 2)} {t('{u}/sem', { u: wUnit() })}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          <div>
-            <Label>{t('Répartition des macronutriments')}</Label>
-            <Picker<MacroPreset>
-              title={t('Répartition des macronutriments')}
-              value={profile.macroPreset}
-              onChange={(v) => updateProfile({ macroPreset: v })}
-              options={[
-                ...(Object.keys(MACRO_PRESETS) as Exclude<MacroPreset, 'custom'>[]).map((k) => ({
-                  value: k as MacroPreset,
-                  label: MACRO_PRESETS[k].label,
-                  hint: `${t('Protéines')} ${MACRO_PRESETS[k].protein} % · ${t('Glucides')} ${MACRO_PRESETS[k].carbs} % · ${t('Lipides')} ${MACRO_PRESETS[k].fat} %`,
-                })),
-                { value: 'custom' as MacroPreset, label: t('Personnalisée') },
-              ]}
-            />
-            {profile.macroPreset === 'custom' && (
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                <NumberField label={t('Protéines')} value={profile.macroSplit.protein} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, protein: v } })} unit="%" color={COLORS.protein} />
-                <NumberField label={t('Glucides')} value={profile.macroSplit.carbs} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, carbs: v } })} unit="%" color={COLORS.carbs} />
-                <NumberField label={t('Lipides')} value={profile.macroSplit.fat} onChange={(v) => updateProfile({ macroSplit: { ...profile.macroSplit, fat: v } })} unit="%" color={COLORS.fat} />
-              </div>
-            )}
-            {splitSum !== 100 && <p className="mt-1 text-[11px] text-amber-400">{t('Le total fait {n}% (devrait faire 100 %).', { n: splitSum })}</p>}
-          </div>
-          <div>
-            <Label>{t('Répartition des calories par repas')}</Label>
-            <div className="grid grid-cols-4 gap-2">
-              {MEAL_TYPES.map((mt) => (
-                <NumberField key={mt} label={MEAL_SHORT[mt]} value={profile.mealSplit[mt]} onChange={(v) => updateProfile({ mealSplit: { ...profile.mealSplit, [mt]: v } })} unit="%" />
-              ))}
-            </div>
-            {mealSum !== 100 && <p className="mt-1 text-[11px] text-amber-400">{t('Le total fait {n}% (devrait faire 100 %).', { n: mealSum })}</p>}
-          </div>
-          <NumberField label={t("Objectif d'hydratation (0 = automatique)")} value={waterOut(profile.waterGoalMl ?? 0)} onChange={(v) => updateProfile({ waterGoalMl: v ? Math.round(waterIn(v)) : undefined })} unit={waterUnitLabel()} allowEmpty placeholder={t('Auto')} />
-          <Button className="w-full" onClick={saveNow}>
-            <CheckCircle2 /> {t('Enregistrer le profil')}
-          </Button>
-        </div>
-      </CollapsibleCard>
-
-      {/* ---------- Calcul ---------- */}
-      <CollapsibleCard
-        id="s.calc"
-        icon={<Calculator className="h-4 w-4 text-amber-400" />}
-        title={t('Calcul de tes besoins')}
-        summary={`${goals.calories} kcal · ${t('P')} ${goals.protein} · ${t('G')} ${goals.carbs} · ${t('L')} ${goals.fat} g`}
-      >
-        <div className="space-y-2 text-xs">
-          <Row label={`${t('Métabolisme de base')} (${goals.bmrMethod})`} value={`${goals.bmr} kcal`} />
-          <Row label={t('Dépense totale (TDEE, activité + sport)')} value={`${goals.tdee} kcal`} />
-          <div className="grid grid-cols-3 gap-2 py-1 text-center">
-            <Zone label={t('Perte')} value={goals.loseTarget} color={COLORS.lose} active={profile.goal === 'lose'} />
-            <Zone label={t('Maintien')} value={goals.maintenance} color={COLORS.maintain} active={profile.goal === 'maintain'} />
-            <Zone label={t('Prise')} value={goals.gainTarget} color={COLORS.gain} active={profile.goal === 'gain'} />
-          </div>
-          <Row label={t('Objectif quotidien')} value={<b className="text-emerald-400">{goals.calories} kcal</b>} />
-          <Row label={t('Protéines / Glucides / Lipides')} value={`${goals.protein} g · ${goals.carbs} g · ${goals.fat} g`} />
-          <Row label={t('Protéines par {u} de poids', { u: wUnit() })} value={`${round(goals.protein / Math.max(1, wOut(profile.weight)), 1)} g/${wUnit()}`} />
-          <Row label={t('Limite de sucres (OMS < 10 %)')} value={`${goals.sugar} g`} />
-          <Row label={t('Fibres recommandées')} value={`${goals.fiber} g`} />
-          <Row label={t('Variation attendue')} value={`${goals.weeklyChangeKg > 0 ? '+' : ''}${wOut(goals.weeklyChangeKg, 2)} ${t('{u} / semaine', { u: wUnit() })}`} />
-          {goals.weeksToTarget !== null && <Row label={t("Temps estimé jusqu'au poids cible")} value={t('≈ {n} semaines', { n: Math.ceil(goals.weeksToTarget) })} />}
-          <Row label={t('IMC')} value={goals.bmi} />
-          {goals.clamped && (
-            <p className="flex gap-1.5 rounded-lg bg-amber-500/10 p-2 text-amber-300">
-              <Info className="h-4 w-4 shrink-0" /> {t('Objectif relevé au minimum de sécurité ({n} kcal). Un déficit plus important est déconseillé.', { n: goals.minSafe })}
-            </p>
-          )}
         </div>
       </CollapsibleCard>
 

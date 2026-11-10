@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fond de démarrage : blanc + logo centré en haute définition (jamais étiré). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@android:color/white" />
+    <item>
+        <bitmap android:src="@drawable/splash_logo" android:gravity="center" android:filter="true" />
+    </item>
+</layer-list>
