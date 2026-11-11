@@ -19,6 +19,7 @@
     "@capacitor/filesystem": "8.1.5",
     "@capacitor/local-notifications": "8.3.1",
     "@capacitor/share": "8.0.3",
+    "@capgo/native-purchases": "8.9.6",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
     "capacitor-health": "8.4.0",

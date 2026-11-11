@@ -7,7 +7,12 @@
  *
  * Routes :
  *   GET  /ticket   -> « ticket fondateur » : date du jour signée (preuve d'utilisation précoce, rien n'est stocké)
- *   GET  /status   -> état du code (nom, quota utilisé / restant)
+ *   GET  /status   -> état du code (nom, formule, quota utilisé / restant)
+ *
+ * Formules (accès public) : gratuit (FREE_PER_DEVICE / jour), Kal-Track Plus et fondateurs (PLUS_PER_DEVICE / jour).
+ *   - Fondateur : en-tête X-Kal-Founder = « date.signature » d'un ticket émis au plus tard le FOUNDER_UNTIL.
+ *     Tant que FOUNDER_UNTIL est vide (avant le lancement de l'abonnement), tout le monde est fondateur.
+ *   - Plus : en-tête X-Kal-Plus = jeton d'achat Google Play, vérifié auprès de Google (résultat mis en cache).
  *   GET  /stats    -> coût réel de l'IA (jour / mois), réservé au code administrateur
  *   POST /generate -> corps Gemini generateContent (system_instruction, contents, generationConfig)
  */
@@ -40,6 +45,12 @@ export class QuotaCounter extends DurableObject {
         for (const k of rows.keys()) if (k.slice(2) < old) await this.ctx.storage.delete(k);
       }
       return Response.json({ days });
+    }
+    // Cache des vérifications d'abonnement (objet « plus » séparé).
+    if (action === 'plusGet') return Response.json({ value: (await this.ctx.storage.get(`p:${code}`)) ?? null });
+    if (action === 'plusPut') {
+      await this.ctx.storage.put(`p:${code}`, usage);
+      return Response.json({ ok: true });
     }
     // Clé secrète de signature des tickets (générée une seule fois, jamais transmise).
     if (action === 'key') {
@@ -125,7 +136,7 @@ async function sendAlert(env, day, count, test = false) {
       '',
       `Aujourd'hui : ${today.n} analyses · ${usd(today)} $`,
       `Ce mois-ci : ${month.n} analyses · ${usd(month)} $`,
-      `Plafond global : ${limit} analyses / jour · ${env.PUBLIC_PER_DEVICE || 10} par téléphone`,
+      `Plafond global : ${limit} analyses / jour · ${env.FREE_PER_DEVICE || 2} par téléphone (gratuit), ${env.PLUS_PER_DEVICE || 20} (Plus / fondateurs)`,
       `Modèle : ${env.MODEL || 'gemini-3.5-flash-lite'}`,
     ].join('\n');
     const res = await fetch('https://api.resend.com/emails', {
@@ -156,6 +167,84 @@ async function ticketKey(env) {
   const stub = env.QUOTA.get(env.QUOTA.idFromName('tickets'));
   const { key } = await stub.fetch('https://tickets/', { method: 'POST', body: JSON.stringify({ action: 'key' }) }).then((r) => r.json());
   return key;
+}
+
+// ---------- Kal-Track Plus et fondateurs ----------
+const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64urlText = (text) => b64url(new TextEncoder().encode(text));
+
+/** Ticket fondateur valide : signature du serveur et date au plus tard FOUNDER_UNTIL. */
+async function founderValid(env, header) {
+  const m = /^(\d{4}-\d{2}-\d{2})\.([0-9a-f]{64})$/.exec(header || '');
+  if (!m) return false;
+  if (env.FOUNDER_UNTIL && m[1] > env.FOUNDER_UNTIL) return false;
+  return m[2] === (await hmac(await ticketKey(env), `founder:${m[1]}`));
+}
+
+let googleToken = { value: '', exp: 0 };
+/** Jeton d'accès à l'API Google Play (compte de service, secret PLAY_SERVICE_ACCOUNT). */
+async function googleAccessToken(env) {
+  if (googleToken.value && googleToken.exp > Date.now() + 60_000) return googleToken.value;
+  const sa = JSON.parse(env.PLAY_SERVICE_ACCOUNT);
+  const now = Math.floor(Date.now() / 1000);
+  const unsigned = `${b64urlText(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))}.${b64urlText(
+    JSON.stringify({ iss: sa.client_email, scope: 'https://www.googleapis.com/auth/androidpublisher', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 }),
+  )}`;
+  const pem = sa.private_key.replace(/-----[^-]+-----/g, '').replace(/\s/g, '');
+  const der = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned));
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${unsigned}.${b64url(sig)}`,
+  });
+  const j = await res.json();
+  if (!j.access_token) throw new Error('google_auth');
+  googleToken = { value: j.access_token, exp: Date.now() + (j.expires_in || 3600) * 1000 };
+  return googleToken.value;
+}
+
+/**
+ * Abonnement Plus actif ? Vérifié auprès de Google Play (API subscriptionsv2),
+ * résultat gardé en cache : jusqu'à 6 h si actif (sans dépasser l'échéance), 1 h sinon.
+ */
+async function plusActive(env, purchaseToken) {
+  if (!purchaseToken || purchaseToken.length > 512 || !env.PLAY_SERVICE_ACCOUNT) return false;
+  const id = await sha256(purchaseToken);
+  const stub = env.QUOTA.get(env.QUOTA.idFromName('plus'));
+  const call = (action, value) => stub.fetch('https://plus/', { method: 'POST', body: JSON.stringify({ action, code: id, usage: value }) }).then((r) => r.json());
+  const cached = (await call('plusGet')).value;
+  if (cached && cached.until > Date.now()) return cached.active;
+  let active = false;
+  let expiry = 0;
+  try {
+    const pkg = env.PLAY_PACKAGE || 'com.kaltrack.app';
+    const res = await fetch(`https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${pkg}/purchases/subscriptionsv2/tokens/${encodeURIComponent(purchaseToken)}`, {
+      headers: { Authorization: `Bearer ${await googleAccessToken(env)}` },
+    });
+    if (res.ok) {
+      const sub = await res.json();
+      expiry = Math.max(0, ...(sub.lineItems || []).map((l) => Date.parse(l.expiryTime) || 0));
+      // Résilié mais payé jusqu'à l'échéance = encore actif ; période de grâce = actif.
+      active = ['SUBSCRIPTION_STATE_ACTIVE', 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD', 'SUBSCRIPTION_STATE_CANCELED'].includes(sub.subscriptionState) && expiry > Date.now();
+    } else if (res.status >= 500) {
+      return cached?.active ?? false; // Google indisponible : on garde le dernier état connu
+    }
+  } catch {
+    return cached?.active ?? false;
+  }
+  const until = active ? Math.min(expiry, Date.now() + 6 * 3600_000) : Date.now() + 3600_000;
+  await call('plusPut', { active, until });
+  return active;
+}
+
+/** Formule de l'utilisateur (accès public) : 'plus', 'founder' ou 'free'. */
+async function resolveTier(env, request) {
+  if (!env.FOUNDER_UNTIL) return 'founder'; // avant le lancement : tout le monde a les avantages
+  if (await plusActive(env, (request.headers.get('X-Kal-Plus') || '').trim())) return 'plus';
+  if (await founderValid(env, (request.headers.get('X-Kal-Founder') || '').trim())) return 'founder';
+  return 'free';
 }
 
 async function sha256(text) {
@@ -193,6 +282,8 @@ export default {
     // Rien n'est enregistré : le serveur signe simplement la date du jour.
     if (url.pathname === '/ticket' && request.method === 'GET') {
       const since = today();
+      // Après le lancement de l'abonnement, plus de nouveaux fondateurs.
+      if (env.FOUNDER_UNTIL && since > env.FOUNDER_UNTIL) return json({ closed: true }, 200, cors);
       return json({ since, sig: await hmac(await ticketKey(env), `founder:${since}`) }, 200, cors);
     }
     if (url.pathname === '/ticket/verify' && request.method === 'POST') {
@@ -211,7 +302,10 @@ export default {
     }
     let entry;
     let isAdmin = false;
-    const publicEntry = { name: 'Public', daily: Number(env.PUBLIC_DAILY) || 1000, perDevice: Number(env.PUBLIC_PER_DEVICE) || 10 };
+    // Formule (gratuit / Plus / fondateur) : uniquement pour l'IA et l'état du quota.
+    const tier = ['/generate', '/status'].includes(url.pathname) ? await resolveTier(env, request) : 'free';
+    const tierPerDevice = tier === 'free' ? Number(env.FREE_PER_DEVICE) || 2 : Number(env.PLUS_PER_DEVICE) || 20;
+    const publicEntry = { name: 'Public', daily: Number(env.PUBLIC_DAILY) || 1000, perDevice: tierPerDevice, tier };
     if (code) {
       entry = codes[await sha256(code)];
       if (!entry) return json({ error: { code: 'bad_code', message: "Code d'accès invalide." } }, 401, cors);
@@ -282,7 +376,7 @@ export default {
       const groupLeft = Math.max(0, limit - used);
       if (perDevice) {
         const devLeft = Math.max(0, perDevice - usedDev);
-        return json({ ok: true, name: entry.name, perDevice: true, used: usedDev, limit: perDevice, remaining: Math.min(devLeft, groupLeft), groupRemaining: groupLeft }, 200, cors);
+        return json({ ok: true, name: entry.name, tier: entry.tier || 'code', perDevice: true, used: usedDev, limit: perDevice, remaining: Math.min(devLeft, groupLeft), groupRemaining: groupLeft }, 200, cors);
       }
       return json({ ok: true, name: entry.name, used, limit, remaining: groupLeft }, 200, cors);
     }
@@ -319,18 +413,25 @@ export default {
               ? 'Le quota du jour de ce code est épuisé. Réessaie demain.'
               : `Tu as utilisé tes ${limit} analyses IA du jour. Réessaie demain.`;
       const reason = taken.reason === 'user' && perDevice ? 'group' : taken.reason;
-      return json({ error: { code: 'quota', reason, limit: reason === 'device' ? perDevice : limit, message } }, 429, cors);
+      return json({ error: { code: 'quota', reason, tier: entry.tier || 'code', limit: reason === 'device' ? perDevice : limit, message } }, 429, cors);
     }
 
     // Tests comparatifs : la clé administrateur peut choisir un modèle parmi une liste autorisée.
     const TEST_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'];
     const asked = (request.headers.get('X-Kal-Model') || '').trim();
     const model = isAdmin && TEST_MODELS.includes(asked) ? asked : env.MODEL || 'gemini-3.5-flash-lite';
-    const upstream = await fetch(`${env.GEMINI_BASE_OVERRIDE || GEMINI_BASE}/${encodeURIComponent(model)}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
-      body: JSON.stringify(payload),
-    });
+    let upstream;
+    try {
+      upstream = await fetch(`${env.GEMINI_BASE_OVERRIDE || GEMINI_BASE}/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      // Google injoignable : l'analyse n'est pas décomptée.
+      await callQuota('refund');
+      return json({ error: { code: 'server', message: 'Service IA momentanément indisponible. Réessaie dans un instant.' } }, 502, cors);
+    }
     const text = await upstream.text();
     // En cas d'échec côté Google, l'analyse n'est pas décomptée.
     if (!upstream.ok) await callQuota('refund');

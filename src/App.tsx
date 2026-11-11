@@ -9,6 +9,8 @@ import { CameraModal } from '@/components/Scan/CameraModal';
 import { ReminderScheduler } from '@/components/ReminderScheduler';
 import { HealthSync } from '@/components/HealthSync';
 import { ensureFounderTicket } from '@/lib/founder';
+import { restorePlus } from '@/lib/plus';
+import { isNative } from '@/lib/native';
 import { Onboarding } from '@/components/Onboarding';
 import { ToastProvider } from '@/components/ui/toast';
 import { useProfile } from '@/hooks/useProfile';
@@ -62,6 +64,8 @@ export default function App() {
   // Ticket « fondateur » (première utilisation), demandé une seule fois.
   useEffect(() => {
     if (!loading && hasProfile && !profile.founder) ensureFounderTicket();
+    // Abonnement Plus : relu auprès de Google Play à chaque ouverture (renouvellement, résiliation, nouveau téléphone).
+    if (!loading && hasProfile && isNative) restorePlus().catch(() => undefined);
   }, [loading, hasProfile, profile.founder]);
 
   // Bouton retour Android sans fenêtre ouverte : revient au Journal, puis quitte l'appli.

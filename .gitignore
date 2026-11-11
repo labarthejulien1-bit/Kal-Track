@@ -9,3 +9,4 @@ dev-dist
 *.jks
 release*.keystore
 upload*.keystore
+worker/.wrangler/

@@ -74,3 +74,23 @@ Autorisations demandées (lecture seule) et justification :
 - Les données restent sur l'appareil, ne sont ni transmises ni partagées, ni utilisées pour la publicité.
 - URL de la politique (section Health Connect incluse) : https://labarthejulien1-bit.github.io/Kal-Track/privacy.html
 - Sécurité des données : les données Health Connect ne quittent pas l'appareil → **rien de plus à déclarer comme « collecté »**.
+
+## Kal-Track Plus (abonnement)
+
+Formules : **gratuit = 2 analyses IA / jour**, **Plus = 20 / jour**, **fondateurs = avantages Plus offerts à vie**.
+
+1. **Profil de paiement** : Play Console → Paramètres → Profil de paiement (marchand). Indispensable pour vendre.
+2. **Créer l'abonnement** (après avoir envoyé une version contenant le module d'achat) :
+   Monétiser → Produits → Abonnements → Créer.
+   - ID du produit : `kaltrack_plus` · Nom : « Kal-Track Plus »
+   - Formule de base `monthly` : renouvellement mensuel, **3,99 €**
+   - Formule de base `yearly` : renouvellement annuel, **24,99 €**
+   - Activer les deux formules.
+3. **Testeurs de licence** (achats fictifs gratuits) : Paramètres → Tests de licence → ajouter son adresse Gmail.
+4. **Compte de service** (vérification des achats par le serveur) :
+   Google Cloud → IAM → Comptes de service → Créer → Clés → Ajouter une clé JSON.
+   Play Console → Utilisateurs et autorisations → Inviter l'adresse du compte de service avec « Afficher les informations financières » et « Gérer les commandes et les abonnements ».
+   Coller le JSON complet dans le secret GitHub **`PLAY_SERVICE_ACCOUNT`** (jamais dans la conversation), puis redéployer le serveur.
+5. **Lancement** : dans `worker/wrangler.toml`, mettre `FOUNDER_UNTIL` à la date de lancement (AAAA-MM-JJ) et redéployer.
+   Les utilisateurs arrivés jusqu'à cette date restent fondateurs ; les nouveaux passent en gratuit (2 / jour).
+   ⚠️ Avant cette date : publier aussi la version web (master) pour que les amis sur la PWA reçoivent leur ticket fondateur.

@@ -40,6 +40,12 @@ jobs:
         run: |
           if [ -z "$RESEND_API_KEY" ]; then echo "Pas de clé Resend : alertes e-mail désactivées."; exit 0; fi
           printf '%s' "$RESEND_API_KEY" | npx -y wrangler@4.152.0 secret put RESEND_API_KEY
+      - name: Enregistrer le compte de service Google Play (abonnements, facultatif)
+        env:
+          PLAY_SERVICE_ACCOUNT: ${{ secrets.PLAY_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT" ]; then echo "Pas de compte de service : vérification des abonnements désactivée."; exit 0; fi
+          printf '%s' "$PLAY_SERVICE_ACCOUNT" | npx -y wrangler@4.152.0 secret put PLAY_SERVICE_ACCOUNT
       - name: Vérifier que le serveur répond
         run: |
           sleep 5

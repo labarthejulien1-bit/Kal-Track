@@ -1,6 +1,7 @@
 import type { MealAnalysis, MealItem, Nutrients } from '@/types';
 import { round } from '@/lib/utils';
 import { AI_LANG_NAMES, getLang, t } from '@/i18n';
+import { tierHeaders } from '@/lib/plus';
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -35,6 +36,8 @@ export const GEMINI_MODELS = [
 
 export class GeminiError extends Error {
   status?: number;
+  /** Limite gratuite atteinte : proposer Kal-Track Plus. */
+  upgrade?: boolean;
   constructor(message: string, status?: number) {
     super(message);
     this.status = status;
@@ -140,8 +143,9 @@ async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, sche
   // L'IA passe toujours par le serveur Kal-Track (accès inclus, code facultatif et invisible).
   const viaProxy = true;
   const url = viaProxy ? `${AI_PROXY_URL}/generate` : `${API_BASE}/${encodeURIComponent(model)}:generateContent`;
+  const tier = viaProxy ? await tierHeaders() : {};
   let headers: Record<string, string> = viaProxy
-    ? { 'Content-Type': 'application/json', 'X-Kal-Device': getDeviceId(), ...(code ? { 'X-Kal-Code': code } : {}) }
+    ? { 'Content-Type': 'application/json', 'X-Kal-Device': getDeviceId(), ...tier, ...(code ? { 'X-Kal-Code': code } : {}) }
     : { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey };
 
   const buildBody = (withSchema: boolean) =>
@@ -190,12 +194,14 @@ async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, sche
     let errCode = '';
     let errReason = '';
     let errLimit = 0;
+    let errTier = '';
     try {
       const err = await res.json();
       if (err?.error?.message) message = err.error.message;
       if (typeof err?.error?.code === 'string') errCode = err.error.code;
       if (typeof err?.error?.reason === 'string') errReason = err.error.reason;
       if (typeof err?.error?.limit === 'number') errLimit = err.error.limit;
+      if (typeof err?.error?.tier === 'string') errTier = err.error.tier;
     } catch {
       /* noop */
     }
@@ -203,12 +209,17 @@ async function callGemini({ apiKey, model, accessCode, systemPrompt, parts, sche
     // Code enregistré devenu invalide : on l'oublie et on bascule sur l'IA incluse.
     if (viaProxy && errCode === 'bad_code' && code) {
       code = '';
-      headers = { 'Content-Type': 'application/json', 'X-Kal-Device': getDeviceId() };
+      headers = { 'Content-Type': 'application/json', 'X-Kal-Device': getDeviceId(), ...tier };
       void clearStoredAccessCode();
       attempt--;
       continue;
     }
-    if (viaProxy && ['bad_code', 'quota', 'too_big', 'server', 'update_app'].includes(errCode)) throw new GeminiError(serverMessage(errCode, errReason, errLimit, message), res.status);
+    if (viaProxy && ['bad_code', 'quota', 'too_big', 'server', 'update_app'].includes(errCode)) {
+      const e = new GeminiError(serverMessage(errCode, errReason, errLimit, message), res.status);
+      // Limite gratuite atteinte : l'appli propose discrètement Kal-Track Plus.
+      e.upgrade = errCode === 'quota' && errReason === 'device' && errTier === 'free';
+      throw e;
+    }
     lastError = new GeminiError(humanizeError(res.status, message), res.status);
 
     if (res.status === 400 && withSchema && /schema|response_schema|responseSchema/i.test(message)) {
@@ -418,17 +429,18 @@ export async function clearStoredAccessCode() {
 }
 
 /** État de l'IA pour ce téléphone (accès inclus, ou code facultatif) et analyses restantes. */
-export async function checkAccessCode(code = ''): Promise<{ ok: boolean; message: string; name?: string; remaining?: number; limit?: number }> {
+export type AiTier = 'free' | 'plus' | 'founder' | 'code';
+export async function checkAccessCode(code = ''): Promise<{ ok: boolean; message: string; name?: string; remaining?: number; limit?: number; tier?: AiTier }> {
   try {
     let c = normalizeCode(code);
     if (c) {
-      const probe = await fetch(`${AI_PROXY_URL}/status`, { headers: { 'X-Kal-Device': getDeviceId(), 'X-Kal-Code': c } });
+      const probe = await fetch(`${AI_PROXY_URL}/status`, { headers: { 'X-Kal-Device': getDeviceId(), ...(await tierHeaders()), 'X-Kal-Code': c } });
       if (probe.status === 401) {
         c = '';
         void clearStoredAccessCode();
       }
     }
-    const res = await fetch(`${AI_PROXY_URL}/status`, { headers: { 'X-Kal-Device': getDeviceId(), ...(c ? { 'X-Kal-Code': c } : {}) } });
+    const res = await fetch(`${AI_PROXY_URL}/status`, { headers: { 'X-Kal-Device': getDeviceId(), ...(await tierHeaders()), ...(c ? { 'X-Kal-Code': c } : {}) } });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.ok)
       return {
@@ -436,7 +448,13 @@ export async function checkAccessCode(code = ''): Promise<{ ok: boolean; message
         name: data.name,
         remaining: data.remaining,
         limit: data.limit,
-        message: t(data.perDevice ? "IA activée ✔ · {a}/{b} analyses disponibles aujourd'hui sur ce téléphone" : "IA activée ✔ · {a}/{b} analyses disponibles aujourd'hui", { a: data.remaining, b: data.limit }),
+        tier: data.tier,
+        message:
+          data.tier === 'plus'
+            ? t("Kal-Track Plus ✔ · {a}/{b} analyses disponibles aujourd'hui", { a: data.remaining, b: data.limit })
+            : data.tier === 'founder'
+              ? t("Fondateur ✔ · {a}/{b} analyses disponibles aujourd'hui", { a: data.remaining, b: data.limit })
+              : t(data.perDevice ? "IA activée ✔ · {a}/{b} analyses disponibles aujourd'hui sur ce téléphone" : "IA activée ✔ · {a}/{b} analyses disponibles aujourd'hui", { a: data.remaining, b: data.limit }),
       };
     return { ok: false, message: data?.error?.code ? serverMessage(data.error.code, data.error.reason, data.error.limit, data.error.message) : t('Erreur serveur ({n})', { n: res.status }) };
   } catch {

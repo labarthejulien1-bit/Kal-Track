@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, ImagePlus, Barcode, ScanText, MessageSquareText, Keyboard, History, Loader2, Sparkles, Star, Search, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Camera, ImagePlus, Barcode, ScanText, MessageSquareText, Keyboard, History, Loader2, Sparkles, Star, Search, ArrowLeft, AlertTriangle, Crown } from 'lucide-react';
 import { Sheet } from '@/components/ui/dialog';
 import { maybeAskReview } from '@/lib/feedback';
 import { isNative } from '@/lib/native';
@@ -14,7 +14,9 @@ import { fetchProductByBarcode } from '@/services/openFoodFacts';
 import { saveMeal, useRecentMeals } from '@/hooks/useMeals';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/components/ui/toast';
-import type { AddMode, AddRequest } from '@/components/AppContext';
+import { useApp, type AddMode, type AddRequest } from '@/components/AppContext';
+import { setSections } from '@/lib/uiState';
+import { PLUS_DAILY } from '@/lib/plus';
 import { MEAL_LABELS, guessMealType, haptic, round, todayISO, fromISODate } from '@/lib/utils';
 import type { Meal, MealAnalysis, MealItem, MealType, MealSource } from '@/types';
 import { locale, t } from '@/i18n';
@@ -86,6 +88,13 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   const [hint, setHint] = useState('');
   const [text, setText] = useState('');
   const [error, setError] = useState('');
+  // Limite gratuite atteinte : lien discret vers Kal-Track Plus.
+  const [upgrade, setUpgrade] = useState(false);
+  const { setTab } = useApp();
+  const showError = (e: unknown) => {
+    setError((e as Error).message);
+    setUpgrade(!!(e as { upgrade?: boolean })?.upgrade);
+  };
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [progress, setProgress] = useState(0);
   const progressDone = useRef(false);
@@ -122,6 +131,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   useEffect(() => {
     if (!request) return;
     setError('');
+    setUpgrade(false);
     setHint('');
     setText('');
     setPhoto(null);
@@ -189,6 +199,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   const pickPhoto = async (mode: 'photo' | 'label', fromCamera: boolean) => {
     setPendingMode(mode);
     setError('');
+    setUpgrade(false);
     // Application Android : vrai appareil photo (le sélecteur de fichiers ouvrirait la galerie).
     if (fromCamera && isNative) {
       try {
@@ -216,7 +227,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
       if (pendingMode_ === 'label') await runLabel(img);
       else setStep('photo-preview');
     } catch (e) {
-      setError((e as Error).message);
+      showError(e);
       setStep(pendingMode_);
     }
   };
@@ -225,6 +236,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
     if (!photo) return;
     setStep('analyzing');
     setError('');
+    setUpgrade(false);
     abortRef.current = new AbortController();
     try {
       const a = await analyzeMealPhoto(photo.base64, { apiKey: profile.apiKey, model: profile.model, accessCode: profile.accessCode, hint, signal: abortRef.current.signal });
@@ -232,7 +244,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
       await finishAndReview(toDraft(a, 'photo', photo.dataUrl));
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
-      setError((e as Error).message);
+      showError(e);
       setStep('photo-preview');
     }
   };
@@ -251,7 +263,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
       await finishAndReview(toDraft(a, 'label', img.dataUrl));
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
-      setError((e as Error).message);
+      showError(e);
       setStep('label');
     }
   };
@@ -260,13 +272,14 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
     if (!text.trim()) return;
     setStep('analyzing');
     setError('');
+    setUpgrade(false);
     abortRef.current = new AbortController();
     try {
       const a = await analyzeMealText(text, { apiKey: profile.apiKey, model: profile.model, accessCode: profile.accessCode, signal: abortRef.current.signal });
       await finishAndReview(toDraft(a, 'text'));
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
-      setError((e as Error).message);
+      showError(e);
       setStep('text');
     }
   };
@@ -275,6 +288,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
     async (code: string) => {
       setStep('analyzing');
       setError('');
+    setUpgrade(false);
       try {
         const p = await fetchProductByBarcode(code);
         if (!p) {
@@ -284,7 +298,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
         }
         await finishAndReview(toDraft(p, 'barcode'));
       } catch (e) {
-        setError((e as Error).message);
+        showError(e);
         setStep('barcode');
       }
     },
@@ -335,6 +349,7 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
   const back = () => {
     abortRef.current?.abort();
     setError('');
+    setUpgrade(false);
     setStep('choose');
   };
 
@@ -376,6 +391,19 @@ export function CameraModal({ request, onClose }: { request: AddRequest | null; 
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="flex-1">
             {error}
+            {upgrade && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSections(['s.plus'], true);
+                  setTab('settings');
+                  onClose();
+                }}
+                className="mt-2 flex items-center gap-1.5 font-semibold text-amber-300 underline underline-offset-2"
+              >
+                <Crown className="h-3.5 w-3.5" /> {t('Passer à {n} analyses par jour avec Kal-Track Plus', { n: PLUS_DAILY })}
+              </button>
+            )}
           </div>
         </div>
       )}

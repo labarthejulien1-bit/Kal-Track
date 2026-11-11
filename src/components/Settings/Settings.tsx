@@ -11,7 +11,8 @@ import { fmtH, fmtW, getUnits, waterIn, waterOut, waterUnitLabel, wOut, wUnit, t
 import { Sheet } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { ensureProfile, useProfile } from '@/hooks/useProfile';
-import { checkAccessCode, fetchAiStats, normalizeCode, type AiStats } from '@/services/geminiVision';
+import { checkAccessCode, fetchAiStats, normalizeCode, type AiStats, type AiTier } from '@/services/geminiVision';
+import { PlusCard } from './PlusCard';
 import { ACTIVITY_FACTORS, MACRO_PRESETS, PACE_DELTAS, computeGoals, macroSplitFor } from '@/services/bmrCalculator';
 import { db, exportBackup, getStorageInfo, importBackup, requestPersistentStorage } from '@/db/database';
 import { isNative, saveFile } from '@/lib/native';
@@ -99,7 +100,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
   // --- IA (serveur Kal-Track : clé et modèle gérés côté serveur) ---
   const [code, setCode] = useState(profile.accessCode ?? '');
   const [checking, setChecking] = useState(false);
-  const [access, setAccess] = useState<{ ok: boolean; message: string; name?: string } | null>(null);
+  const [access, setAccess] = useState<{ ok: boolean; message: string; name?: string; tier?: AiTier } | null>(null);
   const [stats, setStats] = useState<AiStats | null>(null);
   useEffect(() => {
     fetchAiStats(profile.accessCode ?? '').then(setStats);
@@ -408,6 +409,9 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
           <p className="text-slate-400">{t("Une fois tes analyses du jour utilisées, tu peux continuer avec le code-barres, la saisie manuelle et tes favoris, puis l'IA revient le lendemain.")}</p>
         </div>
       </Sheet>
+
+      {/* ---------- Kal-Track Plus ---------- */}
+      <PlusCard tier={access?.tier} onChanged={() => checkAccessCode(profile.accessCode ?? '').then(setAccess)} />
 
       {/* ---------- Calcul ---------- */}
       <CollapsibleCard

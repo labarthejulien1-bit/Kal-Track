@@ -69,6 +69,8 @@ export interface Profile {
   sportBonus?: boolean;
   /** « Ticket fondateur » signé par le serveur : date de première utilisation (avantages des premiers utilisateurs). */
   founder?: { since: string; sig: string };
+  /** Abonnement Kal-Track Plus (jeton d'achat Google Play, vérifié par le serveur). */
+  plus?: { token: string; plan?: 'monthly' | 'yearly'; since?: string };
   /** Dernière demande d'avis Play Store (horodatage). */
   reviewAskedAt?: number;
   language?: 'auto' | 'fr' | 'en' | 'es' | 'pt' | 'de' | 'it';
