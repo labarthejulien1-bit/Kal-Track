@@ -16,6 +16,8 @@ const DAY = 86_400_000;
 const BLUE = COLORS.water;
 const RED = '#f43f5e';
 const PLAN = '#10b981';
+/** Trajectoire vers l'objectif (pointillés) et objectifs hebdomadaires. */
+const GOAL = RED;
 
 interface Row {
   x: number;
@@ -59,7 +61,7 @@ export function WeightChart({
   const [showWeights, toggleWeights] = useSectionOpen('wc.weights', true);
   const [showArea, toggleArea] = useSectionOpen('wc.area', true);
   const [showPlan, togglePlan] = useSectionOpen('wc.plan', true);
-  const [showWeekly, toggleWeekly] = useSectionOpen('wc.weekly', true);
+  const [showWeekly, toggleWeekly] = useSectionOpen('wc.weekly2', false);
   const [showTrend, toggleTrend] = useSectionOpen('wc.trend', true);
   const [showGoals, toggleGoals] = useSectionOpen('wc.goals', true);
 
@@ -216,18 +218,18 @@ export function WeightChart({
 
   // Zone de tracé (en pixels) : marges du graphique + axe des poids.
   const plot = { left: 46, right: width - 12, top: 22 };
-  // Bulles hebdomadaires : une sur N si les semaines sont trop serrées (≥ 44 px entre deux bulles).
+  // Bulles hebdomadaires : une sur N si les semaines sont trop serrées (≥ 52 px entre deux bulles).
   const pxPerWeek = ((plot.right - plot.left) * 7 * DAY) / Math.max(DAY, model.domain[1] - model.domain[0]);
-  const weekStep = Math.max(1, Math.ceil(44 / Math.max(1, pxPerWeek)));
+  const weekStep = Math.max(1, Math.ceil(52 / Math.max(1, pxPerWeek)));
   // Bulles au-dessus à droite ; en dessous si la courbe monte (prise de poids) pour ne pas la cacher.
   const below = !model.losing;
   const lastRow = [...model.rows].reverse().find((r) => r.Poids !== undefined);
   const bubbles: BubbleItem[] = [];
   if (showWeights && lastRow) bubbles.push({ x: lastRow.x, y: lastRow.Poids!, text: `${round(lastRow.Poids!, 1)} ${wUnit()}`, color: lastRow.above ? RED : BLUE });
-  if (showGoals && model.startDot) bubbles.push({ x: model.startDot.x, y: model.startDot.y, text: `${t('Départ')} ${fmtW(wIn(model.startDot.y))}`, color: RED });
+  if (showGoals && model.startDot) bubbles.push({ x: model.startDot.x, y: model.startDot.y, text: `${t('Départ')} ${fmtW(wIn(model.startDot.y))}`, color: RED, pin: true });
   if (showGoals && model.endDot)
     bubbles.push({ x: model.endDot.x, y: model.endDot.y, text: `🎯 ${fmtW(targetWeight)} · ${formatDate(toISODate(new Date(model.endDot.x)), { day: 'numeric', month: 'short' })}`, color: RED });
-  if (showWeekly) model.weekly.forEach((w, i) => (weekStep === 1 || i % weekStep === weekStep - 1) && bubbles.push({ x: w.x, y: w.y, text: `${round(w.y, 1)}`, color: PLAN, small: true }));
+  if (showWeekly) model.weekly.forEach((w, i) => (weekStep === 1 || i % weekStep === weekStep - 1) && bubbles.push({ x: w.x, y: w.y, text: `${round(w.y, 1)}`, color: GOAL, small: true }));
   // Points à ne pas recouvrir : pesées, objectifs hebdomadaires, départ / arrivée.
   const obstacles: { x: number; y: number }[] = [
     ...(showWeights ? model.rows.filter((r) => r.Poids !== undefined).map((r) => ({ x: r.x, y: r.Poids! })) : []),
@@ -273,7 +275,7 @@ export function WeightChart({
 
       <div ref={box}>
       <ResponsiveContainer width="100%" height={270}>
-        <ComposedChart data={model.rows} margin={{ top: 22, right: 12, left: -14, bottom: 0 }}>
+        <ComposedChart data={model.rows} margin={{ top: 30, right: 12, left: -14, bottom: 0 }}>
           <defs>
             <linearGradient id={`seg-${uid}`} x1="0" y1="0" x2="1" y2="0">
               {model.stops.map((s, i) => (
@@ -303,8 +305,8 @@ export function WeightChart({
             <ReferenceLine x={model.todayTs} stroke="var(--c-axis)" strokeDasharray="2 3" label={{ value: t('Auj.'), position: 'insideBottomRight', fontSize: 10, fill: 'var(--c-tick)' }} />
           )}
           {/* Trajectoire vers l'objectif : ligne droite du départ à l'arrivée */}
-          <Line hide={!showPlan} dataKey="Plan" stroke={PLAN} strokeWidth={2} strokeDasharray="6 5" dot={false} activeDot={false} type="linear" connectNulls isAnimationActive={false} />
-          {/* Objectif de chaque semaine (points verts + valeur) */}
+          <Line hide={!showPlan} dataKey="Plan" stroke={GOAL} strokeWidth={2} strokeDasharray="6 5" dot={false} activeDot={false} type="linear" connectNulls isAnimationActive={false} />
+          {/* Objectif de chaque semaine (points rouges + valeur) */}
           {showWeekly &&
             model.weekly.map((w) => (
               <ReferenceDot
@@ -312,7 +314,7 @@ export function WeightChart({
                 x={w.x}
                 y={w.y}
                 r={4}
-                fill={PLAN}
+                fill={GOAL}
                 stroke="var(--c-dot)"
                 strokeWidth={2}
               />
@@ -345,7 +347,7 @@ export function WeightChart({
             connectNulls
             isAnimationActive
             animationDuration={700}
-            dot={(props: { cx?: number; cy?: number; payload?: Row; index?: number }) => <WeightDot key={props.index} {...props} glow={`glow-${uid}`} />}
+            dot={(props: { cx?: number; cy?: number; payload?: Row; index?: number }) => <WeightDot key={props.index} {...props} glow={`glow-${uid}`} hideAt={showGoals ? model.startDot?.x : undefined} />}
             activeDot={{ r: 6, fill: BLUE, stroke: 'var(--c-dot)', strokeWidth: 2 }}
           />
           <Customized component={(cp: object) => <BubbleLayer {...(cp as LayerProps)} items={bubbles} obstacles={obstacles} below={below} />} />
@@ -357,8 +359,8 @@ export function WeightChart({
       <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-[11px]">
         <Toggle on={showWeights} onClick={toggleWeights} icon={<span className="h-0.5 w-3.5 rounded-full" style={{ background: BLUE }} />} label={t('Tes pesées')} />
         <Toggle on={showArea && showWeights} onClick={toggleArea} icon={<span className="h-2.5 w-2.5 rounded-sm" style={{ background: `linear-gradient(90deg, ${BLUE}99, ${RED}99)` }} />} label={t('Zone')} />
-        <Toggle on={showPlan} onClick={togglePlan} icon={<span className="w-3.5 border-t-2 border-dashed" style={{ borderColor: PLAN }} />} label={t('Trajectoire vers {w}', { w: fmtW(targetWeight) })} />
-        {model.weekly.length > 0 && <Toggle on={showWeekly} onClick={toggleWeekly} icon={<span className="h-2.5 w-2.5 rounded-full" style={{ background: PLAN }} />} label={t('Objectif par semaine')} />}
+        <Toggle on={showPlan} onClick={togglePlan} icon={<span className="w-3.5 border-t-2 border-dashed" style={{ borderColor: GOAL }} />} label={t('Trajectoire vers {w}', { w: fmtW(targetWeight) })} />
+        {model.weekly.length > 0 && <Toggle on={showWeekly} onClick={toggleWeekly} icon={<span className="h-2.5 w-2.5 rounded-full" style={{ background: GOAL }} />} label={t('Objectif par semaine')} />}
         {model.hasProj && <Toggle on={showTrend} onClick={toggleTrend} icon={<span className="w-3.5 border-t-2 border-dotted" style={{ borderColor: `${BLUE}99` }} />} label={t('Tendance actuelle')} />}
         <Toggle on={showGoals} onClick={toggleGoals} icon={<span className="h-2.5 w-2.5 rounded-full" style={{ background: RED }} />} label={t('Départ / objectif')} />
       </div>
@@ -367,7 +369,7 @@ export function WeightChart({
 }
 
 
-type BubbleItem = { x: number; y: number; text: string; color: string; small?: boolean };
+type BubbleItem = { x: number; y: number; text: string; color: string; small?: boolean; /** Épinglée en haut à gauche, au-dessus de tous les points. */ pin?: boolean };
 type Scale = (v: number) => number;
 type LayerProps = { xAxisMap?: Record<string, { scale: Scale }>; yAxisMap?: Record<string, { scale: Scale }>; offset?: { left: number; top: number; width: number; height: number } };
 
@@ -389,12 +391,21 @@ function BubbleLayer({ xAxisMap, yAxisMap, offset, items, obstacles, below }: La
     return { l: px - 5, t: py - 5, r: px + 5, b: py + 5 };
   });
   const out: { item: BubbleItem; l: number; t: number; w: number; h: number }[] = [];
+  const topPoint = Math.min(...placed.map((o) => o.t));
   for (const it of items) {
     const px = xs(it.x);
     const py = ys(it.y);
     const h = it.small ? 15 : 18;
     const w = it.text.length * (it.small ? 5.6 : 6.1) + (it.small ? 9 : 12);
     const g = it.small ? 6 : 7; // toujours au-delà du rayon du point (5 px)
+    if (it.pin) {
+      // Bulle de départ : tout à gauche (au-dessus de l'axe) et plus haut que tous les points.
+      const spot = { l: 2, t: Math.max(0, Math.min(py, topPoint) - 4 - h), r: 2 + w, b: 0 };
+      spot.b = spot.t + h;
+      placed.push(spot);
+      out.push({ item: it, l: spot.l, t: spot.t, w, h });
+      continue;
+    }
     const above = [
       { l: px + g, t: py - g - h },
       { l: px - g - w, t: py - g - h },
@@ -403,7 +414,9 @@ function BubbleLayer({ xAxisMap, yAxisMap, offset, items, obstacles, below }: La
       { l: px + g, t: py + g },
       { l: px - g - w, t: py + g },
     ];
-    const tries = below ? [...under, ...above] : [...above, ...under];
+    // Objectifs hebdomadaires : toujours au-dessus de la trajectoire, du côté où elle descend.
+    // Centrées juste au-dessus de leur point (alignées), sinon décalées à droite ou à gauche.
+    const tries = it.small ? [{ l: px - w / 2, t: py - g - 2 - h }, ...(below ? [above[1], above[0]] : above)] : below ? [...under, ...above] : [...above, ...under];
     const spot = tries.map((c) => ({ l: c.l, t: c.t, r: c.l + w, b: c.t + h })).find((c) => c.l >= box.l && c.r <= box.r && c.t >= box.t && c.b <= box.b && !placed.some((o) => hit(c, o)));
     if (!spot) continue;
     placed.push(spot);
@@ -446,8 +459,10 @@ function Toggle({ on, onClick, icon, label }: { on: boolean; onClick: () => void
   );
 }
 
-function WeightDot({ cx, cy, payload, glow }: { cx?: number; cy?: number; payload?: Row; glow: string }) {
+function WeightDot({ cx, cy, payload, glow, hideAt }: { cx?: number; cy?: number; payload?: Row; glow: string; hideAt?: number }) {
   if (cx == null || cy == null || payload?.Poids === undefined) return <g />;
+  // Pesée de départ : seul le point rouge « Départ » est affiché.
+  if (hideAt !== undefined && payload.x === hideAt && !payload.last) return <g />;
   const c = payload.above ? RED : BLUE;
   if (!payload.last) return <circle cx={cx} cy={cy} r={3.5} fill="var(--c-dot)" stroke={c} strokeWidth={2} />;
   // Dernière pesée : halo lumineux (sa valeur est affichée dans une bulle).
@@ -471,8 +486,8 @@ function WeightTooltip({ active, row }: { active?: boolean; row?: Row }) {
         </p>
       )}
       {row.Plan !== undefined && (
-        <p className="flex items-center gap-1.5" style={{ color: PLAN }}>
-          <span className="h-2 w-2 rounded-full" style={{ background: PLAN }} /> {t('Trajectoire')} : <b className="tabular-nums">{round(row.Plan, 1)} {wUnit()}</b>
+        <p className="flex items-center gap-1.5" style={{ color: GOAL }}>
+          <span className="h-2 w-2 rounded-full" style={{ background: GOAL }} /> {t('Trajectoire')} : <b className="tabular-nums">{round(row.Plan, 1)} {wUnit()}</b>
         </p>
       )}
       {diff !== null && Math.abs(diff) >= 0.05 && (
