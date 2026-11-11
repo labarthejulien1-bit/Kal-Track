@@ -18,6 +18,15 @@ UN JOURNAL CLAIR
 ANALYSES ET POIDS
 • Graphiques par jour, semaine et mois avec vos lignes d'objectif.
 • Courbe de poids et tendance sur 1 mois, 3 mois, 6 mois, 1 an ou toute la période.
+• Suivi de l'hydratation par jour, semaine et mois.
+• Date estimée d'arrivée à votre objectif et objectifs de poids semaine par semaine.
+• IMC et poids de forme pour votre taille.
+• Dépense calorique réelle estimée à partir de vos repas et de vos pesées.
+
+SPORT ET SANTÉ ANDROID
+• Connexion à Santé Android (Health Connect) : pas, séances de sport et poids de votre balance importés automatiquement.
+• Les séances en plus de celles prévues ajoutent leurs calories à l'objectif du jour.
+• Ajout manuel d'une séance de sport en quelques secondes.
 
 VOS DONNÉES RESTENT CHEZ VOUS
 • Aucun compte, aucune publicité, aucun traceur.

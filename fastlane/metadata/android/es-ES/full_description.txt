@@ -18,6 +18,15 @@ UN DIARIO CLARO
 ANÁLISIS Y PESO
 • Gráficos por día, semana y mes con tus líneas de objetivo.
 • Curva de peso y tendencia en 1 mes, 3 meses, 6 meses, 1 año o todo el periodo.
+• Seguimiento de la hidratación por día, semana y mes.
+• Fecha estimada para alcanzar tu objetivo y metas de peso semana a semana.
+• IMC y peso saludable para tu estatura.
+• Gasto calórico real estimado a partir de tus comidas y pesajes.
+
+DEPORTE Y HEALTH CONNECT
+• Conexión con Health Connect: pasos, entrenamientos y peso de tu báscula importados automáticamente.
+• Los entrenamientos adicionales a los previstos suman sus calorías al objetivo del día.
+• Añade un entrenamiento manualmente en segundos.
 
 TUS DATOS SE QUEDAN CONTIGO
 • Sin cuenta, sin publicidad, sin rastreadores.

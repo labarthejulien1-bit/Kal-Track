@@ -18,6 +18,15 @@ A CLEAR DIARY
 INSIGHTS AND WEIGHT
 • Daily, weekly and monthly charts with your goal lines.
 • Weight curve and trend over 1 month, 3 months, 6 months, 1 year or all time.
+• Water tracking by day, week and month.
+• Estimated date to reach your goal and week-by-week weight targets.
+• BMI and healthy weight range for your height.
+• Real calorie expenditure estimated from your meals and weigh-ins.
+
+WORKOUTS AND HEALTH CONNECT
+• Connect to Health Connect: steps, workouts and smart-scale weight imported automatically.
+• Extra workouts beyond your plan add their calories to the day's goal.
+• Add a workout manually in seconds.
 
 YOUR DATA STAYS WITH YOU
 • No account, no ads, no trackers.

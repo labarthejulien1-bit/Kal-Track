@@ -18,6 +18,15 @@ EIN ÜBERSICHTLICHES TAGEBUCH
 AUSWERTUNGEN UND GEWICHT
 • Diagramme nach Tag, Woche und Monat mit deinen Ziellinien.
 • Gewichtskurve und Trend über 1 Monat, 3 Monate, 6 Monate, 1 Jahr oder den gesamten Zeitraum.
+• Trinkmenge pro Tag, Woche und Monat.
+• Voraussichtliches Datum zum Erreichen deines Ziels und Gewichtsziele Woche für Woche.
+• BMI und Wohlfühlgewicht für deine Größe.
+• Tatsächlicher Kalorienverbrauch, geschätzt aus Mahlzeiten und Wiegungen.
+
+SPORT UND HEALTH CONNECT
+• Verbindung mit Health Connect: Schritte, Trainings und das Gewicht deiner Waage werden automatisch übernommen.
+• Zusätzliche Trainings über deinen Plan hinaus erhöhen das Tagesziel um ihre Kalorien.
+• Training in Sekunden manuell hinzufügen.
 
 DEINE DATEN BLEIBEN BEI DIR
 • Kein Konto, keine Werbung, keine Tracker.
