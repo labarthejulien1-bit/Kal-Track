@@ -72,7 +72,7 @@ export function CalorieSummary({
     <Card className="overflow-hidden p-4">
       <div className="flex items-center gap-3">
         <div className="relative shrink-0" style={{ width: size, height: size }}>
-          <svg width={size} height={size}>
+          <svg width={size} height={size} overflow="visible" style={{ overflow: 'visible' }}>
             <g transform={`rotate(-90 ${cx} ${cx})`}>
               <circle cx={cx} cy={cx} r={r} stroke="var(--c-track)" strokeWidth={stroke} fill="none" />
               {/* Bonus sport : fin de l'anneau en orange clair */}
