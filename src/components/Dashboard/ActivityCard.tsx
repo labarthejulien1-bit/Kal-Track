@@ -8,7 +8,7 @@ import { db } from '@/db/database';
 import { useProfile } from '@/hooks/useProfile';
 import { SPORTS, isWorkout, keyOf } from '@/lib/sport';
 import { Sheet } from '@/components/ui/dialog';
-import { connectHealth, healthAvailable, healthSupported, installHealthConnect, syncHealth } from '@/lib/health';
+import { connectHealth, getLastSync, healthAvailable, healthSupported, installHealthConnect, openHealthSettings, stepsDiagnostic, syncHealth, type StepsDiagnostic } from '@/lib/health';
 import { addDays, haptic, round, todayISO } from '@/lib/utils';
 import type { ActivityLevel } from '@/types';
 import type { useActivity } from '@/hooks/useActivity';
@@ -30,6 +30,8 @@ export function ActivityCard({ date, activity }: { date: string; activity: Retur
   const [adding, setAdding] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [help, setHelp] = useState(false);
+  const [detail, setDetail] = useState(false);
+  const [last, setLast] = useState(getLastSync);
   const bonusOn = profile.sportBonus !== false;
   const planned = profile.workoutsPerWeek;
   const connected = healthSupported && !!profile.health?.connected;
@@ -65,12 +67,14 @@ export function ActivityCard({ date, activity }: { date: string; activity: Retur
     setSyncing(true);
     const r = await syncHealth(profile, { force: true }).catch(() => null);
     setSyncing(false);
+    setLast(getLastSync());
     if (r && !r.ok) toast(t('Autorisations Santé Android retirées : reconnecte-toi dans Réglages.'), 'error');
+    else if (r?.error) toast(t('Lecture de Santé Android impossible pour le moment.'), 'error');
   };
 
   // Synchronisation silencieuse en affichant un jour récent.
   useEffect(() => {
-    if (connected && date >= addDays(todayISO(), -6)) syncHealth(profile).catch(() => {});
+    if (connected && date >= addDays(todayISO(), -6)) syncHealth(profile).then(() => setLast(getLastSync())).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, date]);
 
@@ -103,6 +107,14 @@ export function ActivityCard({ date, activity }: { date: string; activity: Retur
             <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: STEPS_COLOR }} />
           </div>
           <p className="mt-1 text-[11px] text-slate-500">{t('Pas et calories actives : déjà inclus dans ton objectif via ton niveau d’activité au quotidien.')}</p>
+          {/* Heure de la dernière lecture ; touche = détail des pas par source */}
+          <button type="button" onClick={() => setDetail(true)} className={`mt-1 text-[11px] underline underline-offset-2 ${last?.error ? 'text-rose-400' : 'text-slate-500'}`}>
+            {last?.error
+              ? t('Lecture de Santé Android impossible · détail')
+              : last
+                ? t('Synchronisé à {h} · détail des pas', { h: new Date(last.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
+                : t('Détail des pas')}
+          </button>
           {showSuggestion && (
             <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-sky-500/10 p-2 text-xs text-sky-300">
               <span>{t('Tu fais {n} pas par jour en moyenne : ton niveau d’activité semble être « {l} ».', { n: avgSteps!.toLocaleString(), l: levelLabel(suggested!) })}</span>
@@ -183,6 +195,7 @@ export function ActivityCard({ date, activity }: { date: string; activity: Retur
       )}
 
       <AddSessionSheet open={adding} onClose={() => setAdding(false)} date={date} />
+      <StepsDetail open={detail} onClose={() => setDetail(false)} date={date} lastError={last?.error} />
       <GoalHelp open={help} onClose={() => setHelp(false)} planned={planned} />
     </Card>
   );
@@ -213,6 +226,58 @@ function GoalHelp({ open, onClose, planned }: { open: boolean; onClose: () => vo
           </div>
         ))}
         <p className="pt-1 text-center text-xs font-semibold text-emerald-400">{t('Rien n’est compté deux fois 👍')}</p>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Détail des pas : total lu par Kal-Track et pas de chaque appli, pour comprendre un écart avec Google Fit, une montre… */
+function StepsDetail({ open, onClose, date, lastError }: { open: boolean; onClose: () => void; date: string; lastError?: string }) {
+  const [diag, setDiag] = useState<StepsDiagnostic | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    setDiag(null);
+    stepsDiagnostic(date)
+      .then(setDiag)
+      .catch((e) => setDiag({ total: null, sources: [], error: String((e as Error)?.message ?? e) }));
+  }, [open, date]);
+  return (
+    <Sheet open={open} onClose={onClose} title={t('Détail des pas')}>
+      <div className="space-y-3 pb-4 text-sm text-slate-300">
+        {!diag ? (
+          <p className="flex items-center gap-2 text-xs text-slate-400">
+            <Loader2 className="h-4 w-4 animate-spin" /> {t('Lecture de Santé Android…')}
+          </p>
+        ) : (
+          <>
+            <div className="rounded-xl bg-slate-800/60 p-3">
+              <p className="text-xs text-slate-400">{t('Total retenu par Santé Android (affiché dans Kal-Track)')}</p>
+              <p className="text-xl font-bold tabular-nums text-slate-50">{diag.total != null ? `${diag.total.toLocaleString()} ${t('pas')}` : '—'}</p>
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-semibold text-slate-400">{t('Pas enregistrés par chaque source')}</p>
+              {diag.sources.length ? (
+                <ul className="space-y-1">
+                  {diag.sources.map((s) => (
+                    <li key={s.name} className="flex justify-between rounded-lg bg-slate-800/40 px-3 py-1.5 text-xs">
+                      <span className="truncate">{s.name}</span>
+                      <b className="tabular-nums">{s.steps.toLocaleString()}</b>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-slate-500">{t('Aucun pas enregistré dans Santé Android pour ce jour.')}</p>
+              )}
+            </div>
+            <p className="text-xs leading-relaxed text-slate-400">
+              {t('Santé Android n’additionne pas les sources : quand elles comptent les mêmes pas, il garde celle placée en premier dans ses priorités. Pour utiliser par exemple Google Fit, place-le en tête : Santé Android → Données et accès → Activité → Pas → Sources de données et priorité.')}
+            </p>
+            {(diag.error || lastError) && <p className="rounded-lg bg-rose-500/10 p-2 text-[11px] text-rose-300">{diag.error || lastError}</p>}
+            <Button variant="secondary" className="w-full" onClick={() => openHealthSettings().catch(() => undefined)}>
+              <HeartPulse /> {t('Ouvrir Santé Android')}
+            </Button>
+          </>
+        )}
       </div>
     </Sheet>
   );

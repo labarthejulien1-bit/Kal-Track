@@ -560,6 +560,17 @@ const d: Record<string, string> = {
   "Paiement et renouvellement automatique via Google Play. Résiliable à tout moment dans Google Play → Abonnements.": "Zahlung und automatische Verlängerung über Google Play. Jederzeit kündbar unter Google Play → Abos.",
   "Kal-Track Plus ✔ · {a}/{b} analyses disponibles aujourd'hui": "Kal-Track Plus ✔ · {a}/{b} Analysen heute verfügbar",
   "Fondateur ✔ · {a}/{b} analyses disponibles aujourd'hui": "Gründer ✔ · {a}/{b} Analysen heute verfügbar",
+  "Lecture de Santé Android impossible pour le moment.": "Health Connect kann gerade nicht gelesen werden.",
+  "Lecture de Santé Android impossible · détail": "Health Connect nicht lesbar · Details",
+  "Synchronisé à {h} · détail des pas": "Synchronisiert um {h} · Schritt-Details",
+  "Détail des pas": "Schritt-Details",
+  "Lecture de Santé Android…": "Health Connect wird gelesen…",
+  "Total retenu par Santé Android (affiché dans Kal-Track)": "Von Health Connect übernommene Summe (in Kal-Track angezeigt)",
+  "Pas enregistrés par chaque source": "Von jeder Quelle erfasste Schritte",
+  "Aucun pas enregistré dans Santé Android pour ce jour.": "Keine Schritte in Health Connect für diesen Tag.",
+  "Santé Android n’additionne pas les sources : quand elles comptent les mêmes pas, il garde celle placée en premier dans ses priorités. Pour utiliser par exemple Google Fit, place-le en tête : Santé Android → Données et accès → Activité → Pas → Sources de données et priorité.": "Health Connect addiert die Quellen nicht: Zählen sie dieselben Schritte, wird die Quelle mit der höchsten Priorität verwendet. Um z. B. Google Fit zu nutzen, setze es nach oben: Health Connect → Daten und Zugriff → Aktivität → Schritte → Datenquellen und Priorität.",
+  "Ouvrir Santé Android": "Health Connect öffnen",
+  "Ce téléphone": "Dieses Telefon",
 };
 
 export default d;
