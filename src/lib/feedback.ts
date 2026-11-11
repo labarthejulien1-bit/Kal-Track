@@ -7,7 +7,7 @@ import { addDays, todayISO } from '@/lib/utils';
 /** Adresse de contact (retours utilisateurs, politique de confidentialité). */
 export const CONTACT_EMAIL = 'kalapps.contact@gmail.com';
 export const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.kaltrack.app';
-export const APP_VERSION = '1.0';
+export const APP_VERSION: string = __APP_VERSION__;
 
 const DAY = 86_400_000;
 

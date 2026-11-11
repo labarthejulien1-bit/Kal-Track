@@ -2,9 +2,12 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'node:path';
+import pkg from './package.json';
 
 export default defineConfig({
   base: './',
+  // Numéro de version affiché dans l'appli : celui de la version Android (1.0.N, fourni par le CI), sinon package.json.
+  define: { __APP_VERSION__: JSON.stringify(process.env.VERSION_NAME || pkg.version) },
   resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
   plugins: [
     react(),

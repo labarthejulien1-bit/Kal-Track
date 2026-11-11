@@ -16,7 +16,7 @@ import { PlusCard } from './PlusCard';
 import { ACTIVITY_FACTORS, MACRO_PRESETS, PACE_DELTAS, computeGoals, macroSplitFor } from '@/services/bmrCalculator';
 import { db, exportBackup, getStorageInfo, importBackup, requestPersistentStorage } from '@/db/database';
 import { isNative, saveFile } from '@/lib/native';
-import { PLAY_URL, feedbackMailto } from '@/lib/feedback';
+import { APP_VERSION, PLAY_URL, feedbackMailto } from '@/lib/feedback';
 import { connectHealth, healthAvailable, healthSupported, installHealthConnect, openHealthSettings, syncHealth } from '@/lib/health';
 import { notificationsSupported, requestNotificationPermission, sendTestReminder } from '@/lib/notifications';
 import { COLORS, MEAL_SHORT, MEAL_TYPES, round, todayISO } from '@/lib/utils';
@@ -744,7 +744,7 @@ function SettingsForm({ draft, setDraft }: { draft: Profile; setDraft: React.Dis
             }
           }}
         >
-          Kal-Track v1.0
+          Kal-Track v{APP_VERSION}
         </p>
         <p>{t("100 % local · aucune donnée envoyée hors de l'appareil, sauf les analyses IA vers Google Gemini et les recherches de code-barres vers Open Food Facts.")}</p>
         <div className="mb-2 mt-1 grid w-full max-w-sm grid-cols-2 gap-2 text-xs">
