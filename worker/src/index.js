@@ -258,7 +258,7 @@ function corsHeaders(request, env) {
   return {
     'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0] || '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Kal-Code, X-Kal-Device, X-Kal-Model',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Kal-Code, X-Kal-Device, X-Kal-Model, X-Kal-Founder, X-Kal-Plus',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
