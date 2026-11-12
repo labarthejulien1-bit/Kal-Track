@@ -22,14 +22,29 @@ function plugin() {
   return import('capacitor-health');
 }
 
+/**
+ * Le module ne crée sa connexion à Santé Android que lors de `isHealthAvailable()` :
+ * on l'appelle une fois par lancement de l'appli, avant toute lecture.
+ */
+let initDone: Promise<boolean> | null = null;
+function ensureInit(): Promise<boolean> {
+  initDone ??= plugin()
+    .then(({ Health }) => Health.isHealthAvailable())
+    .then((r) => r.available)
+    .catch(() => false)
+    .then((ok) => {
+      if (!ok) initDone = null; // nouvel essai au prochain appel
+      return ok;
+    });
+  return initDone;
+}
+
+/** Valeur numérique sûre (Santé Android renvoie parfois une valeur vide). */
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
 export async function healthAvailable(): Promise<boolean> {
   if (!isNative) return false;
-  try {
-    const { Health } = await plugin();
-    return (await Health.isHealthAvailable()).available;
-  } catch {
-    return false;
-  }
+  return ensureInit();
 }
 
 /** Ouvre Santé Android dans le Play Store (anciens téléphones sans Health Connect intégré). */
@@ -39,12 +54,14 @@ export async function installHealthConnect() {
 }
 
 export async function openHealthSettings() {
+  await ensureInit();
   const { Health } = await plugin();
   await Health.openHealthConnectSettings();
 }
 
 /** Demande les autorisations. Renvoie true si au moins une donnée est accessible. */
 export async function connectHealth(): Promise<boolean> {
+  await ensureInit();
   const { Health } = await plugin();
   const res = await Health.requestHealthPermissions({ permissions: [...PERMISSIONS] });
   return grantedFrom(res.permissions).length > 0;
@@ -106,6 +123,7 @@ function saveLastSync(error?: string) {
 }
 
 async function doSync(profile: Pick<Profile, 'weight'>, days: number): Promise<SyncResult> {
+  await ensureInit();
   const { Health } = await plugin();
   const check = await Health.checkHealthPermissions({ permissions: [...PERMISSIONS] });
   const granted = new Set(grantedFrom(check.permissions));
@@ -135,14 +153,14 @@ async function doSync(profile: Pick<Profile, 'weight'>, days: number): Promise<S
   // Si une des deux lectures a échoué, on garde la valeur précédente au lieu d'écrire 0.
   const previous = new Map((await db.healthDays.where('date').between(fromDate, today, true, true).toArray()).map((d) => [d.date, d]));
   for (let d = fromDate; d <= today; d = addDays(d, 1))
-    dayMap.set(d, { date: d, steps: steps ? 0 : (previous.get(d)?.steps ?? 0), activeKcal: kcal ? 0 : (previous.get(d)?.activeKcal ?? 0), syncedAt: Date.now() });
+    dayMap.set(d, { date: d, steps: steps ? 0 : num(previous.get(d)?.steps), activeKcal: kcal ? 0 : num(previous.get(d)?.activeKcal), syncedAt: Date.now() });
   for (const s of steps?.aggregatedData ?? []) {
     const d = dayMap.get(localDate(s.startDate));
-    if (d) d.steps += Math.round(s.value);
+    if (d) d.steps += Math.round(num(s.value));
   }
   for (const s of kcal?.aggregatedData ?? []) {
     const d = dayMap.get(localDate(s.startDate));
-    if (d) d.activeKcal += Math.round(s.value);
+    if (d) d.activeKcal += Math.round(num(s.value));
   }
 
   // Séances
@@ -167,7 +185,7 @@ async function doSync(profile: Pick<Profile, 'weight'>, days: number): Promise<S
   const firstByDay = new Map<string, number>();
   for (const r of [...(weights?.records ?? [])].sort((a, b) => a.startDate.localeCompare(b.startDate))) {
     const d = localDate(r.startDate);
-    if (!firstByDay.has(d) && r.value > 20 && r.value < 400) firstByDay.set(d, r.value);
+    if (!firstByDay.has(d) && num(r.value) > 20 && num(r.value) < 400) firstByDay.set(d, r.value);
   }
 
   let newWeights = 0;
@@ -218,6 +236,7 @@ export interface StepsDiagnostic {
 
 /** Détail des pas d'un jour : total lu et pas de chaque source, pour comprendre un écart avec une autre appli. */
 export async function stepsDiagnostic(date: string): Promise<StepsDiagnostic> {
+  await ensureInit();
   const { Health } = await plugin();
   const startDate = new Date(`${date}T00:00:00`).toISOString();
   const endDate = new Date(Math.min(Date.now(), new Date(`${addDays(date, 1)}T00:00:00`).getTime())).toISOString();
@@ -225,7 +244,7 @@ export async function stepsDiagnostic(date: string): Promise<StepsDiagnostic> {
   const errs: string[] = [];
   try {
     const agg = await Health.queryAggregated({ startDate, endDate, dataType: 'steps', bucket: 'day' });
-    out.total = Math.round((agg.aggregatedData ?? []).reduce((n, s) => n + s.value, 0));
+    out.total = Math.round((agg.aggregatedData ?? []).reduce((n, s) => n + num(s.value), 0));
   } catch (e) {
     errs.push(String((e as Error)?.message ?? e));
   }
@@ -235,7 +254,7 @@ export async function stepsDiagnostic(date: string): Promise<StepsDiagnostic> {
     for (const r of rec.records ?? []) {
       const pkg = r.sourceBundleId ?? '';
       const key = pkg === 'android' || pkg === 'com.google.android.apps.healthdata' ? t('Ce téléphone') : (SOURCE_NAMES[pkg] ?? (pkg || '?'));
-      by.set(key, (by.get(key) ?? 0) + (r.value ?? 0));
+      by.set(key, (by.get(key) ?? 0) + num(r.value));
     }
     out.sources = [...by].map(([name, steps]) => ({ name, steps: Math.round(steps) })).sort((a, b) => b.steps - a.steps);
   } catch (e) {

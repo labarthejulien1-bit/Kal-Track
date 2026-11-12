@@ -24,5 +24,5 @@ export function useActivity(date: string, plannedPerWeek: number, bonusEnabled: 
   const sessionKcal = sessions.reduce((n, s) => n + s.kcal, 0);
   // Séances sportives de la semaine jusqu'à ce jour (pour le compteur « x / N prévues »).
   const weekWorkouts = week.filter(isWorkout).length;
-  return { loaded: data !== undefined, steps: day?.steps ?? 0, activeKcal: day?.activeKcal ?? 0, hasHealthDay: !!day, sessions, bonusKeys, bonusKcal, sessionKcal, weekWorkouts };
+  return { loaded: data !== undefined, steps: Number.isFinite(day?.steps) ? day!.steps : 0, activeKcal: Number.isFinite(day?.activeKcal) ? day!.activeKcal : 0, hasHealthDay: !!day, sessions, bonusKeys, bonusKcal, sessionKcal, weekWorkouts };
 }
